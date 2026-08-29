@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة المستخدمين</title>
+    <link rel="stylesheet" href="/public/styles.css">
+    <style>
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
+        .chip { display: inline-block; padding: 5px 10px; margin: 2px; background: #eee; border-radius: 15px; font-size: 0.9em; }
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        .alert { padding: 15px; margin-bottom: 20px; border-radius: 4px; background: #d4edda; color: #155724; }
+        .edit-form { background: #f9f9f9; padding: 15px; margin-top: 10px; border: 1px solid #ddd; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"], .form-group input[type="password"], .form-group select { width: 100%; padding: 8px; box-sizing: border-box; }
+        .btn { padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        .btn-danger { background: #dc3545; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        nav a { margin-right: 15px; text-decoration: none; color: #007bff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>إدارة المستخدمين</h1>
+            <nav>
+                <a href="/">الرئيسية</a>
+                <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin') { %>
+                    <a href="/setup">الإعدادات</a>
+                <% } %>
+            </nav>
+        </header>
+
+        <% if (typeof message !== 'undefined' && message) { %>
+            <div class="alert"><%= message %></div>
+        <% } %>
+
+        <section>
+            <h2>إضافة مستخدم جديد</h2>
+            <form action="/users" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="mode" value="create">
+                <div class="form-group">
+                    <label>الاسم</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label>رقم الجوال</label>
+                    <input type="text" name="phone">
+                </div>
+                <div class="form-group">
+                    <label>المسمى الوظيفي</label>
+                    <input type="text" name="job_title">
+                </div>
+                <div class="form-group">
+                    <label>المهام</label>
+                    <input type="text" name="tasks">
+                </div>
+                <div class="form-group">
+                    <label>الفروع</label>
+                    <div class="checkbox-grid">
+                        <% if (typeof branches !== 'undefined') { branches.forEach(function(branch) { %>
+                            <label><input type="checkbox" name="branches[]" value="<%= branch %>"> <%= branch %></label>
+                        <% }); } %>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>المراحل</label>
+                    <div class="checkbox-grid">
+                        <% if (typeof phases !== 'undefined') { phases.forEach(function(phase) { %>
+                            <label><input type="checkbox" name="phases[]" value="<%= phase %>"> <%= phase %></label>
+                        <% }); } %>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>الدور</label>
+                    <select name="role">
+                        <% if (typeof roles !== 'undefined') { Object.entries(roles).forEach(function([key, val]) { %>
+                            <option value="<%= key %>"><%= val %></option>
+                        <% }); } %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الصلاحيات</label>
+                    <div class="checkbox-grid">
+                        <% if (typeof permissions !== 'undefined') { Object.entries(permissions).forEach(function([key, val]) { %>
+                            <label><input type="checkbox" name="permissions[<%= key %>]" value="true"> <%= val %></label>
+                        <% }); } %>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>المرفقات</label>
+                    <input type="file" name="file">
+                </div>
+                <button type="submit" class="btn">إضافة مستخدم</button>
+            </form>
+        </section>
+
+        <section style="margin-top: 30px;">
+            <h2>بحث</h2>
+            <form action="/users" method="GET" style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" name="query" value="<%= typeof query !== 'undefined' ? query : '' %>" placeholder="ابحث بالاسم أو اسم المستخدم..." style="padding: 8px; flex: 1;">
+                <select name="roleFilter" style="padding: 8px;">
+                    <option value="">الكل</option>
+                    <% if (typeof roles !== 'undefined') { Object.entries(roles).forEach(function([key, val]) { %>
+                        <option value="<%= key %>" <%= (typeof roleFilter !== 'undefined' && roleFilter === key) ? 'selected' : '' %>><%= val %></option>
+                    <% }); } %>
+                </select>
+                <button type="submit" class="btn">بحث</button>
+            </form>
+        </section>
+
+        <section style="margin-top: 30px;">
+            <h2>قائمة المستخدمين</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>اسم المستخدم</th>
+                        <th>رقم الجوال</th>
+                        <th>المسمى الوظيفي</th>
+                        <th>المهام</th>
+                        <th>الفروع</th>
+                        <th>المراحل</th>
+                        <th>الدور</th>
+                        <th>الصلاحيات</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (typeof users !== 'undefined') { users.forEach(function(user) { %>
+                        <tr>
+                            <td><%= user.name %></td>
+                            <td><%= user.username %></td>
+                            <td><%= user.phone || '-' %></td>
+                            <td><%= user.job_title || '-' %></td>
+                            <td><%= user.tasks || '-' %></td>
+                            <td><%= user.branches && user.branches.filter(b=>b).join('\u060c ') || '-' %></td>
+                            <td><%= user.phases && user.phases.filter(p=>p).join('\u060c ') || '-' %></td>
+                            <td><%= (typeof roles !== 'undefined' && roles[user.role]) ? roles[user.role] : user.role %></td>
+                            <td>
+                                <% if (user.permissions && typeof permissions !== 'undefined') { %>
+                                    <% Object.entries(user.permissions).forEach(function([key, val]) { %>
+                                        <% if (val) { %>
+                                            <span class="chip"><%= permissions[key] || key %></span>
+                                        <% } %>
+                                    <% }); %>
+                                <% } %>
+                            </td>
+                            <td>
+                                <details>
+                                    <summary class="btn" style="display:inline-block; margin-bottom:5px;">تعديل</summary>
+                                    <div class="edit-form">
+                                        <form action="/users/<%= user.id || user._id %>" method="POST" enctype="multipart/form-data">
+                                            <input type="hidden" name="mode" value="edit">
+                                            <div class="form-group">
+                                                <label>الاسم</label>
+                                                <input type="text" name="name" value="<%= user.name %>" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>اسم المستخدم</label>
+                                                <input type="text" name="username" value="<%= user.username %>" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>كلمة المرور (اتركه فارغاً لعدم التغيير)</label>
+                                                <input type="password" name="password">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>رقم الجوال</label>
+                                                <input type="text" name="phone" value="<%= user.phone || '' %>">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>المسمى الوظيفي</label>
+                                                <input type="text" name="job_title" value="<%= user.job_title || '' %>">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>المهام</label>
+                                                <input type="text" name="tasks" value="<%= user.tasks || '' %>">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>الفروع</label>
+                                                <div class="checkbox-grid">
+                                                    <% if (typeof branches !== 'undefined') { branches.forEach(function(branch) { %>
+                                                        <label><input type="checkbox" name="branches[]" value="<%= branch %>" <%= user.branches && user.branches.includes(branch) ? 'checked' : '' %>> <%= branch %></label>
+                                                    <% }); } %>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>المراحل</label>
+                                                <div class="checkbox-grid">
+                                                    <% if (typeof phases !== 'undefined') { phases.forEach(function(phase) { %>
+                                                        <label><input type="checkbox" name="phases[]" value="<%= phase %>" <%= user.phases && user.phases.includes(phase) ? 'checked' : '' %>> <%= phase %></label>
+                                                    <% }); } %>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>الدور</label>
+                                                <select name="role">
+                                                    <% if (typeof roles !== 'undefined') { Object.entries(roles).forEach(function([key, val]) { %>
+                                                        <option value="<%= key %>" <%= user.role === key ? 'selected' : '' %>><%= val %></option>
+                                                    <% }); } %>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>الصلاحيات</label>
+                                                <div class="checkbox-grid">
+                                                    <% if (typeof permissions !== 'undefined') { Object.entries(permissions).forEach(function([key, val]) { %>
+                                                        <label><input type="checkbox" name="permissions[<%= key %>]" value="true" <%= user.permissions && user.permissions[key] ? 'checked' : '' %>> <%= val %></label>
+                                                    <% }); } %>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>المرفقات</label>
+                                                <input type="file" name="file">
+                                            </div>
+                                            <button type="submit" class="btn">حفظ التعديلات</button>
+                                        </form>
+                                    </div>
+                                </details>
+                                <form action="/users/<%= user.id || user._id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+                                    <button type="submit" class="btn btn-danger">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); } %>
+                </tbody>
+            </table>
+        </section>
+    </div>
+</body>
+</html>
