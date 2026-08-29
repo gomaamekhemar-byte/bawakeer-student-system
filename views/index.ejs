@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>مدارس بواكير</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- HEADER -->
+    <header class="hero-card">
+      <div>
+        <p class="eyebrow">مدارس بواكير</p>
+        <h1>متابعة تسجيل الطلاب</h1>
+        <% if(activeYear){ %>
+          <div class="user-badge">
+            <span class="user-label">العام الدراسي:</span>
+            <strong><%= activeYear.year_name %></strong>
+          </div>
+        <% } %>
+        <% if(currentUser){ %>
+          <div class="user-badge">
+            <span class="user-label">المستخدم:</span>
+            <strong><%= currentUser.full_name || currentUser.username %></strong>
+          </div>
+        <% } %>
+        <% if(activeBranch){ %>
+          <div class="user-badge">
+            <span class="user-label">الفرع الحالي:</span>
+            <strong><%= activeBranch !== 'الكل' ? activeBranch : 'جميع الفروع' %></strong>
+          </div>
+        <% } %>
+      </div>
+      <div class="hero-actions">
+        <% if(canViewAnalytics){ %><a href="/analytics" class="btn-outline">📊 التحليلات</a><% } %>
+        <% if(currentUser && currentUser.permissions && currentUser.permissions.export_reports){ %>
+          <a href="/export/excel" class="btn-outline">تصدير Excel</a>
+          <a href="/export/pdf" class="btn-primary">تصدير PDF</a>
+        <% } %>
+        <% if(canManageYears){ %>
+          <a href="/academic_years" class="btn-outline">الأعوام الدراسية</a>
+          <a href="/branches" class="btn-outline">الفروع</a>
+        <% } %>
+        <% if(currentUser && currentUser.role === 'admin'){ %>
+          <a href="/history" class="btn-outline">السجل التاريخي</a>
+          <a href="/setup" class="btn-outline">الإعدادات</a>
+        <% } %>
+        <% if(canManageUsers){ %><a href="/users" class="btn-outline">إدارة المستخدمين</a><% } %>
+        <a href="/logout" class="btn-outline">تسجيل الخروج</a>
+      </div>
+    </header>
+
+    <!-- FLASH MESSAGE -->
+    <% if(message){ %><div class="message"><%= message %></div><% } %>
+
+    <!-- STATS GRID -->
+    <div class="stats-grid">
+      <div class="stat-card stat-primary"><strong><%= stats.total %></strong><span>إجمالي</span></div>
+      <div class="stat-card stat-success"><strong><%= stats.accepted %></strong><span>مقبول</span></div>
+      <div class="stat-card stat-danger"><strong><%= stats.rejected %></strong><span>غير مقبول</span></div>
+      <div class="stat-card stat-info"><strong><%= stats.registered %></strong><span>مسجل</span></div>
+      <div class="stat-card stat-warning"><strong><%= stats.waiting %></strong><span>في انتظار</span></div>
+      <div class="stat-card stat-secondary"><strong><%= stats.not_interested %></strong><span>لا يرغب</span></div>
+      <div class="stat-card stat-secondary"><strong><%= stats.pending_interview %></strong><span>في انتظار المقابلة</span></div>
+    </div>
+
+    <!-- ADD/EDIT FORM -->
+    <% if(canManageStudents){ %>
+    <div class="card">
+      <div class="card-header"><h2><%= editingStudent ? 'تعديل بيانات الطالب' : 'إضافة طالب جديد' %></h2></div>
+      <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="student_id" value="<%= editingStudent ? editingStudent.id : '' %>">
+        <div class="grid">
+          <label>الاسم <input name="name" required value="<%= editingStudent ? editingStudent.name : '' %>"></label>
+          <label>رقم الجوال <input name="phone" value="<%= editingStudent ? editingStudent.phone : '' %>"></label>
+          <label>تاريخ الميلاد <input name="date_of_birth" type="date" value="<%= editingStudent ? editingStudent.date_of_birth : '' %>"></label>
+          <label>الجنسية
+            <select name="nationality">
+              <option value="">اختر...</option>
+              <% nationalities.forEach(function(n){ %>
+                <option value="<%= n %>" <%= editingStudent && editingStudent.nationality===n ? 'selected' : '' %>><%= n %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>الحي <input name="neighborhood" value="<%= editingStudent ? editingStudent.neighborhood : '' %>"></label>
+          <label>تاريخ المقابلة <input name="interview_date" type="date" value="<%= editingStudent ? editingStudent.interview_date : '' %>"></label>
+          <label>نتيجة المقابلة
+            <select name="interview_result">
+              <option value="">اختر...</option>
+              <% interview_results.forEach(function(r){ %>
+                <option value="<%= r %>" <%= editingStudent && editingStudent.interview_result===r ? 'selected' : '' %>><%= r %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>سبب عدم الاجتياز <input name="interview_reason" value="<%= editingStudent ? editingStudent.interview_reason : '' %>"></label>
+          <label>حالة المتابعة
+            <select name="followup_status">
+              <option value="">اختر...</option>
+              <% followup_statuses.forEach(function(s){ %>
+                <option value="<%= s %>" <%= editingStudent && editingStudent.followup_status===s ? 'selected' : '' %>><%= s %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>سبب عدم التسجيل <input name="registration_reason" value="<%= editingStudent ? editingStudent.registration_reason : '' %>"></label>
+          <label>نوع الطالب
+            <select name="student_type">
+              <option value="">اختر...</option>
+              <% student_types.forEach(function(t){ %>
+                <option value="<%= t %>" <%= editingStudent && editingStudent.student_type===t ? 'selected' : '' %>><%= t %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>المسار
+            <select name="track">
+              <option value="">اختر...</option>
+              <% tracks.forEach(function(t){ %>
+                <option value="<%= t %>" <%= editingStudent && editingStudent.track===t ? 'selected' : '' %>><%= t %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>المرحلة
+            <select name="phase">
+              <option value="">اختر...</option>
+              <% phases.forEach(function(p){ %>
+                <option value="<%= p %>" <%= editingStudent && editingStudent.phase===p ? 'selected' : '' %>><%= p %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>الصف
+            <select name="grade">
+              <option value="">اختر...</option>
+              <% grades.forEach(function(g){ %>
+                <option value="<%= g %>" <%= editingStudent && editingStudent.grade===g ? 'selected' : '' %>><%= g %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>الفرع
+            <select name="student_branch">
+              <option value="">اختر...</option>
+              <% branches.forEach(function(b){ %>
+                <option value="<%= b %>" <%= editingStudent && editingStudent.branch===b ? 'selected' : '' %>><%= b %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>ملاحظات <textarea name="notes"><%= editingStudent ? editingStudent.notes : '' %></textarea></label>
+          <label>مرفقات <input type="file" name="attachments" multiple></label>
+        </div>
+        <div class="actions">
+          <button type="submit"><%= editingStudent ? 'حفظ التعديل' : 'إضافة طالب' %></button>
+          <% if(editingStudent){ %>
+            <a href="/" class="secondary">إلغاء</a>
+          <% } %>
+        </div>
+      </form>
+    </div>
+    <% } %>
+
+    <!-- FILTERS -->
+    <div class="card">
+      <div class="card-header"><h2>بحث وتصفية</h2></div>
+      <form method="get" class="filters">
+        <input name="q" value="<%= query %>" placeholder="بحث بالاسم أو الجوال">
+        <select name="interview_filter">
+          <option value="">كل نتائج المقابلة</option>
+          <% interview_results.forEach(function(r){ %>
+            <option value="<%= r %>" <%= interviewFilter===r ? 'selected' : '' %>><%= r %></option>
+          <% }) %>
+        </select>
+        <select name="followup_filter">
+          <option value="">كل حالات المتابعة</option>
+          <% followup_statuses.forEach(function(s){ %>
+            <option value="<%= s %>" <%= followupFilter===s ? 'selected' : '' %>><%= s %></option>
+          <% }) %>
+        </select>
+        <select name="student_type_filter">
+          <option value="">كل الأنواع</option>
+          <% student_types.forEach(function(t){ %>
+            <option value="<%= t %>" <%= studentTypeFilter===t ? 'selected' : '' %>><%= t %></option>
+          <% }) %>
+        </select>
+        <select name="phase_filter">
+          <option value="">كل المراحل</option>
+          <% phases.forEach(function(p){ %>
+            <option value="<%= p %>" <%= phaseFilter===p ? 'selected' : '' %>><%= p %></option>
+          <% }) %>
+        </select>
+        <select name="grade_filter">
+          <option value="">كل الصفوف</option>
+          <% grades.forEach(function(g){ %>
+            <option value="<%= g %>" <%= gradeFilter===g ? 'selected' : '' %>><%= g %></option>
+          <% }) %>
+        </select>
+        <select name="branch_filter">
+          <option value="">كل الفروع</option>
+          <% branches.forEach(function(b){ %>
+            <option value="<%= b %>" <%= branchFilter===b ? 'selected' : '' %>><%= b %></option>
+          <% }) %>
+        </select>
+        <select name="status_filter">
+          <option value="">كل الحالات</option>
+          <option value="لم يقابل" <%= statusFilter==='لم يقابل' ? 'selected' : '' %>>لم يقابل</option>
+          <option value="لم يسجل" <%= statusFilter==='لم يسجل' ? 'selected' : '' %>>لم يسجل</option>
+          <option value="غير مقبول" <%= statusFilter==='غير مقبول' ? 'selected' : '' %>>غير مقبول</option>
+          <option value="في انتظار التسجيل" <%= statusFilter==='في انتظار التسجيل' ? 'selected' : '' %>>في انتظار التسجيل</option>
+        </select>
+        <button type="submit">بحث</button>
+        <a href="/" class="secondary">إعادة تعيين</a>
+      </form>
+    </div>
+
+    <!-- STUDENTS TABLE -->
+    <div class="card">
+      <div class="card-header"><h2>قائمة الطلاب (<%= students.length %>)</h2></div>
+      <% if(!students || students.length === 0){ %>
+        <p style="text-align:center;color:#64748b;padding:24px;">لا يوجد طلاب حسب التصفية الحالية</p>
+      <% } else { %>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th><th>الجوال</th><th>المرحلة/الصف</th>
+              <th>نتيجة المقابلة</th><th>حالة المتابعة</th>
+              <th>الفرع</th><th>النوع</th><th>تاريخ المقابلة</th>
+              <th>المرفقات</th><th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% students.forEach(function(student){ %>
+              <% var rowClass = student.followup_status === 'تم التسجيل' ? 'status-registered' : student.followup_status === 'في انتظار التسجيل' ? 'status-pending' : 'status-other'; %>
+              <tr class="status-row <%= rowClass %>">
+                <td><strong><%= student.name %></strong>
+                  <% if(student.age){ %><br><small style="color:#64748b;"><%= student.age %></small><% } %>
+                </td>
+                <td><%= student.phone || '-' %></td>
+                <td><%= student.phase || '-' %> <%= student.grade ? '(' + student.grade + ')' : '' %></td>
+                <td><%= student.interview_result || 'لم يقابل' %></td>
+                <td><%= student.followup_status || '-' %></td>
+                <td><%= student.branch || '-' %></td>
+                <td><%= student.student_type || '-' %></td>
+                <td><%= student.interview_date || '-' %></td>
+                <td>
+                  <% if(student.attachments && student.attachments.length > 0){ %>
+                    <% student.attachments.forEach(function(att){ %>
+                      <a href="/download/<%= att.filename %>" style="font-size:12px;display:block;"><%= att.original_name || att.filename %></a>
+                    <% }) %>
+                  <% } else { %>-<% } %>
+                </td>
+                <td class="actions-cell">
+                  <% if(canManageStudents){ %>
+                    <a href="/?edit_id=<%= student.id %>" class="btn-sm">تعديل</a>
+                  <% } %>
+                  <% if(canDeleteStudents){ %>
+                    <form method="post" action="/delete/<%= student.id %>" style="display:inline;" onsubmit="return confirm('حذف الطالب?');">
+                      <button type="submit" class="danger-btn">حذف</button>
+                    </form>
+                  <% } %>
+                  <% if(currentUser && ['admin','manager'].includes(currentUser.role)){ %>
+                    <a href="/student_history/<%= student.id %>" class="btn-sm" style="background:#6c757d;">سجل</a>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>
