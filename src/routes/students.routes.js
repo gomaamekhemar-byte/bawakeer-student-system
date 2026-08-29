@@ -169,14 +169,12 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     students = students.filter(s => userMatchesScope(currentUser, s));
   }
 
-  const fatherName = (req.query.father_name || "").toLowerCase().trim();
   const interviewFilter = req.query.interview_filter || "";
   const followupFilter = req.query.followup_filter || "";
   const phaseFilter = req.query.phase_filter || "";
   const branchFilter = req.query.branch_filter || "";
 
   let filtered = students.filter(s => {
-    if (fatherName && !(s.neighborhood || "").toLowerCase().includes(fatherName) && !(s.name || "").toLowerCase().includes(fatherName)) return false;
     if (interviewFilter && s.interview_result !== interviewFilter) return false;
     if (followupFilter && s.followup_status !== followupFilter) return false;
     if (phaseFilter && s.phase !== phaseFilter) return false;
@@ -192,7 +190,6 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     branches,
     activeYear,
     currentUser,
-    fatherName,
     interviewFilter,
     followupFilter,
     phaseFilter,
