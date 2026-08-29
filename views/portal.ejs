@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>البوابة الرئيسية | مدارس بواكير الأهلية</title>
+  <title>الرئيسية | مدارس بواكير الأهلية</title>
   <link rel="stylesheet" href="/public/styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <style>
     body {
-      background-color: #eef2f6;
+      background-color: #f1f5f9;
       font-family: 'Cairo', sans-serif;
       margin: 0;
       padding: 0;
@@ -19,7 +19,7 @@
     }
     .portal-header {
       background: #ffffff;
-      padding: 12px 28px;
+      padding: 14px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -28,23 +28,24 @@
     .portal-user {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
     .portal-avatar {
-      width: 44px;
-      height: 44px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      background: #2563eb;
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
+      font-size: 22px;
       position: relative;
+      box-shadow: 0 4px 10px rgba(37,99,235,0.25);
     }
     .portal-avatar .online-dot {
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
       background: #22c55e;
       border: 2px solid white;
       border-radius: 50%;
@@ -56,82 +57,109 @@
       text-align: right;
     }
     .portal-user-name {
-      font-weight: 700;
-      font-size: 15px;
-      color: #1e293b;
+      font-weight: 800;
+      font-size: 16px;
+      color: #0f172a;
       line-height: 1.2;
     }
     .portal-user-role {
-      font-size: 12px;
+      font-size: 13px;
       color: #64748b;
+      font-weight: 600;
+      margin-top: 2px;
     }
     .portal-header-actions {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
     }
-    .portal-header-icon {
-      font-size: 18px;
-      color: #64748b;
-      cursor: pointer;
+    .portal-header-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
       text-decoration: none;
-      transition: color 0.2s;
+      transition: all 0.2s;
     }
-    .portal-header-icon:hover {
-      color: #1e293b;
+    .portal-header-btn.logout {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
     }
-    .portal-header-icon.logout {
-      color: #ef4444;
+    .portal-header-btn.logout:hover {
+      background: #dc2626;
+      color: white;
     }
     .portal-grid-container {
       flex: 1;
-      max-width: 1200px;
-      margin: 40px auto;
+      max-width: 1240px;
+      margin: 36px auto;
       padding: 0 24px;
       width: 100%;
+    }
+    .portal-welcome-banner {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: white;
+      border-radius: 16px;
+      padding: 20px 28px;
+      margin-bottom: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 20px -5px rgba(37,99,235,0.25);
     }
     .portal-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
+      gap: 22px;
     }
     .portal-card {
       background: #ffffff;
-      border-radius: 16px;
-      padding: 32px 20px;
+      border-radius: 18px;
+      padding: 30px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
       text-decoration: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       border: 1px solid #e2e8f0;
-      transition: all 0.25s ease;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
-      min-height: 160px;
+      min-height: 165px;
+      position: relative;
     }
     .portal-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.08);
-      border-color: #cbd5e1;
+      transform: translateY(-5px);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.08);
+      border-color: #94a3b8;
     }
     .portal-card-icon-box {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 26px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      font-size: 28px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
     .portal-card-title {
-      font-size: 17px;
+      font-size: 16.5px;
       font-weight: 800;
-      color: #1e293b;
+      color: #0f172a;
       margin: 0;
+    }
+    .portal-card-sub {
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 4px;
     }
     .portal-footer {
       text-align: center;
@@ -146,6 +174,7 @@
     }
     @media (max-width: 576px) {
       .portal-grid { grid-template-columns: 1fr; }
+      .portal-welcome-banner { flex-direction: column; text-align: center; gap: 10px; }
     }
   </style>
 </head>
@@ -158,84 +187,107 @@
         <div class="online-dot"></div>
       </div>
       <div class="portal-user-info">
-        <div class="portal-user-name"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></div>
-        <div class="portal-user-role"><%= currentUser ? (currentUser.job_title || currentUser.role) : 'StaffUser' %></div>
+        <div class="portal-user-name"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'مدير النظام' %></div>
+        <div class="portal-user-role"><%= currentUser ? (currentUser.job_title || 'مسؤول النظام') : 'StaffUser' %></div>
       </div>
     </div>
     
     <div class="portal-header-actions">
-      <a href="/logout" class="portal-header-icon logout" title="تسجيل الخروج">🚪 خروج</a>
-      <span class="portal-header-icon" title="الأمان وكلمة المرور">🔑</span>
-      <span class="portal-header-icon" title="التنبيهات">🔔</span>
+      <span style="background:#f1f5f9;color:#334155;padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700;">
+        📍 الفرع: <%= activeBranch && activeBranch !== 'الكل' ? activeBranch : 'جميع الفروع' %>
+      </span>
+      <a href="/logout" class="portal-header-btn logout">
+        <span>🚪</span>
+        <span>تسجيل الخروج</span>
+      </a>
     </div>
   </header>
 
   <!-- MAIN GRID MODULES -->
   <main class="portal-grid-container">
+    <!-- WELCOME BANNER -->
+    <div class="portal-welcome-banner">
+      <div>
+        <h2 style="margin:0 0 4px;font-size:20px;font-weight:800;">مدارس بواكير الأهلية</h2>
+        <p style="margin:0;opacity:0.9;font-size:13.5px;">نظام متابعة تسجيل وقبول الطلاب</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.18);backdrop-filter:blur(8px);padding:8px 16px;border-radius:30px;font-size:13px;font-weight:700;">
+        📅 العام الدراسي: <%= activeYear ? activeYear.year_name : '1448هـ' %>
+      </div>
+    </div>
+
     <div class="portal-grid">
-      <!-- 1. حسابات الطلاب -->
-      <a href="/students" class="portal-card">
-        <div class="portal-card-icon-box" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;">
-          👥
+      <!-- 1. تسجيل ومتابعة الطلاب -->
+      <a href="/students" class="portal-card" style="border:2px solid #2563eb;box-shadow:0 6px 16px rgba(37,99,235,0.1);">
+        <div class="portal-card-icon-box" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">
+          📋
         </div>
-        <h3 class="portal-card-title">حسابات الطلاب</h3>
+        <h3 class="portal-card-title" style="color:#1e40af;">تسجيل ومتابعة الطلاب</h3>
+        <span class="portal-card-sub">إدارة وتحديث بيانات الطلاب</span>
       </a>
 
-      <!-- 2. الموارد البشرية -->
-      <a href="/users" class="portal-card">
-        <div class="portal-card-icon-box" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">
-          👤
-        </div>
-        <h3 class="portal-card-title">الموارد البشرية</h3>
-      </a>
-
-      <!-- 3. المستودعات -->
-      <div class="portal-card" style="opacity:0.9;">
-        <div class="portal-card-icon-box" style="background:#fff7ed;color:#ea580c;border:1px solid #ffedd5;">
-          📦
-        </div>
-        <h3 class="portal-card-title">المستودعات</h3>
-      </div>
-
-      <!-- 4. الحسابات العامة -->
-      <div class="portal-card" style="opacity:0.9;">
-        <div class="portal-card-icon-box" style="background:#eff6ff;color:#2563eb;border:1px solid #dbeafe;">
-          🧮
-        </div>
-        <h3 class="portal-card-title">الحسابات العامة</h3>
-      </div>
-
-      <!-- 5. الداش بورد -->
+      <!-- 2. لوحة التحليلات والإحصائيات -->
       <a href="/analytics" class="portal-card">
         <div class="portal-card-icon-box" style="background:#fffbeb;color:#d97706;border:1px solid #fef3c7;">
           📊
         </div>
-        <h3 class="portal-card-title">الداش بورد</h3>
+        <h3 class="portal-card-title">الداش بورد والتحليلات</h3>
+        <span class="portal-card-sub">مؤشرات القبول والتسجيل</span>
       </a>
 
-      <!-- 6. التسجيل الإلكتروني (متابعة الطلاب) -->
-      <a href="/students" class="portal-card" style="border:2px solid #10b981;box-shadow:0 6px 16px rgba(16,185,129,0.12);">
-        <div class="portal-card-icon-box" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;">
-          📋
+      <!-- 3. تصدير التقارير (Excel & PDF) -->
+      <a href="/students" class="portal-card">
+        <div class="portal-card-icon-box" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">
+          📑
         </div>
-        <h3 class="portal-card-title" style="color:#059669;">التسجيل الإلكتروني</h3>
+        <h3 class="portal-card-title">التقارير والتصدير</h3>
+        <span class="portal-card-sub">تقارير Excel وطباعة PDF</span>
       </a>
 
-      <!-- 7. التوظيف الإلكتروني -->
-      <div class="portal-card" style="opacity:0.9;">
+      <!-- 4. إدارة المستخدمين والصلاحيات -->
+      <a href="/users" class="portal-card">
+        <div class="portal-card-icon-box" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">
+          👥
+        </div>
+        <h3 class="portal-card-title">إدارة المستخدمين</h3>
+        <span class="portal-card-sub">حسابات الموظفين والصلاحيات</span>
+      </a>
+
+      <!-- 5. إدارة الفروع -->
+      <a href="/branches" class="portal-card">
+        <div class="portal-card-icon-box" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;">
+          🏢
+        </div>
+        <h3 class="portal-card-title">إدارة الفروع</h3>
+        <span class="portal-card-sub">فروع المدارس والمواقع</span>
+      </a>
+
+      <!-- 6. الأعوام الدراسية -->
+      <a href="/academic_years" class="portal-card">
+        <div class="portal-card-icon-box" style="background:#fff7ed;color:#ea580c;border:1px solid #ffedd5;">
+          📅
+        </div>
+        <h3 class="portal-card-title">الأعوام الدراسية</h3>
+        <span class="portal-card-sub">تهيئة وتفعيل العام الدراسي</span>
+      </a>
+
+      <!-- 7. السجل التاريخي -->
+      <a href="/history" class="portal-card">
         <div class="portal-card-icon-box" style="background:#f0fdfa;color:#0d9488;border:1px solid #ccfbf1;">
-          👔
+          📜
         </div>
-        <h3 class="portal-card-title">التوظيف الإلكتروني</h3>
-      </div>
+        <h3 class="portal-card-title">السجل والعمليات</h3>
+        <span class="portal-card-sub">تتبع حركة التعديلات والتسجيل</span>
+      </a>
 
-      <!-- 8. الخدمات المساندة -->
-      <div class="portal-card" style="opacity:0.9;">
-        <div class="portal-card-icon-box" style="background:#f0f9ff;color:#0284c7;border:1px solid #e0f2fe;">
-          🎧
+      <!-- 8. تهيئة وإعدادات النظام -->
+      <a href="/setup" class="portal-card">
+        <div class="portal-card-icon-box" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;">
+          ⚙️
         </div>
-        <h3 class="portal-card-title">الخدمات المساندة</h3>
-      </div>
+        <h3 class="portal-card-title">إعدادات النظام</h3>
+        <span class="portal-card-sub">الضبط العام وتغيير كلمات المرور</span>
+      </a>
     </div>
   </main>
 
