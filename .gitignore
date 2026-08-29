@@ -1,0 +1,13 @@
+﻿# ملفات قاعدة البيانات والبيئة
+.env
+*.env
+node_modules/
+npm-debug.log*
+
+# ملفات النظام
+.DS_Store
+Thumbs.db
+*.log
+
+# ملفات النشر
+.netlify/
