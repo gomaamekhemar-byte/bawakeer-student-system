@@ -1,7 +1,8 @@
 ﻿const express = require("express");
 const router = express.Router();
-const { signToken } = require("../middleware/auth");
-const { verifyPassword } = require("../services/users.service");
+const { signToken, requireAuth, getCurrentUser } = require("../middleware/auth");
+const { withUser } = require("../middleware/permissions");
+const { verifyPassword, updateUser } = require("../services/users.service");
 const { getBranchNames } = require("../services/branches.service");
 const { addHistory } = require("../services/history.service");
 
@@ -40,6 +41,39 @@ router.post("/login", async (req, res) => {
   });
   await addHistory("login_success", `تم تسجيل دخول المستخدم ${user.username} للفرع ${branchVal}`, user.username);
   res.redirect("/");
+});
+
+// POST /change_password (Available for ANY logged in user)
+router.post("/change_password", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser) return res.redirect("/login");
+
+  const { current_password, new_password, confirm_password } = req.body;
+
+  if (!current_password || !new_password || !confirm_password) {
+    return res.redirect("/?msg=" + encodeURIComponent("يرجى ملء جميع حقول تغيير كلمة المرور"));
+  }
+
+  if (new_password !== confirm_password) {
+    return res.redirect("/?msg=" + encodeURIComponent("كلمة المرور الجديدة غير متطابقة مع التأكيد"));
+  }
+
+  if (new_password.length < 4) {
+    return res.redirect("/?msg=" + encodeURIComponent("يجب أن تكون كلمة المرور 4 أحرف على الأقل"));
+  }
+
+  const verified = await verifyPassword(currentUser.username, current_password);
+  if (!verified) {
+    return res.redirect("/?msg=" + encodeURIComponent("كلمة المرور الحالية غير صحيحة"));
+  }
+
+  const updated = await updateUser(currentUser.username, { password: new_password });
+  if (updated) {
+    await addHistory("password_changed", `قام المستخدم ${currentUser.username} بتغيير كلمة المرور الخاصة به`, currentUser.username);
+    return res.redirect("/?msg=" + encodeURIComponent("تم تغيير كلمة المرور بنجاح ✅"));
+  } else {
+    return res.redirect("/?msg=" + encodeURIComponent("حدث خطأ أثناء تحديث كلمة المرور"));
+  }
 });
 
 // GET /logout
