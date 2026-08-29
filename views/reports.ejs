@@ -78,6 +78,9 @@
 
       <div class="d-flex align-items-center gap-3">
         <span class="fw-bold text-dark"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></span>
+        <button type="button" class="btn btn-outline-warning text-dark btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal" title="تغيير كلمة المرور الخاصة بي">
+          <i class="fa-solid fa-key me-1 text-warning"></i> كلمة المرور
+        </button>
         <a href="/logout" class="btn btn-outline-danger btn-sm" title="تسجيل الخروج">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </a>
@@ -312,6 +315,40 @@
       </div>
     </div>
 
+  <!-- SELF CHANGE PASSWORD MODAL -->
+  <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="fa-solid fa-key text-warning me-2"></i> تغيير كلمة المرور الخاصة بي
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="post" action="/change_password">
+          <div class="modal-body p-4">
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-dark">كلمة المرور الحالية <span class="text-danger">*</span></label>
+              <input type="password" name="current_password" class="form-control" required placeholder="••••••••">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-dark">كلمة المرور الجديدة <span class="text-danger">*</span></label>
+              <input type="password" name="new_password" class="form-control" required placeholder="••••••••">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-dark">تأكيد كلمة المرور الجديدة <span class="text-danger">*</span></label>
+              <input type="password" name="confirm_password" class="form-control" required placeholder="••••••••">
+            </div>
+          </div>
+          <div class="modal-footer bg-light d-flex justify-content-start gap-2">
+            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+              <i class="fa-solid fa-check me-1"></i> تحديث كلمة المرور
+            </button>
+            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
