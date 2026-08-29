@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>لوحة المؤشرات</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <style>
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { padding: 16px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }
+    .stat-primary { background: #f8fafc; }
+    .stat-card strong { display: block; font-size: 24px; margin-bottom: 8px; color: #17324d; }
+    .stat-card span { font-size: 14px; color: #475569; }
+    .rates-container { display: flex; gap: 24px; margin-bottom: 24px; justify-content: center; }
+    .rate-circle { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 120px; border-radius: 50%; border: 4px solid #17324d; }
+    .rate-circle strong { font-size: 24px; color: #17324d; }
+    .analytics-bars { margin-bottom: 24px; }
+    .bar-row { display: flex; align-items: center; margin-bottom: 12px; }
+    .bar-label { width: 150px; font-weight: bold; }
+    .bar-track { flex: 1; background: #e2e8f0; height: 24px; border-radius: 12px; overflow: hidden; margin: 0 12px; position: relative; }
+    .bar-fill { height: 100%; display: flex; align-items: center; padding: 0 8px; color: #fff; font-size: 12px; }
+    .bar-percent { width: 50px; text-align: left; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: right; }
+    th { background: #f8fafc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="hero-card">
+      <div>
+        <p class="eyebrow">إحصائيات</p>
+        <h1>لوحة المؤشرات التحليلية</h1>
+        <% if(currentUser){ %>
+          <div class="user-badge">
+            <span class="user-label">المستخدم:</span>
+            <strong><%= currentUser.full_name || currentUser.username %></strong>
+          </div>
+        <% } %>
+      </div>
+      <div class="hero-actions">
+        <a href="/" class="btn-outline">العودة للطلاب</a>
+        <a href="/logout" class="btn-outline">تسجيل الخروج</a>
+      </div>
+    </header>
+
+    <div class="card">
+      <h3>إحصائيات عامة</h3>
+      <div class="stats-grid">
+        <div class="stat-card stat-primary">
+          <strong><%= analytics.total %></strong>
+          <span>إجمالي الطلاب</span>
+        </div>
+        <div class="stat-card">
+          <strong><%= analytics.accepted %></strong>
+          <span>المقبولين</span>
+        </div>
+        <div class="stat-card">
+          <strong><%= analytics.registered %></strong>
+          <span>المسجلين</span>
+        </div>
+        <div class="stat-card">
+          <strong><%= analytics.rejected %></strong>
+          <span>المرفوضين</span>
+        </div>
+        <div class="stat-card">
+          <strong><%= analytics.waiting %></strong>
+          <span>قائمة الانتظار</span>
+        </div>
+      </div>
+
+      <div class="rates-container">
+        <div class="rate-circle">
+          <strong><%= analytics.acceptanceRate %>%</strong>
+          <span>نسبة القبول</span>
+        </div>
+        <div class="rate-circle">
+          <strong><%= analytics.registrationRate %>%</strong>
+          <span>نسبة التسجيل</span>
+        </div>
+        <div class="rate-circle">
+          <strong><%= analytics.conversionRate %>%</strong>
+          <span>نسبة التحويل</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>إحصائيات المراحل</h3>
+      <div class="analytics-bars">
+        <% phases.forEach(function(phase){ %>
+          <div class="bar-row">
+            <span class="bar-label"><%= phase %></span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:<%= analytics.total > 0 ? Math.round((analytics.phaseStats[phase]||0)/analytics.total*100) : 0 %>%;background:#17324d;">
+                <span class="bar-value"><%= analytics.phaseStats[phase] || 0 %></span>
+              </div>
+            </div>
+            <span class="bar-percent"><%= analytics.total > 0 ? Math.round((analytics.phaseStats[phase]||0)/analytics.total*100) : 0 %>%</span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>حالات المتابعة (التسجيل)</h3>
+      <table>
+        <thead><tr><th>الحالة</th><th>العدد</th></tr></thead>
+        <tbody>
+          <% followup_statuses.forEach(function(status){ %>
+            <tr>
+              <td><%= status %></td>
+              <td><%= analytics.registrationStats[status] || 0 %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>نتائج المقابلة</h3>
+      <table>
+        <thead><tr><th>النتيجة</th><th>العدد</th></tr></thead>
+        <tbody>
+          <% interview_results.forEach(function(result){ %>
+            <tr>
+              <td><%= result %></td>
+              <td><%= analytics.acceptanceStats[result] || 0 %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if(branchAnalytics && Object.keys(branchAnalytics).length > 0){ %>
+      <div class="card">
+        <h3>تحليل الفروع</h3>
+        <% Object.keys(branchAnalytics).forEach(function(b){ %>
+          <div class="card" style="margin-bottom: 16px;">
+            <h4><%= b %></h4>
+            <div class="stats-grid">
+              <div class="stat-card stat-primary">
+                <strong><%= branchAnalytics[b].total %></strong>
+                <span>الطلاب</span>
+              </div>
+              <div class="stat-card">
+                <strong><%= branchAnalytics[b].accepted %></strong>
+                <span>مقبول</span>
+              </div>
+              <div class="stat-card">
+                <strong><%= branchAnalytics[b].registered %></strong>
+                <span>مسجل</span>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</body>
+</html>
