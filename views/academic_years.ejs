@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>مدارس بواكير - السنوات الأكاديمية</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="hero-card">
+      <div>
+        <p class="eyebrow">الإدارة</p>
+        <h1>السنوات الأكاديمية</h1>
+        <% if(typeof currentUser !== 'undefined' && currentUser){ %>
+          <div class="user-badge">
+            <span class="user-label">المستخدم:</span>
+            <strong><%= currentUser.full_name || currentUser.username %></strong>
+          </div>
+        <% } %>
+      </div>
+      <div class="hero-actions">
+        <a href="/" class="btn-outline">العودة للطلاب</a>
+        <a href="/logout" class="btn-outline">تسجيل الخروج</a>
+      </div>
+    </header>
+
+    <% if(typeof message !== 'undefined' && message){ %>
+      <div class="message"><%= message %></div>
+    <% } %>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h2>إضافة سنة أكاديمية</h2>
+      <form method="post" action="/academic_years/create">
+        <label>السنة
+          <input name="name" required placeholder="مثال: 2024-2025">
+        </label>
+        <button type="submit">إضافة</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead><tr><th>السنة</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+        <tbody>
+          <% if(typeof years !== 'undefined' && years && years.length > 0){ years.forEach(function(year){ %>
+            <tr>
+              <td><%= year.name %></td>
+              <td><%= year.is_active ? 'نشط' : 'غير نشط' %></td>
+              <td>
+                <form method="post" action="/academic_years/activate/<%= year.id %>" style="display:inline;">
+                  <button type="submit" class="btn-outline"><%= year.is_active ? 'إلغاء التنشيط' : 'تنشيط' %></button>
+                </form>
+                <form method="post" action="/academic_years/delete/<%= year.id %>" style="display:inline;">
+                  <button type="submit" style="background:#b71c1c;color:white;border:none;">حذف</button>
+                </form>
+              </td>
+            </tr>
+          <% })} else { %>
+            <tr><td colspan="3">لا توجد سنوات أكاديمية</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
