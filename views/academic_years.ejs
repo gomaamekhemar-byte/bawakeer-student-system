@@ -2,79 +2,156 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>الأعوام الدراسية | مدارس بواكير الأهلية</title>
-  <link rel="stylesheet" href="/public/styles.css">
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
   <style>
-    body { background-color: #f1f5f9; font-family: 'Cairo', sans-serif; margin: 0; padding: 0; }
-    .erp-top-nav { background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; }
-    .erp-nav-right, .erp-nav-left { display: flex; align-items: center; gap: 12px; }
-    .erp-menu-item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; color: #334155; text-decoration: none; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-    .erp-menu-item:hover { background: #f1f5f9; color: #0f172a; }
-    .erp-menu-tag { padding: 4px 8px; border-radius: 4px; font-weight: 700; color: white; display: inline-flex; align-items: center; gap: 4px; }
-    .erp-sub-banner { background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%); color: #ffffff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14.5px; box-shadow: 0 2px 4px rgba(37,99,235,0.15); }
-    .erp-content { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+    body { font-family: 'Cairo', system-ui, sans-serif; background-color: #f4f6f9; color: #212529; }
+    .navbar-erp { background: #ffffff; border-bottom: 1px solid #e3e8ee; }
+    .erp-sub-header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 14px 0; }
+    .table thead th { background-color: #1e3a8a !important; color: #ffffff !important; font-weight: 700; padding: 12px; }
   </style>
 </head>
 <body>
-  <nav class="erp-top-nav">
-    <div class="erp-nav-right">
-      <a href="/" class="erp-menu-item" style="color:#2563eb;font-weight:800;"><span>🏠 الرئيسية</span></a>
-      <a href="/students" class="erp-menu-item"><span class="erp-menu-tag" style="background:#10b981;">📋 متابعة الطلاب</span></a>
-      <a href="/users" class="erp-menu-item"><span class="erp-menu-tag" style="background:#ef4444;">🛡️ الحماية</span></a>
-      <a href="/history" class="erp-menu-item"><span class="erp-menu-tag" style="background:#6366f1;">📑 السجل التاريخي</span></a>
-      <a href="/academic_years" class="erp-menu-item" style="background:#f8fafc;"><span class="erp-menu-tag" style="background:#2563eb;">🏛️ الفروع والأعوام</span></a>
-      <a href="/analytics" class="erp-menu-item"><span class="erp-menu-tag" style="background:#d97706;">📊 الداش بورد</span></a>
-    </div>
-    <div class="erp-nav-left">
-      <span style="font-weight:700;color:#1e293b;"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></span>
-      <a href="/logout" style="color:#ef4444;text-decoration:none;font-weight:700;">🚪 خروج</a>
+
+  <!-- TOP NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-erp py-2">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="/">
+        <i class="fa-solid fa-graduation-cap fs-4"></i>
+        <span>مدارس بواكير الأهلية</span>
+      </a>
+
+      <div class="d-flex align-items-center gap-3">
+        <a href="/" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="fa-solid fa-house me-1"></i> الرئيسية
+        </a>
+        <a href="/students" class="btn btn-outline-primary btn-sm fw-bold">
+          <i class="fa-solid fa-users me-1"></i> قائمة الطلاب
+        </a>
+        <a href="/branches" class="btn btn-outline-info text-dark btn-sm fw-bold">
+          <i class="fa-solid fa-building me-1"></i> الفروع
+        </a>
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+        <span class="fw-bold text-dark"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></span>
+        <a href="/logout" class="btn btn-outline-danger btn-sm" title="تسجيل الخروج">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </a>
+      </div>
     </div>
   </nav>
 
-  <div class="erp-sub-banner">
-    <div>إدارة الأعوام الدراسية | مدارس بواكير الأهلية</div>
-    <div>تهيئة وتفعيل الأعوام</div>
+  <!-- BLUE SUB-HEADER -->
+  <div class="erp-sub-header">
+    <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+      <div class="fw-bold fs-5 d-flex align-items-center gap-2">
+        <i class="fa-solid fa-calendar-days"></i>
+        <span>إدارة الأعوام الدراسية | مدارس بواكير الأهلية</span>
+      </div>
+      <a href="/students" class="btn btn-light text-primary btn-sm fw-bold shadow-sm">
+        <i class="fa-solid fa-arrow-right me-1"></i> العودة للطلاب
+      </a>
+    </div>
   </div>
 
-  <div class="erp-content">
-    <% if(typeof message !== 'undefined' && message){ %><div class="message"><%= message %></div><% } %>
+  <div class="container px-4 py-4" style="max-width: 1100px;">
+    <% if(typeof message !== 'undefined' && message){ %>
+      <div class="alert alert-primary alert-dismissible fade show shadow-sm fw-bold mb-4" role="alert">
+        <i class="fa-solid fa-circle-info me-2"></i> <%= message %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    <% } %>
 
-    <div class="card" style="margin-bottom:20px;">
-      <div class="card-header"><h3>+ إنشاء عام دراسي جديد</h3></div>
-      <form method="post" action="/academic_years" class="grid" style="align-items:flex-end;">
-        <input type="hidden" name="action" value="create">
-        <label>اسم العام الدراسي * <input name="year_name" required placeholder="مثال: 1448هـ"></label>
-        <div><button type="submit" style="padding:10px 20px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;">إنشاء وتفعيل</button></div>
-      </form>
+    <!-- CREATE ACADEMIC YEAR CARD -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+      <div class="card-header bg-white py-3 border-0">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="fa-solid fa-plus-circle text-primary me-2"></i> إنشاء وتفعيل عام دراسي جديد
+        </h5>
+      </div>
+      <div class="card-body p-4 pt-2">
+        <form method="post" action="/academic_years" class="row g-3 align-items-end">
+          <input type="hidden" name="action" value="create">
+          
+          <div class="col-md-9">
+            <label class="form-label fw-bold text-secondary small">اسم العام الدراسي <span class="text-danger">*</span></label>
+            <input name="year_name" class="form-control" required placeholder="مثال: 1448هـ أو 2026-2027">
+          </div>
+
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
+              <i class="fa-solid fa-bolt me-1"></i> إنشاء وتفعيل
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-header"><h3>الأعوام الدراسية المسجلة</h3></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>العام الدراسي</th><th>الحالة</th><th>تاريخ الإنشاء</th><th>الإجراءات</th></tr></thead>
+    <!-- ACADEMIC YEARS LIST TABLE -->
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="fa-solid fa-calendar-check text-primary me-2"></i> الأعوام الدراسية المسجلة
+        </h5>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>العام الدراسي</th>
+              <th>الحالة</th>
+              <th>تاريخ الإنشاء</th>
+              <th class="text-center" style="width: 160px;">الإجراءات</th>
+            </tr>
+          </thead>
           <tbody>
             <% if(typeof years !== 'undefined' && years && years.length > 0){ years.forEach(function(year, idx){ %>
               <tr>
-                <td><%= idx + 1 %></td>
-                <td style="font-weight:700;color:#0f172a;"><%= year.year_name %></td>
-                <td><%= year.is_active ? '<span class="pill pill-success">نشط حالياً</span>' : '<span class="pill pill-secondary">مغلق</span>' %></td>
-                <td><%= year.created_at ? new Date(year.created_at).toLocaleDateString('ar-SA') : '—' %></td>
+                <td class="text-muted fw-bold"><%= idx + 1 %></td>
+                <td class="fw-bold text-dark fs-6"><%= year.year_name %></td>
                 <td>
-                  <% if(!year.is_active){ %>
-                    <form method="post" action="/academic_years" style="display:inline;">
-                      <input type="hidden" name="action" value="activate">
-                      <input type="hidden" name="year_id" value="<%= year.id %>">
-                      <button type="submit" class="btn-sm" style="background:#ecfdf5;color:#059669;border-color:#a7f3d0;">تفعيل</button>
-                    </form>
+                  <% if(year.is_active){ %>
+                    <span class="badge bg-success-subtle text-success border border-success px-3 py-2 fw-bold">
+                      <i class="fa-solid fa-circle-check me-1"></i> نشط حالياً
+                    </span>
+                  <% } else { %>
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 fw-bold">
+                      <i class="fa-solid fa-lock me-1"></i> مغلق
+                    </span>
                   <% } %>
-                  <form method="post" action="/academic_years" style="display:inline;" onsubmit="return confirm('هل تريد حذف هذا العام؟')">
-                    <input type="hidden" name="action" value="delete">
-                    <input type="hidden" name="year_id" value="<%= year.id %>">
-                    <button type="submit" class="btn-sm" style="color:#ef4444;background:#fef2f2;border-color:#fecaca;">حذف</button>
-                  </form>
+                </td>
+                <td class="text-muted"><%= year.created_at ? new Date(year.created_at).toLocaleDateString('ar-SA') : '—' %></td>
+                <td class="text-center">
+                  <div class="btn-group btn-group-sm">
+                    <% if(!year.is_active){ %>
+                      <form method="post" action="/academic_years" class="d-inline">
+                        <input type="hidden" name="action" value="activate">
+                        <input type="hidden" name="year_id" value="<%= year.id %>">
+                        <button type="submit" class="btn btn-outline-success fw-bold" title="تفعيل">
+                          <i class="fa-solid fa-check"></i> تفعيل
+                        </button>
+                      </form>
+                    <% } %>
+
+                    <form method="post" action="/academic_years" class="d-inline ms-1" onsubmit="return confirm('هل أنت متأكد من حذف هذا العام الدراسي؟')">
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="year_id" value="<%= year.id %>">
+                      <button type="submit" class="btn btn-outline-danger fw-bold" title="حذف">
+                        <i class="fa-solid fa-trash"></i>
+                      </button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             <% })} %>
@@ -82,6 +159,9 @@
         </table>
       </div>
     </div>
+
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
