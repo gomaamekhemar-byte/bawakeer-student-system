@@ -47,29 +47,64 @@ function buildAnalytics(students, branchLabel) {
 router.get("/analytics", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userHasPermission(currentUser, "view_analytics")) return res.redirect("/");
-  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
-  let students = await getStudents();
+  
+  const branches = await getBranchNames();
+  const allStudents = await getStudents();
+
+  // Allow dynamic branch filter from query params
+  const selectedBranch = req.query.branch || (req.cookies && req.cookies.active_branch) || "";
+  
+  let students = allStudents;
   if (["manager", "employee"].includes(currentUser.role)) {
     students = students.filter(s => userMatchesScope(currentUser, s));
-  } else if (activeBranch && activeBranch !== "الكل") {
-    students = students.filter(s => s.branch === activeBranch);
+  } else if (selectedBranch && selectedBranch !== "الكل") {
+    students = students.filter(s => s.branch === selectedBranch);
   }
-  const branchLabel = activeBranch === "الكل" ? "جميع الفروع" : activeBranch ? `فرع ${activeBranch}` : "جميع الفروع";
+
+  const branchLabel = selectedBranch === "الكل" ? "جميع الفروع" : selectedBranch ? `فرع ${selectedBranch}` : "جميع الفروع";
   const analyticsData = buildAnalytics(students, branchLabel);
-  const branchAnalytics = {};
-  if (!activeBranch || activeBranch === "الكل") {
-    const allBranches = await getBranchNames();
-    const allStudents = await getStudents();
-    for (const b of allBranches) {
-      branchAnalytics[b] = buildAnalytics(allStudents.filter(s => s.branch === b), `فرع ${b}`);
-    }
-  }
-  const branches = await getBranchNames();
+
+  // Compute detailed Branch + Phase breakdown
+  const detailedBranchPhaseStats = [];
+  const targetBranches = (selectedBranch && selectedBranch !== "الكل") ? [selectedBranch] : branches;
+
+  targetBranches.forEach(bName => {
+    const branchStudents = allStudents.filter(s => s.branch === bName);
+    const phasesData = PHASES.map(pName => {
+      const pStudents = branchStudents.filter(s => s.phase === pName);
+      return {
+        phase: pName,
+        total: pStudents.length,
+        registered: pStudents.filter(s => s.followup_status === "تم التسجيل").length,
+        accepted: pStudents.filter(s => s.interview_result === "مقبول").length,
+        pending_interview: pStudents.filter(s => s.interview_result === "في انتظار المقابلة").length,
+        waiting_registration: pStudents.filter(s => s.followup_status === "في انتظار التسجيل").length,
+        rejected: pStudents.filter(s => s.interview_result === "غير مقبول").length,
+      };
+    });
+
+    detailedBranchPhaseStats.push({
+      branch: bName,
+      total: branchStudents.length,
+      registered: branchStudents.filter(s => s.followup_status === "تم التسجيل").length,
+      accepted: branchStudents.filter(s => s.interview_result === "مقبول").length,
+      phasesData,
+    });
+  });
+
   res.render("analytics", {
-    analytics: analyticsData, branchAnalytics, currentUser, activeBranch,
-    phases: PHASES, grades: GRADES, interview_results: INTERVIEW_RESULTS,
-    followup_statuses: FOLLOWUP_STATUSES, student_types: STUDENT_TYPES,
-    tracks: TRACKS, nationalities: NATIONALITIES, branches,
+    analytics: analyticsData,
+    currentUser,
+    selectedBranch,
+    branches,
+    phases: PHASES,
+    grades: GRADES,
+    interview_results: INTERVIEW_RESULTS,
+    followup_statuses: FOLLOWUP_STATUSES,
+    student_types: STUDENT_TYPES,
+    tracks: TRACKS,
+    nationalities: NATIONALITIES,
+    detailedBranchPhaseStats,
   });
 });
 
