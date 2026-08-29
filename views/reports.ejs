@@ -141,14 +141,14 @@
       </div>
     </div>
 
-    <!-- 2. ADVANCED FILTER & EXPORT ACTIONS CARD (CLEAN & BALANCED) -->
+    <!-- 2. ADVANCED FILTER & EXPORT ACTIONS CARD (DROPDOWNS ONLY - NO TEXT SEARCH) -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
       <div class="card-body p-4">
         
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2 border-bottom">
           <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
             <i class="fa-solid fa-sliders text-primary"></i>
-            <span>معايير الفلترة المتقدمة</span>
+            <span>معايير الفلترة وتصدير الكشوفات</span>
           </h5>
 
           <!-- PROMINENT EXPORT ACTION BUTTONS -->
@@ -167,9 +167,9 @@
         <form method="get" action="/reports">
           <div class="row g-3 align-items-end">
             <!-- 1. Branch -->
-            <div class="col-lg-2 col-md-4 col-6">
+            <div class="col-md-3 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">الفرع</label>
-              <select name="branch_filter" class="form-select">
+              <select name="branch_filter" class="form-select" onchange="this.form.submit()">
                 <option value="">جميع الفروع</option>
                 <% branches.forEach(function(b){ %>
                   <option value="<%= b %>" <%= typeof branchFilter !== 'undefined' && branchFilter===b ? 'selected' : '' %>>فرع <%= b %></option>
@@ -178,9 +178,9 @@
             </div>
 
             <!-- 2. Phase -->
-            <div class="col-lg-2 col-md-4 col-6">
+            <div class="col-md-3 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">المرحلة الدراسية</label>
-              <select name="phase_filter" class="form-select">
+              <select name="phase_filter" class="form-select" onchange="this.form.submit()">
                 <option value="">جميع المراحل</option>
                 <% phases.forEach(function(p){ %>
                   <option value="<%= p %>" <%= typeof phaseFilter !== 'undefined' && phaseFilter===p ? 'selected' : '' %>><%= p %></option>
@@ -189,10 +189,10 @@
             </div>
 
             <!-- 3. Interview Result -->
-            <div class="col-lg-2 col-md-4 col-6">
+            <div class="col-md-3 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">نتيجة المقابلة</label>
-              <select name="interview_filter" class="form-select">
-                <option value="">الكل</option>
+              <select name="interview_filter" class="form-select" onchange="this.form.submit()">
+                <option value="">جميع النتائج (الكل)</option>
                 <% interview_results.forEach(function(r){ %>
                   <option value="<%= r %>" <%= typeof interviewFilter !== 'undefined' && interviewFilter===r ? 'selected' : '' %>><%= r %></option>
                 <% }) %>
@@ -200,31 +200,21 @@
             </div>
 
             <!-- 4. Followup Status -->
-            <div class="col-lg-2 col-md-4 col-6">
+            <div class="col-md-3 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">حالة المتابعة</label>
-              <select name="followup_filter" class="form-select">
-                <option value="">الكل</option>
+              <select name="followup_filter" class="form-select" onchange="this.form.submit()">
+                <option value="">جميع الحالات (الكل)</option>
                 <% followup_statuses.forEach(function(s){ %>
                   <option value="<%= s %>" <%= typeof followupFilter !== 'undefined' && followupFilter===s ? 'selected' : '' %>><%= s %></option>
                 <% }) %>
               </select>
             </div>
+          </div>
 
-            <!-- 5. Father Name (EXACT LABEL: إسم الأب ONLY) -->
-            <div class="col-lg-2 col-md-4 col-6">
-              <label class="form-label fw-bold text-secondary small mb-1">إسم الأب</label>
-              <input type="text" name="father_name" class="form-control" placeholder="بحث باسم الأب..." value="<%= typeof fatherName !== 'undefined' ? fatherName : '' %>">
-            </div>
-
-            <!-- 6. Action Buttons -->
-            <div class="col-lg-2 col-md-4 col-12 d-flex gap-2">
-              <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
-                <i class="fa-solid fa-magnifying-glass me-1"></i> تصفية
-              </button>
-              <a href="/reports" class="btn btn-outline-secondary px-3" title="إعادة ضبط">
-                <i class="fa-solid fa-rotate-left"></i>
-              </a>
-            </div>
+          <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+            <a href="/reports" class="btn btn-outline-secondary px-3">
+              <i class="fa-solid fa-rotate-left me-1"></i> إعادة ضبط الفلاتر
+            </a>
           </div>
         </form>
 
