@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>مدارس بواكير - السجل التاريخي</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="hero-card">
+      <div>
+        <p class="eyebrow">الإدارة</p>
+        <h1>السجل التاريخي للتعديلات</h1>
+        <% if(typeof currentUser !== 'undefined' && currentUser){ %>
+          <div class="user-badge">
+            <span class="user-label">المستخدم:</span>
+            <strong><%= currentUser.full_name || currentUser.username %></strong>
+          </div>
+        <% } %>
+      </div>
+      <div class="hero-actions">
+        <a href="/" class="btn-outline">العودة للطلاب</a>
+        <a href="/logout" class="btn-outline">تسجيل الخروج</a>
+      </div>
+    </header>
+    <div class="card">
+      <table>
+        <thead><tr><th>الوقت</th><th>الإجراء</th><th>التفاصيل</th><th>المستخدم</th></tr></thead>
+        <tbody>
+          <% if(typeof entries !== 'undefined' && entries && entries.length > 0){ entries.forEach(function(entry){ %>
+            <tr>
+              <td><%= entry.timestamp %></td>
+              <td><%= entry.action %></td>
+              <td><%= entry.details %></td>
+              <td><%= entry.username %></td>
+            </tr>
+          <% })} else { %>
+            <tr><td colspan="4">لا توجد سجلات بعد</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
