@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>مدارس بواكير - الفروع</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="hero-card">
+      <div>
+        <p class="eyebrow">الإدارة</p>
+        <h1>الفروع</h1>
+        <% if(typeof currentUser !== 'undefined' && currentUser){ %>
+          <div class="user-badge">
+            <span class="user-label">المستخدم:</span>
+            <strong><%= currentUser.full_name || currentUser.username %></strong>
+          </div>
+        <% } %>
+      </div>
+      <div class="hero-actions">
+        <a href="/" class="btn-outline">العودة للطلاب</a>
+        <a href="/logout" class="btn-outline">تسجيل الخروج</a>
+      </div>
+    </header>
+
+    <% if(typeof message !== 'undefined' && message){ %>
+      <div class="message"><%= message %></div>
+    <% } %>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h2>إضافة فرع جديد</h2>
+      <form method="post" action="/branches/create">
+        <label>الاسم
+          <input name="name" required placeholder="اسم الفرع">
+        </label>
+        <label>الموقع
+          <input name="location" placeholder="موقع الفرع">
+        </label>
+        <button type="submit">إضافة</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead><tr><th>الاسم</th><th>الموقع</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+        <tbody>
+          <% if(typeof branches !== 'undefined' && branches && branches.length > 0){ branches.forEach(function(branch){ %>
+            <tr>
+              <td><%= branch.name %></td>
+              <td><%= branch.location %></td>
+              <td><%= branch.is_active ? 'نشط' : 'غير نشط' %></td>
+              <td>
+                <form method="post" action="/branches/toggle_active/<%= branch.id %>" style="display:inline;">
+                  <button type="submit" class="btn-outline"><%= branch.is_active ? 'إيقاف' : 'تفعيل' %></button>
+                </form>
+                <form method="post" action="/branches/delete/<%= branch.id %>" style="display:inline;">
+                  <button type="submit" style="background:#b71c1c;color:white;border:none;">حذف</button>
+                </form>
+                <details style="margin-top:10px;">
+                  <summary style="cursor:pointer;color:#17324d;text-decoration:underline;">تعديل</summary>
+                  <form method="post" action="/branches/edit/<%= branch.id %>" style="margin-top:10px;padding:10px;background:#f8f9fa;border-radius:8px;">
+                    <label>الاسم: <input name="name" value="<%= branch.name %>" required></label>
+                    <label>الموقع: <input name="location" value="<%= branch.location %>"></label>
+                    <button type="submit" style="margin-top:8px;">حفظ التعديلات</button>
+                  </form>
+                </details>
+              </td>
+            </tr>
+          <% })} else { %>
+            <tr><td colspan="4">لا توجد فروع</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
