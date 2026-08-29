@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تقارير تسجيل وقبول الطلاب | مدارس بواكير الأهلية</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    body { font-family: 'Cairo', system-ui, sans-serif; background-color: #f4f6f9; color: #212529; min-height: 100vh; }
+    .navbar-erp { background: #ffffff; border-bottom: 1px solid #e3e8ee; }
+    .erp-sub-header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 14px 0; }
+    
+    .table thead th {
+      background-color: #1e3a8a !important;
+      color: #ffffff !important;
+      font-weight: 700;
+      padding: 14px 12px;
+      font-size: 13.5px;
+      vertical-align: middle;
+    }
+    .table tbody td {
+      padding: 14px 12px;
+      vertical-align: middle;
+      font-size: 13.5px;
+    }
+    .badge-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-erp py-2">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="/">
+        <i class="fa-solid fa-graduation-cap fs-4"></i>
+        <span>مدارس بواكير الأهلية</span>
+      </a>
+
+      <div class="d-flex align-items-center gap-3">
+        <a href="/" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="fa-solid fa-house me-1"></i> الرئيسية
+        </a>
+        <a href="/students" class="btn btn-outline-primary btn-sm fw-bold">
+          <i class="fa-solid fa-users me-1"></i> متابعة الطلاب
+        </a>
+        <a href="/reports" class="btn btn-warning text-white btn-sm fw-bold shadow-sm" style="background:#f97316;border-color:#f97316;">
+          <i class="fa-solid fa-file-lines me-1"></i> مركز التقارير
+        </a>
+        <a href="/analytics" class="btn btn-outline-success btn-sm fw-bold">
+          <i class="fa-solid fa-chart-pie me-1"></i> الداش بورد
+        </a>
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+        <span class="fw-bold text-dark"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></span>
+        <a href="/logout" class="btn btn-outline-danger btn-sm" title="تسجيل الخروج">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- BLUE SUB-HEADER BANNER -->
+  <div class="erp-sub-header">
+    <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+      <div class="fw-bold fs-5 d-flex align-items-center gap-2">
+        <i class="fa-solid fa-file-invoice"></i>
+        <span>مركز الاستعلام والتقارير المعتمدة | مدارس بواكير الأهلية</span>
+      </div>
+      <div class="badge bg-white text-primary fs-6 px-3 py-2 fw-bold shadow-sm">
+        <i class="fa-regular fa-calendar-check me-1"></i>
+        العام الدراسي: <%= activeYear ? activeYear.year_name : '1448هـ' %>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid px-4 py-4" style="margin-top: 10px;">
+
+    <!-- SEARCH & ADVANCED FILTER CARD (NO ADD STUDENT BUTTON) -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+      <div class="card-body p-4">
+        
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2 border-bottom">
+          <h5 class="fw-bold text-dark mb-0">
+            <i class="fa-solid fa-filter text-primary me-2"></i> معايير تصفية واستخراج التقارير
+          </h5>
+
+          <!-- PROMINENT EXPORT BUTTONS -->
+          <div class="d-flex gap-2">
+            <a href="/export/excel" class="btn btn-success px-4 fw-bold shadow-sm d-flex align-items-center gap-2">
+              <i class="fa-solid fa-file-excel fs-5"></i>
+              <span>تصدير كشف Excel</span>
+            </a>
+            <a href="/export/pdf" class="btn btn-danger px-4 fw-bold shadow-sm d-flex align-items-center gap-2">
+              <i class="fa-solid fa-file-pdf fs-5"></i>
+              <span>طباعة تقرير PDF</span>
+            </a>
+          </div>
+        </div>
+
+        <form method="get" action="/reports">
+          <!-- SEARCH ROW -->
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-bold text-secondary small mb-1">
+                <i class="fa-solid fa-user me-1"></i> اسم الطالب
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" name="q" class="form-control" placeholder="بحث باسم الطالب..." value="<%= typeof query !== 'undefined' ? query : '' %>">
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-bold text-secondary small mb-1">
+                <i class="fa-solid fa-location-dot me-1"></i> إسم الأب / الحي
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" name="neighborhood" class="form-control" placeholder="الحي السكني...">
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-bold text-secondary small mb-1">
+                <i class="fa-solid fa-phone me-1"></i> رقم الجوال
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-phone text-muted"></i></span>
+                <input type="text" name="phone_search" class="form-control" placeholder="05xxxxxxxx">
+              </div>
+            </div>
+          </div>
+
+          <!-- ADVANCED FILTERS ROW -->
+          <div class="row g-3 align-items-end pt-2 border-top">
+            <div class="col-md-3 col-6">
+              <label class="form-label fw-bold text-secondary small mb-1">الفرع</label>
+              <select name="branch_filter" class="form-select" onchange="this.form.submit()">
+                <option value="">جميع الفروع</option>
+                <% branches.forEach(function(b){ %>
+                  <option value="<%= b %>" <%= typeof branchFilter !== 'undefined' && branchFilter===b ? 'selected' : '' %>>فرع <%= b %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="col-md-3 col-6">
+              <label class="form-label fw-bold text-secondary small mb-1">المرحلة الدراسية</label>
+              <select name="phase_filter" class="form-select" onchange="this.form.submit()">
+                <option value="">جميع المراحل</option>
+                <% phases.forEach(function(p){ %>
+                  <option value="<%= p %>" <%= typeof phaseFilter !== 'undefined' && phaseFilter===p ? 'selected' : '' %>><%= p %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="col-md-3 col-6">
+              <label class="form-label fw-bold text-secondary small mb-1">نتيجة المقابلة</label>
+              <select name="interview_filter" class="form-select" onchange="this.form.submit()">
+                <option value="">نتيجة المقابلة (الكل)</option>
+                <% interview_results.forEach(function(r){ %>
+                  <option value="<%= r %>" <%= typeof interviewFilter !== 'undefined' && interviewFilter===r ? 'selected' : '' %>><%= r %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="col-md-3 col-6">
+              <label class="form-label fw-bold text-secondary small mb-1">حالة المتابعة والتسجيل</label>
+              <select name="followup_filter" class="form-select" onchange="this.form.submit()">
+                <option value="">حالة المتابعة (الكل)</option>
+                <% followup_statuses.forEach(function(s){ %>
+                  <option value="<%= s %>" <%= typeof followupFilter !== 'undefined' && followupFilter===s ? 'selected' : '' %>><%= s %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+            <a href="/reports" class="btn btn-outline-secondary px-3">
+              <i class="fa-solid fa-rotate-left me-1"></i> إعادة ضبط
+            </a>
+            <button type="submit" class="btn btn-primary px-4 fw-bold">
+              <i class="fa-solid fa-magnifying-glass me-1"></i> استعلام وتحديث
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- REPORT RESULTS TABLE -->
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="fa-solid fa-table text-primary me-2"></i> نتائج التقرير المعتمد (<%= students.length %> طالب)
+        </h5>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle mb-0 text-nowrap">
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>اسم الطالب</th>
+              <th>رقم الجوال</th>
+              <th>المرحلة والصف</th>
+              <th>الفرع</th>
+              <th>نتيجة المقابلة</th>
+              <th>حالة المتابعة</th>
+              <th>الملاحظات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if(students && students.length > 0){ %>
+              <% students.forEach(function(s, idx){ %>
+                <tr>
+                  <td class="text-muted fw-bold"><%= idx + 1 %></td>
+                  <td class="fw-bold text-dark fs-6"><%= s.name %></td>
+                  <td><%= s.phone || '—' %></td>
+                  <td><span class="badge bg-light text-dark border"><%= s.phase || '' %> <%= s.grade ? ' - صف ' + s.grade : '' %></span></td>
+                  <td><span class="badge bg-secondary-subtle text-secondary border"><%= s.branch || 'الندى' %></span></td>
+                  <td>
+                    <% if(s.interview_result === 'مقبول'){ %>
+                      <span class="badge-status bg-success-subtle text-success border border-success">✓ مقبول</span>
+                    <% } else if(s.interview_result === 'غير مقبول'){ %>
+                      <span class="badge-status bg-danger-subtle text-danger border border-danger">✕ غير مقبول</span>
+                    <% } else { %>
+                      <span class="badge-status bg-light text-muted border"><%= s.interview_result || 'لم يقابل' %></span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if(s.followup_status === 'تم التسجيل'){ %>
+                      <span class="badge-status bg-info-subtle text-info border border-info">✔ تم التسجيل</span>
+                    <% } else { %>
+                      <span class="badge-status bg-light text-muted border"><%= s.followup_status || 'لم يسجل' %></span>
+                    <% } %>
+                  </td>
+                  <td class="text-truncate" style="max-width: 250px;"><small class="text-muted"><%= s.notes || '—' %></small></td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr>
+                <td colspan="8" class="text-center py-5 text-muted fw-bold">لا توجد سجلات مطابقة لمعايير البحث</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
