@@ -29,7 +29,7 @@
         <span>مدارس بواكير الأهلية</span>
       </a>
 
-      <div class="d-flex align-items-center gap-3">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
         <a href="/" class="btn btn-outline-secondary btn-sm fw-bold">
           <i class="fa-solid fa-house me-1"></i> الرئيسية
         </a>
@@ -39,13 +39,25 @@
         <a href="/reports" class="btn btn-outline-warning text-dark btn-sm fw-bold">
           <i class="fa-solid fa-file-lines me-1 text-warning"></i> التقارير
         </a>
-        <a href="/history" class="btn btn-outline-info text-dark btn-sm fw-bold">
-          <i class="fa-solid fa-clock-rotate-left me-1"></i> سجل العمليات
+        <a href="/analytics" class="btn btn-outline-success btn-sm fw-bold">
+          <i class="fa-solid fa-chart-pie me-1"></i> الداش بورد
+        </a>
+        <a href="/users" class="btn btn-danger text-white btn-sm fw-bold shadow-sm">
+          <i class="fa-solid fa-shield-halved me-1"></i> المستخدمين والصلاحيات
         </a>
       </div>
 
       <div class="d-flex align-items-center gap-3">
-        <span class="fw-bold text-dark"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></span>
+        <div class="text-end">
+          <div class="fw-bold text-dark fs-6"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></div>
+          <small class="text-muted"><%= currentUser && currentUser.role === 'admin' ? 'مدير النظام العام' : 'مستخدم مصرح' %></small>
+        </div>
+
+        <!-- SELF PASSWORD CHANGE BUTTON -->
+        <button type="button" class="btn btn-outline-warning text-dark btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal" title="تغيير كلمة المرور الخاصة بي">
+          <i class="fa-solid fa-key me-1 text-warning"></i> كلمة المرور
+        </button>
+
         <a href="/logout" class="btn btn-outline-danger btn-sm" title="تسجيل الخروج">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </a>
@@ -57,8 +69,8 @@
   <div class="erp-sub-header">
     <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
       <div class="fw-bold fs-5 d-flex align-items-center gap-2">
-        <i class="fa-solid fa-shield-halved"></i>
-        <span>إدارة المستخدمين والصلاحيات والأمان | مدارس بواكير الأهلية</span>
+        <i class="fa-solid fa-user-shield"></i>
+        <span>إدارة المستخدمين وصلاحيات الوصول | لوحة تحكم المدير العام</span>
       </div>
       <a href="/students" class="btn btn-light text-primary btn-sm fw-bold shadow-sm">
         <i class="fa-solid fa-arrow-right me-1"></i> العودة للطلاب
@@ -66,7 +78,7 @@
     </div>
   </div>
 
-  <div class="container-fluid px-4 py-4" style="max-width: 1300px;">
+  <div class="container-fluid px-4 py-4" style="max-width: 1350px;">
 
     <% if (typeof message !== 'undefined' && message) { %>
       <div class="alert alert-primary alert-dismissible fade show shadow-sm fw-bold mb-4" role="alert">
@@ -75,12 +87,15 @@
       </div>
     <% } %>
 
-    <!-- CREATE USER FORM (BOOTSTRAP GRID) -->
+    <!-- 1. CREATE USER FORM (BOOTSTRAP GRID) -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
-      <div class="card-header bg-white py-3 border-0">
+      <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
         <h5 class="fw-bold mb-0 text-dark">
-          <i class="fa-solid fa-user-plus text-primary me-2"></i> إضافة مستخدم جديد للنظام
+          <i class="fa-solid fa-user-plus text-primary me-2"></i> إضافة مستخدم جديد وتحديد صلاحياته
         </h5>
+        <a href="/users/export" class="btn btn-sm btn-outline-success fw-bold">
+          <i class="fa-solid fa-file-excel me-1"></i> تصدير المستخدمين Excel
+        </a>
       </div>
 
       <div class="card-body p-4 pt-2">
@@ -121,7 +136,7 @@
               <label class="form-label fw-bold small text-secondary">الدور الأساسي <span class="text-danger">*</span></label>
               <select name="role" class="form-select" required>
                 <% Object.entries(roles).forEach(function([key, label]) { %>
-                  <option value="<%= key %>"><%= label %></option>
+                  <option value="<%= key %>" <%= key === 'employee' ? 'selected' : '' %>><%= label %></option>
                 <% }); %>
               </select>
             </div>
@@ -187,11 +202,11 @@
       </div>
     </div>
 
-    <!-- USERS LIST TABLE -->
+    <!-- 2. USERS LIST TABLE WITH EDIT & DELETE ACTIONS -->
     <div class="card border-0 shadow-sm rounded-3">
       <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
         <h5 class="fw-bold mb-0 text-dark">
-          <i class="fa-solid fa-users-gear text-primary me-2"></i> قائمة المستخدمين المسجلين (<%= users ? users.length : 0 %> مستخدم)
+          <i class="fa-solid fa-users-gear text-primary me-2"></i> قائمة حسابات المستخدمين المسجلين (<%= users ? users.length : 0 %> مستخدم)
         </h5>
       </div>
 
@@ -202,11 +217,11 @@
               <th style="width: 50px;">#</th>
               <th>الاسم الكامل</th>
               <th>اسم المستخدم</th>
-              <th>الدور</th>
+              <th>الدور الوظيفي</th>
               <th>المسمى الوظيفي</th>
-              <th>الفروع</th>
-              <th>الصلاحيات</th>
-              <th class="text-center" style="width: 80px;">حذف</th>
+              <th>الفروع المصرح بها</th>
+              <th>الصلاحيات الممنوحة</th>
+              <th class="text-center" style="width: 120px;">الإجراءات</th>
             </tr>
           </thead>
           <tbody>
@@ -233,22 +248,28 @@
                   <% } %>
                 </td>
                 <td>
-                  <small class="text-muted">
+                  <span class="badge bg-primary-subtle text-primary border border-primary fw-bold">
                     <%= Object.keys(u.permissions || {}).filter(k => u.permissions[k]).length %> صلاحيات
-                  </small>
+                  </span>
                 </td>
                 <td class="text-center">
-                  <% if(u.username !== 'admin'){ %>
-                    <form action="/users" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا الحساب؟')">
-                      <input type="hidden" name="mode" value="delete">
-                      <input type="hidden" name="username" value="<%= u.username %>">
-                      <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف المستخدم">
-                        <i class="fa-solid fa-trash"></i>
-                      </button>
-                    </form>
-                  <% } else { %>
-                    <span class="text-muted small"><i class="fa-solid fa-lock"></i></span>
-                  <% } %>
+                  <div class="btn-group btn-group-sm">
+                    <!-- EDIT USER & PERMISSIONS BUTTON -->
+                    <button type="button" class="btn btn-outline-primary" onclick="openEditUserModal(<%= JSON.stringify(u) %>)" title="تعديل المستخدم والصلاحيات">
+                      <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+
+                    <!-- DELETE USER BUTTON -->
+                    <% if(u.username !== 'admin'){ %>
+                      <form action="/users/delete/<%= u.username %>" method="POST" class="d-inline ms-1" onsubmit="return confirm('هل أنت متأكد من حذف الحساب <%= u.username %>؟')">
+                        <button type="submit" class="btn btn-outline-danger" title="حذف المستخدم">
+                          <i class="fa-solid fa-trash"></i>
+                        </button>
+                      </form>
+                    <% } else { %>
+                      <span class="btn btn-sm btn-light disabled ms-1 text-muted" title="محمي"><i class="fa-solid fa-lock"></i></span>
+                    <% } %>
+                  </div>
                 </td>
               </tr>
             <% })} %>
@@ -259,6 +280,209 @@
 
   </div>
 
+  <!-- 3. EDIT USER & PERMISSIONS MODAL (ADMIN ONLY) -->
+  <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold text-dark" id="editUserModalLabel">
+            <i class="fa-solid fa-user-pen text-primary me-2"></i> تعديل بيانات وصلاحيات المستخدم
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <form action="/users" method="POST">
+          <input type="hidden" name="mode" value="edit">
+          <input type="hidden" name="username" id="edit_username">
+
+          <div class="modal-body p-4">
+            
+            <!-- ROW 1: FULL NAME, USERNAME DISPLAY, PASSWORD -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label class="form-label fw-bold small text-secondary">الاسم الكامل <span class="text-danger">*</span></label>
+                <input type="text" name="full_name" id="edit_full_name" class="form-control" required>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label fw-bold small text-secondary">اسم المستخدم (Login)</label>
+                <input type="text" id="edit_username_display" class="form-control bg-light" disabled>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label fw-bold small text-secondary">كلمة مرور جديدة (اختياري)</label>
+                <input type="password" name="password" class="form-control" placeholder="اتركه فارغاً للإبقاء عليها">
+              </div>
+            </div>
+
+            <!-- ROW 2: PHONE, JOB TITLE, ROLE -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label class="form-label fw-bold small text-secondary">رقم الجوال</label>
+                <input type="text" name="phone" id="edit_phone" class="form-control">
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label fw-bold small text-secondary">المسمى الوظيفي</label>
+                <input type="text" name="job_title" id="edit_job_title" class="form-control">
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label fw-bold small text-secondary">الدور الأساسي <span class="text-danger">*</span></label>
+                <select name="role" id="edit_role" class="form-select" required>
+                  <% Object.entries(roles).forEach(function([key, label]) { %>
+                    <option value="<%= key %>"><%= label %></option>
+                  <% }); %>
+                </select>
+              </div>
+            </div>
+
+            <!-- ROW 3: PERMISSIONS SWITCHES GRID -->
+            <div class="card bg-light border-0 p-3 rounded-3 mb-4">
+              <h6 class="fw-bold text-dark mb-3">
+                <i class="fa-solid fa-lock text-primary me-2"></i> تعديل الصلاحيات الممنوحة للمستخدم
+              </h6>
+              <div class="row g-3">
+                <% Object.entries(permissions).forEach(function([permKey, permLabel]) { %>
+                  <div class="col-md-4 col-sm-6">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" name="permissions" value="<%= permKey %>" id="edit_perm_<%= permKey %>">
+                      <label class="form-check-label fw-bold small text-dark" for="edit_perm_<%= permKey %>">
+                        <%= permLabel %>
+                      </label>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+            </div>
+
+            <!-- ROW 4: BRANCHES & PHASES -->
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="card bg-light border-0 p-3 rounded-3 h-100">
+                  <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-building text-secondary me-1"></i> نطاق الفروع:</h6>
+                  <div class="d-flex flex-wrap gap-3 mt-2">
+                    <% branches.forEach(function(b) { %>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="branches" value="<%= b %>" id="edit_branch_<%= b %>">
+                        <label class="form-check-label small fw-bold" for="edit_branch_<%= b %>">فرع <%= b %></label>
+                      </div>
+                    <% }); %>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="card bg-light border-0 p-3 rounded-3 h-100">
+                  <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-layer-group text-secondary me-1"></i> نطاق المراحل:</h6>
+                  <div class="d-flex flex-wrap gap-3 mt-2">
+                    <% phases.forEach(function(p) { %>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="phases" value="<%= p %>" id="edit_phase_<%= p %>">
+                        <label class="form-check-label small fw-bold" for="edit_phase_<%= p %>"><%= p %></label>
+                      </div>
+                    <% }); %>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="modal-footer bg-light d-flex justify-content-start gap-2">
+            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+              <i class="fa-solid fa-floppy-disk me-1"></i> حفظ التعديلات
+            </button>
+            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. SELF CHANGE PASSWORD MODAL (FOR CURRENT LOGGED-IN USER) -->
+  <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold text-dark">
+            <i class="fa-solid fa-key text-warning me-2"></i> تغيير كلمة المرور الخاصة بي
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="post" action="/change_password">
+          <div class="modal-body p-4">
+            
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-dark">كلمة المرور الحالية <span class="text-danger">*</span></label>
+              <input type="password" name="current_password" class="form-control" required placeholder="••••••••">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-dark">كلمة المرور الجديدة <span class="text-danger">*</span></label>
+              <input type="password" name="new_password" class="form-control" required placeholder="••••••••">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold small text-dark">تأكيد كلمة المرور الجديدة <span class="text-danger">*</span></label>
+              <input type="password" name="confirm_password" class="form-control" required placeholder="••••••••">
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light d-flex justify-content-start gap-2">
+            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+              <i class="fa-solid fa-check me-1"></i> تحديث كلمة المرور
+            </button>
+            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    function openEditUserModal(user) {
+      document.getElementById('edit_username').value = user.username || '';
+      document.getElementById('edit_username_display').value = user.username || '';
+      document.getElementById('edit_full_name').value = user.full_name || '';
+      document.getElementById('edit_phone').value = user.phone || '';
+      document.getElementById('edit_job_title').value = user.job_title || '';
+      document.getElementById('edit_role').value = user.role || 'viewer';
+
+      // Reset & Set Permissions Checkboxes
+      const userPerms = user.permissions || {};
+      <% Object.keys(permissions).forEach(function(permKey) { %>
+        const permEl_<%= permKey %> = document.getElementById('edit_perm_<%= permKey %>');
+        if (permEl_<%= permKey %>) {
+          permEl_<%= permKey %>.checked = Boolean(userPerms['<%= permKey %>']);
+        }
+      <% }); %>
+
+      // Reset & Set Branches
+      const userBranches = user.branches || [];
+      <% branches.forEach(function(b) { %>
+        const bEl_<%= b %> = document.getElementById('edit_branch_<%= b %>');
+        if (bEl_<%= b %>) {
+          bEl_<%= b %>.checked = userBranches.length === 0 || userBranches.includes('<%= b %>') || userBranches.includes('الكل');
+        }
+      <% }); %>
+
+      // Reset & Set Phases
+      const userPhases = user.phases || [];
+      <% phases.forEach(function(p) { %>
+        const pEl_<%= p %> = document.getElementById('edit_phase_<%= p %>');
+        if (pEl_<%= p %>) {
+          pEl_<%= p %>.checked = userPhases.length === 0 || userPhases.includes('<%= p %>') || userPhases.includes('الكل');
+        }
+      <% }); %>
+
+      const myModal = new bootstrap.Modal(document.getElementById('editUserModal'));
+      myModal.show();
+    }
+  </script>
 </body>
 </html>
