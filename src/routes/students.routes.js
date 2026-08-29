@@ -1,8 +1,7 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const { requireAuth } = require("../middleware/auth");
 const { withUser, userCan, userHasPermission, userMatchesScope } = require("../middleware/permissions");
-const { getCurrentUser } = require("../middleware/auth");
 const { getStudents, getStudentById, createStudent, updateStudent, deleteStudent, normalizeStudent } = require("../services/students.service");
 const { addHistory, addStudentHistory, computeFieldChanges } = require("../services/history.service");
 const { getBranchNames } = require("../services/branches.service");
@@ -47,8 +46,17 @@ async function uploadFiles(files) {
   return results.filter(Boolean);
 }
 
-// GET / - Main page
+// GET / - Main Portal Screen (Image 1)
 router.get("/", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser) return res.redirect("/login");
+  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const activeYear = await getActiveYear();
+  res.render("portal", { currentUser, activeBranch, activeYear });
+});
+
+// GET /students - Students Management Screen (Image 2)
+router.get("/students", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
   
@@ -81,6 +89,8 @@ router.get("/", requireAuth, withUser, async (req, res) => {
 
   // Filters
   const query = (req.query.q || "").toLowerCase();
+  const neighborhoodQuery = (req.query.neighborhood || "").toLowerCase();
+  const phoneQuery = (req.query.phone_search || "").trim();
   const interviewFilter = req.query.interview_filter || "";
   const followupFilter = req.query.followup_filter || "";
   const studentTypeFilter = req.query.student_type_filter || "";
@@ -90,7 +100,9 @@ router.get("/", requireAuth, withUser, async (req, res) => {
   const branchFilter = req.query.branch_filter || "";
 
   let filtered = students.filter(s => {
-    if (query && !(s.name || "").toLowerCase().includes(query) && !(s.phone || "").includes(query)) return false;
+    if (query && !(s.name || "").toLowerCase().includes(query)) return false;
+    if (neighborhoodQuery && !(s.neighborhood || "").toLowerCase().includes(neighborhoodQuery)) return false;
+    if (phoneQuery && !(s.phone || "").includes(phoneQuery)) return false;
     if (interviewFilter && s.interview_result !== interviewFilter) return false;
     if (followupFilter && s.followup_status !== followupFilter) return false;
     if (studentTypeFilter && s.student_type !== studentTypeFilter) return false;
@@ -140,8 +152,8 @@ router.get("/", requireAuth, withUser, async (req, res) => {
   });
 });
 
-// POST / - Create or update student
-router.post("/", requireAuth, withUser, upload.array("attachments", 10), async (req, res) => {
+// POST /students - Create or update student
+router.post("/students", requireAuth, withUser, upload.array("attachments", 10), async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
   
@@ -151,7 +163,7 @@ router.post("/", requireAuth, withUser, upload.array("attachments", 10), async (
   const statusUpdateMode = req.body.status_update === "1";
 
   if (!canManageStudents) {
-    return res.redirect("/?msg=" + encodeURIComponent("ليس لديك صلاحية لإضافة أو تعديل الطلاب"));
+    return res.redirect("/students?msg=" + encodeURIComponent("ليس لديك صلاحية لإضافة أو تعديل الطلاب"));
   }
 
   const studentId = (req.body.student_id || "").trim();
@@ -178,9 +190,8 @@ router.post("/", requireAuth, withUser, upload.array("attachments", 10), async (
   if (studentId) {
     // UPDATE existing student
     const existing = await getStudentById(parseInt(studentId));
-    if (!existing) return res.redirect("/");
+    if (!existing) return res.redirect("/students");
     
-    const attachmentOnlyUpdate = uploadedFiles.length > 0 && !name && !canManageStudents;
     const existingAttachments = Array.isArray(existing.attachments) ? existing.attachments : [];
     const newAttachments = [...existingAttachments, ...uploadedFiles];
     
@@ -212,7 +223,7 @@ router.post("/", requireAuth, withUser, upload.array("attachments", 10), async (
     await addHistory(actionLabel, details, currentUser.username);
   } else {
     // CREATE new student
-    if (!name) return res.redirect("/?msg=" + encodeURIComponent("يرجى إدخال اسم الطالب"));
+    if (!name) return res.redirect("/students?msg=" + encodeURIComponent("يرجى إدخال اسم الطالب"));
     const newStudent = {
       name, phone, date_of_birth, nationality, neighborhood,
       interview_date, interview_result, interview_reason,
@@ -228,13 +239,13 @@ router.post("/", requireAuth, withUser, upload.array("attachments", 10), async (
       await addHistory("student_created", `تم إضافة الطالب ${name}`, currentUser.username);
     }
   }
-  res.redirect("/");
+  res.redirect("/students");
 });
 
 // POST /delete/:id
 router.post("/delete/:id", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
-  if (!currentUser || !userCan(currentUser, "admin")) return res.redirect("/");
+  if (!currentUser || !userCan(currentUser, "admin")) return res.redirect("/students");
   const studentId = parseInt(req.params.id);
   const student = await getStudentById(studentId);
   await deleteStudent(studentId);
@@ -242,7 +253,7 @@ router.post("/delete/:id", requireAuth, withUser, async (req, res) => {
     await addStudentHistory(studentId, "student_deleted", `تم حذف الطالب ${student.name}`, currentUser.username);
   }
   await addHistory("student_deleted", `تم حذف الطالب رقم ${studentId}`, currentUser.username);
-  res.redirect("/");
+  res.redirect("/students");
 });
 
 module.exports = router;
