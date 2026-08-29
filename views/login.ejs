@@ -1,36 +1,56 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>مدارس بواكير</title>
+  <title>تسجيل الدخول | نظام متابعة تسجيل الطلاب - مدارس بواكير</title>
   <link rel="stylesheet" href="/public/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 </head>
 <body>
   <div class="login-shell">
     <div class="login-card">
-      <h1>مدارس بواكير</h1>
-      <p>نظام متابعة تسجيل الطلاب</p>
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="width:60px;height:60px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:white;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 8px 16px rgba(37,99,235,0.25);">
+          🎓
+        </div>
+      </div>
+      <h1>مدارس بواكير الأهلية</h1>
+      <p>نظام متابعة وتسجيل الطلاب</p>
+      
       <% if(typeof error !== 'undefined' && error){ %>
-        <div class="message" style="background:#fde8e8;color:#b71c1c;"><%= error %></div>
+        <div class="message" style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;margin-bottom:18px;">
+          ⚠️ <%= error %>
+        </div>
       <% } %>
+
       <form method="post">
-        <label>اسم المستخدم
-          <input name="username" required autocomplete="username">
+        <label>
+          اسم المستخدم
+          <input name="username" required autocomplete="username" placeholder="مثال: admin" autofocus>
         </label>
-        <label>كلمة المرور
-          <input name="password" type="password" required autocomplete="current-password">
+        
+        <label>
+          كلمة المرور
+          <input name="password" type="password" required autocomplete="current-password" placeholder="••••••••">
         </label>
-        <label>اختر الفرع
+        
+        <label>
+          الفرع
           <select name="branch" required>
             <option value="">-- اختر الفرع --</option>
-            <option value="الكل">الكل</option>
+            <option value="الكل">جميع الفروع</option>
             <% branches.forEach(function(branch){ %>
-              <option value="<%= branch %>"><%= branch %></option>
+              <option value="<%= branch %>">فرع <%= branch %></option>
             <% }) %>
           </select>
         </label>
-        <button type="submit" style="width:100%;margin-top:12px;">تسجيل الدخول</button>
+        
+        <button type="submit" style="width:100%;margin-top:10px;padding:12px;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span>دخول إلى النظام</span>
+          <span>←</span>
+        </button>
       </form>
     </div>
   </div>
