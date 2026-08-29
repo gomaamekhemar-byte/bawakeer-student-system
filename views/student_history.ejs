@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>سجل الطالب</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="hero-card">
+      <div>
+        <p class="eyebrow">السجل التاريخي</p>
+        <h1>سجل تغييرات الطالب</h1>
+        <% if(student){ %>
+          <div class="user-badge">
+            <span class="user-label">الطالب:</span>
+            <strong><%= student.name %></strong>
+          </div>
+        <% } %>
+        <% if(currentUser){ %>
+          <div class="user-badge">
+            <span class="user-label">المستخدم:</span>
+            <strong><%= currentUser.full_name || currentUser.username %></strong>
+          </div>
+        <% } %>
+      </div>
+      <div class="hero-actions">
+        <a href="/" class="btn-outline">العودة للطلاب</a>
+        <a href="/logout" class="btn-outline">تسجيل الخروج</a>
+      </div>
+    </header>
+    <div class="card">
+      <% if(!entries || entries.length === 0){ %>
+        <p style="text-align:center;color:#64748b;">لا توجد سجلات لهذا الطالب</p>
+      <% } else { entries.forEach(function(entry){ %>
+        <div class="card" style="margin-bottom:12px;border:1px solid #e2e8f0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div>
+              <strong><%= entry.action %></strong>
+              <span style="color:#64748b;font-size:13px;margin-right:12px;"><%= entry.timestamp %></span>
+            </div>
+            <span style="color:#475569;font-size:13px;">بواسطة: <%= entry.username %></span>
+          </div>
+          <p style="margin:4px 0;color:#17324d;"><%= entry.details %></p>
+          <% if(entry.field_changes && entry.field_changes.length > 0){ %>
+            <table class="changes-table">
+              <thead><tr><th>الحقل</th><th>القديمة</th><th>الجديدة</th></tr></thead>
+              <tbody>
+                <% entry.field_changes.forEach(function(change){ %>
+                  <tr>
+                    <td><strong><%= change.field_label %></strong></td>
+                    <td style="color:#b71c1c;"><%= change.old_value %></td>
+                    <td style="color:#2e7d32;"><%= change.new_value %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          <% } %>
+        </div>
+      <% }) } %>
+    </div>
+  </div>
+</body>
+</html>
