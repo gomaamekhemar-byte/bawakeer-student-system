@@ -1,241 +1,150 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة المستخدمين</title>
-    <link rel="stylesheet" href="/public/styles.css">
-    <style>
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
-        .chip { display: inline-block; padding: 5px 10px; margin: 2px; background: #eee; border-radius: 15px; font-size: 0.9em; }
-        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
-        .alert { padding: 15px; margin-bottom: 20px; border-radius: 4px; background: #d4edda; color: #155724; }
-        .edit-form { background: #f9f9f9; padding: 15px; margin-top: 10px; border: 1px solid #ddd; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input[type="text"], .form-group input[type="password"], .form-group select { width: 100%; padding: 8px; box-sizing: border-box; }
-        .btn { padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        .btn-danger { background: #dc3545; }
-        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-        nav a { margin-right: 15px; text-decoration: none; color: #007bff; font-weight: bold; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة المستخدمين والصلاحيات | مدارس بواكير الأهلية</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    body { background-color: #f1f5f9; font-family: 'Cairo', sans-serif; margin: 0; padding: 0; }
+    .erp-top-nav { background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; }
+    .erp-nav-right, .erp-nav-left { display: flex; align-items: center; gap: 12px; }
+    .erp-menu-item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; color: #334155; text-decoration: none; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .erp-menu-item:hover { background: #f1f5f9; color: #0f172a; }
+    .erp-menu-tag { padding: 4px 8px; border-radius: 4px; font-weight: 700; color: white; display: inline-flex; align-items: center; gap: 4px; }
+    .erp-sub-banner { background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%); color: #ffffff; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 14.5px; box-shadow: 0 2px 4px rgba(37,99,235,0.15); }
+    .erp-content { max-width: 1400px; margin: 24px auto; padding: 0 24px; }
+    .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .perm-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .perm-card input { width: 16px; height: 16px; cursor: pointer; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>إدارة المستخدمين</h1>
-            <nav>
-                <a href="/">الرئيسية</a>
-                <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin') { %>
-                    <a href="/setup">الإعدادات</a>
-                <% } %>
-            </nav>
-        </header>
-
-        <% if (typeof message !== 'undefined' && message) { %>
-            <div class="alert"><%= message %></div>
-        <% } %>
-
-        <section>
-            <h2>إضافة مستخدم جديد</h2>
-            <form action="/users" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="mode" value="create">
-                <div class="form-group">
-                    <label>الاسم</label>
-                    <input type="text" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label>اسم المستخدم</label>
-                    <input type="text" name="username" required>
-                </div>
-                <div class="form-group">
-                    <label>كلمة المرور</label>
-                    <input type="password" name="password" required>
-                </div>
-                <div class="form-group">
-                    <label>رقم الجوال</label>
-                    <input type="text" name="phone">
-                </div>
-                <div class="form-group">
-                    <label>المسمى الوظيفي</label>
-                    <input type="text" name="job_title">
-                </div>
-                <div class="form-group">
-                    <label>المهام</label>
-                    <input type="text" name="tasks">
-                </div>
-                <div class="form-group">
-                    <label>الفروع</label>
-                    <div class="checkbox-grid">
-                        <% if (typeof branches !== 'undefined') { branches.forEach(function(branch) { %>
-                            <label><input type="checkbox" name="branches[]" value="<%= branch %>"> <%= branch %></label>
-                        <% }); } %>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>المراحل</label>
-                    <div class="checkbox-grid">
-                        <% if (typeof phases !== 'undefined') { phases.forEach(function(phase) { %>
-                            <label><input type="checkbox" name="phases[]" value="<%= phase %>"> <%= phase %></label>
-                        <% }); } %>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>الدور</label>
-                    <select name="role">
-                        <% if (typeof roles !== 'undefined') { Object.entries(roles).forEach(function([key, val]) { %>
-                            <option value="<%= key %>"><%= val %></option>
-                        <% }); } %>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>الصلاحيات</label>
-                    <div class="checkbox-grid">
-                        <% if (typeof permissions !== 'undefined') { Object.entries(permissions).forEach(function([key, val]) { %>
-                            <label><input type="checkbox" name="permissions[<%= key %>]" value="true"> <%= val %></label>
-                        <% }); } %>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>المرفقات</label>
-                    <input type="file" name="file">
-                </div>
-                <button type="submit" class="btn">إضافة مستخدم</button>
-            </form>
-        </section>
-
-        <section style="margin-top: 30px;">
-            <h2>بحث</h2>
-            <form action="/users" method="GET" style="display: flex; gap: 10px; align-items: center;">
-                <input type="text" name="query" value="<%= typeof query !== 'undefined' ? query : '' %>" placeholder="ابحث بالاسم أو اسم المستخدم..." style="padding: 8px; flex: 1;">
-                <select name="roleFilter" style="padding: 8px;">
-                    <option value="">الكل</option>
-                    <% if (typeof roles !== 'undefined') { Object.entries(roles).forEach(function([key, val]) { %>
-                        <option value="<%= key %>" <%= (typeof roleFilter !== 'undefined' && roleFilter === key) ? 'selected' : '' %>><%= val %></option>
-                    <% }); } %>
-                </select>
-                <button type="submit" class="btn">بحث</button>
-            </form>
-        </section>
-
-        <section style="margin-top: 30px;">
-            <h2>قائمة المستخدمين</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>الاسم</th>
-                        <th>اسم المستخدم</th>
-                        <th>رقم الجوال</th>
-                        <th>المسمى الوظيفي</th>
-                        <th>المهام</th>
-                        <th>الفروع</th>
-                        <th>المراحل</th>
-                        <th>الدور</th>
-                        <th>الصلاحيات</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% if (typeof users !== 'undefined') { users.forEach(function(user) { %>
-                        <tr>
-                            <td><%= user.name %></td>
-                            <td><%= user.username %></td>
-                            <td><%= user.phone || '-' %></td>
-                            <td><%= user.job_title || '-' %></td>
-                            <td><%= user.tasks || '-' %></td>
-                            <td><%= user.branches && user.branches.filter(b=>b).join('\u060c ') || '-' %></td>
-                            <td><%= user.phases && user.phases.filter(p=>p).join('\u060c ') || '-' %></td>
-                            <td><%= (typeof roles !== 'undefined' && roles[user.role]) ? roles[user.role] : user.role %></td>
-                            <td>
-                                <% if (user.permissions && typeof permissions !== 'undefined') { %>
-                                    <% Object.entries(user.permissions).forEach(function([key, val]) { %>
-                                        <% if (val) { %>
-                                            <span class="chip"><%= permissions[key] || key %></span>
-                                        <% } %>
-                                    <% }); %>
-                                <% } %>
-                            </td>
-                            <td>
-                                <details>
-                                    <summary class="btn" style="display:inline-block; margin-bottom:5px;">تعديل</summary>
-                                    <div class="edit-form">
-                                        <form action="/users/<%= user.id || user._id %>" method="POST" enctype="multipart/form-data">
-                                            <input type="hidden" name="mode" value="edit">
-                                            <div class="form-group">
-                                                <label>الاسم</label>
-                                                <input type="text" name="name" value="<%= user.name %>" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>اسم المستخدم</label>
-                                                <input type="text" name="username" value="<%= user.username %>" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>كلمة المرور (اتركه فارغاً لعدم التغيير)</label>
-                                                <input type="password" name="password">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>رقم الجوال</label>
-                                                <input type="text" name="phone" value="<%= user.phone || '' %>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>المسمى الوظيفي</label>
-                                                <input type="text" name="job_title" value="<%= user.job_title || '' %>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>المهام</label>
-                                                <input type="text" name="tasks" value="<%= user.tasks || '' %>">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>الفروع</label>
-                                                <div class="checkbox-grid">
-                                                    <% if (typeof branches !== 'undefined') { branches.forEach(function(branch) { %>
-                                                        <label><input type="checkbox" name="branches[]" value="<%= branch %>" <%= user.branches && user.branches.includes(branch) ? 'checked' : '' %>> <%= branch %></label>
-                                                    <% }); } %>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>المراحل</label>
-                                                <div class="checkbox-grid">
-                                                    <% if (typeof phases !== 'undefined') { phases.forEach(function(phase) { %>
-                                                        <label><input type="checkbox" name="phases[]" value="<%= phase %>" <%= user.phases && user.phases.includes(phase) ? 'checked' : '' %>> <%= phase %></label>
-                                                    <% }); } %>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>الدور</label>
-                                                <select name="role">
-                                                    <% if (typeof roles !== 'undefined') { Object.entries(roles).forEach(function([key, val]) { %>
-                                                        <option value="<%= key %>" <%= user.role === key ? 'selected' : '' %>><%= val %></option>
-                                                    <% }); } %>
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>الصلاحيات</label>
-                                                <div class="checkbox-grid">
-                                                    <% if (typeof permissions !== 'undefined') { Object.entries(permissions).forEach(function([key, val]) { %>
-                                                        <label><input type="checkbox" name="permissions[<%= key %>]" value="true" <%= user.permissions && user.permissions[key] ? 'checked' : '' %>> <%= val %></label>
-                                                    <% }); } %>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>المرفقات</label>
-                                                <input type="file" name="file">
-                                            </div>
-                                            <button type="submit" class="btn">حفظ التعديلات</button>
-                                        </form>
-                                    </div>
-                                </details>
-                                <form action="/users/<%= user.id || user._id %>/delete" method="POST" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
-                                    <button type="submit" class="btn btn-danger">حذف</button>
-                                </form>
-                            </td>
-                        </tr>
-                    <% }); } %>
-                </tbody>
-            </table>
-        </section>
+  <!-- TOP ERP NAVBAR -->
+  <nav class="erp-top-nav">
+    <div class="erp-nav-right">
+      <a href="/" class="erp-menu-item" style="color:#2563eb;font-weight:800;"><span>🏠 الرئيسية</span></a>
+      <a href="/students" class="erp-menu-item"><span class="erp-menu-tag" style="background:#10b981;">📋 متابعة الطلاب</span></a>
+      <a href="/users" class="erp-menu-item" style="background:#f8fafc;"><span class="erp-menu-tag" style="background:#ef4444;">🛡️ الحماية والمستخدمين</span></a>
+      <a href="/history" class="erp-menu-item"><span class="erp-menu-tag" style="background:#6366f1;">📑 السجل التاريخي</span></a>
+      <a href="/branches" class="erp-menu-item"><span class="erp-menu-tag" style="background:#2563eb;">🏛️ الفروع والأعوام</span></a>
+      <a href="/analytics" class="erp-menu-item"><span class="erp-menu-tag" style="background:#d97706;">📊 الداش بورد</span></a>
     </div>
+    <div class="erp-nav-left">
+      <span style="font-weight:700;color:#1e293b;"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></span>
+      <a href="/logout" style="color:#ef4444;text-decoration:none;font-weight:700;">🚪 خروج</a>
+    </div>
+  </nav>
+
+  <!-- SUB BANNER -->
+  <div class="erp-sub-banner">
+    <div>إدارة المستخدمين والصلاحيات والأمان | مدارس بواكير الأهلية</div>
+    <div>قائمة حسابات الموظفين والمسؤولين</div>
+  </div>
+
+  <div class="erp-content">
+    <% if (typeof message !== 'undefined' && message) { %>
+      <div class="message"><%= message %></div>
+    <% } %>
+
+    <!-- CREATE USER CARD -->
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-header">
+        <h3>+ إضافة مستخدم جديد للنظام</h3>
+      </div>
+      <form action="/users" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="mode" value="create">
+        
+        <div class="grid">
+          <label>الاسم الكامل * <input type="text" name="name" required placeholder="مثال: شاهر مخيمر"></label>
+          <label>اسم المستخدم (لتسجيل الدخول) * <input type="text" name="username" required placeholder="مثال: shaher"></label>
+          <label>كلمة المرور * <input type="password" name="password" required placeholder="••••••••"></label>
+          <label>رقم الجوال <input type="text" name="phone" placeholder="05xxxxxxxx"></label>
+          <label>المسمى الوظيفي <input type="text" name="job_title" placeholder="مثال: مدير المتابعة"></label>
+          <label>الدور الأساسي *
+            <select name="role" required id="userRoleSelect">
+              <option value="admin">مدير النظام (Admin)</option>
+              <option value="manager">مدير المتابعة (Manager)</option>
+              <option value="employee" selected>موظف (Employee)</option>
+              <option value="viewer">مشاهد (Viewer)</option>
+            </select>
+          </label>
+        </div>
+
+        <h4 style="margin:16px 0 10px;font-size:14px;color:#1e293b;">الصلاحيات التفصيلية:</h4>
+        <div class="checkbox-grid">
+          <label class="perm-card"><input type="checkbox" name="permissions[view_students]" value="true" checked> عرض الطلاب</label>
+          <label class="perm-card"><input type="checkbox" name="permissions[manage_students]" value="true" checked> إضافة وتعديل الطلاب</label>
+          <label class="perm-card"><input type="checkbox" name="permissions[export_reports]" value="true"> تصدير التقارير (Excel/PDF)</label>
+          <label class="perm-card"><input type="checkbox" name="permissions[view_analytics]" value="true"> عرض الداش بورد والتحليلات</label>
+          <label class="perm-card"><input type="checkbox" name="permissions[manage_users]" value="true"> إدارة المستخدمين</label>
+          <label class="perm-card"><input type="checkbox" name="permissions[manage_years]" value="true"> إدارة الفروع والأعوام</label>
+          <label class="perm-card"><input type="checkbox" name="permissions[manage_settings]" value="true"> إعدادات النظام</label>
+        </div>
+
+        <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+          <button type="submit" style="background:#2563eb;color:white;padding:10px 24px;border:none;border-radius:8px;font-weight:700;cursor:pointer;">
+            حفظ وإنشاء الحساب
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- USERS LIST TABLE -->
+    <div class="card">
+      <div class="card-header">
+        <h3>قائمة المستخدمين المسجلين (<%= users ? users.length : 0 %>)</h3>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الاسم الكامل</th>
+              <th>اسم المستخدم</th>
+              <th>الدور</th>
+              <th>المسمى الوظيفي</th>
+              <th>الجوال</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (users && users.length > 0) { users.forEach(function(u, idx) { %>
+              <tr>
+                <td><%= idx + 1 %></td>
+                <td style="font-weight:700;color:#0f172a;"><%= u.full_name || u.username %></td>
+                <td><span class="pill pill-secondary"><%= u.username %></span></td>
+                <td>
+                  <% if(u.role === 'admin'){ %>
+                    <span class="pill pill-danger">مدير النظام</span>
+                  <% } else if(u.role === 'manager'){ %>
+                    <span class="pill pill-info">مدير المتابعة</span>
+                  <% } else if(u.role === 'employee'){ %>
+                    <span class="pill pill-success">موظف</span>
+                  <% } else { %>
+                    <span class="pill pill-secondary">مشاهد</span>
+                  <% } %>
+                </td>
+                <td><%= u.job_title || '—' %></td>
+                <td><%= u.phone || '—' %></td>
+                <td>
+                  <% if (u.username !== 'admin') { %>
+                    <form method="POST" action="/users/delete/<%= u.username %>" style="display:inline;" onsubmit="return confirm('هل أنت متأكد من حذف المستخدم <%= u.username %>؟')">
+                      <button type="submit" class="btn-sm" style="color:#ef4444;background:#fef2f2;border-color:#fecaca;" title="حذف">🗑️ حذف</button>
+                    </form>
+                  <% } else { %>
+                    <span style="font-size:12px;color:#94a3b8;">رئيسي</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
