@@ -1,4 +1,4 @@
-﻿require("dotenv").config();
+require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const path = require("path");
@@ -15,9 +15,29 @@ app.use(cookieParser());
 // Static files
 app.use("/public", express.static(path.join(__dirname, "../public")));
 
-// View engine
+const fs = require("fs");
+
+// Find views directory across environments (Local / Netlify Serverless)
+function getViewsDir() {
+  const candidates = [
+    path.join(__dirname, "../views"),
+    path.join(__dirname, "../../views"),
+    path.join(process.cwd(), "views"),
+    path.join(__dirname, "views"),
+    path.join("/var/task", "views"),
+  ];
+  for (const dir of candidates) {
+    try {
+      if (fs.existsSync(dir)) return dir;
+    } catch (e) {}
+  }
+  return path.join(process.cwd(), "views");
+}
+
+// View engine setup
+app.engine("ejs", require("ejs").renderFile);
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "../views"));
+app.set("views", getViewsDir());
 
 // =============================================
 // Routes
