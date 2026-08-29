@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const router = express.Router();
 const { requireAuth } = require("../middleware/auth");
 const { withUser, userCan, userHasPermission, userMatchesScope } = require("../middleware/permissions");
@@ -149,6 +149,58 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
     canDeleteStudents, canUpdateStatusOnly, statusUpdateMode,
     roles: ROLES, branches, activeYear,
     allPhonesMap,
+  });
+});
+
+// GET /reports - Dedicated Reports Screen
+router.get("/reports", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser) return res.redirect("/login");
+  
+  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  let students = await getStudents();
+  const branches = await getBranchNames();
+  const activeYear = await getActiveYear();
+
+  if (activeBranch && activeBranch !== "الكل") {
+    students = students.filter(s => s.branch === activeBranch);
+  }
+  if (currentUser && ["manager", "employee"].includes(currentUser.role)) {
+    students = students.filter(s => userMatchesScope(currentUser, s));
+  }
+
+  const query = (req.query.q || "").toLowerCase();
+  const neighborhoodQuery = (req.query.neighborhood || "").toLowerCase();
+  const phoneQuery = (req.query.phone_search || "").trim();
+  const interviewFilter = req.query.interview_filter || "";
+  const followupFilter = req.query.followup_filter || "";
+  const phaseFilter = req.query.phase_filter || "";
+  const branchFilter = req.query.branch_filter || "";
+
+  let filtered = students.filter(s => {
+    if (query && !(s.name || "").toLowerCase().includes(query)) return false;
+    if (neighborhoodQuery && !(s.neighborhood || "").toLowerCase().includes(neighborhoodQuery)) return false;
+    if (phoneQuery && !(s.phone || "").includes(phoneQuery)) return false;
+    if (interviewFilter && s.interview_result !== interviewFilter) return false;
+    if (followupFilter && s.followup_status !== followupFilter) return false;
+    if (phaseFilter && s.phase !== phaseFilter) return false;
+    if (branchFilter && s.branch !== branchFilter) return false;
+    return true;
+  });
+
+  res.render("reports", {
+    students: filtered,
+    interview_results: INTERVIEW_RESULTS,
+    followup_statuses: FOLLOWUP_STATUSES,
+    phases: PHASES,
+    branches,
+    activeYear,
+    currentUser,
+    query,
+    interviewFilter,
+    followupFilter,
+    phaseFilter,
+    branchFilter,
   });
 });
 
