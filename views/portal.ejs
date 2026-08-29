@@ -1,0 +1,246 @@
+﻿<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>البوابة الرئيسية | مدارس بواكير الأهلية</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    body {
+      background-color: #eef2f6;
+      font-family: 'Cairo', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .portal-header {
+      background: #ffffff;
+      padding: 12px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .portal-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .portal-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #2563eb;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      position: relative;
+    }
+    .portal-avatar .online-dot {
+      width: 10px;
+      height: 10px;
+      background: #22c55e;
+      border: 2px solid white;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+    }
+    .portal-user-info {
+      text-align: right;
+    }
+    .portal-user-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.2;
+    }
+    .portal-user-role {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .portal-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .portal-header-icon {
+      font-size: 18px;
+      color: #64748b;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .portal-header-icon:hover {
+      color: #1e293b;
+    }
+    .portal-header-icon.logout {
+      color: #ef4444;
+    }
+    .portal-grid-container {
+      flex: 1;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 24px;
+      width: 100%;
+    }
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+    .portal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 32px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      border: 1px solid #e2e8f0;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      min-height: 160px;
+    }
+    .portal-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+      border-color: #cbd5e1;
+    }
+    .portal-card-icon-box {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .portal-card-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #1e293b;
+      margin: 0;
+    }
+    .portal-footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 13px;
+      color: #64748b;
+      border-top: 1px solid #e2e8f0;
+      background: #ffffff;
+    }
+    @media (max-width: 992px) {
+      .portal-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 576px) {
+      .portal-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="portal-header">
+    <div class="portal-user">
+      <div class="portal-avatar">
+        👤
+        <div class="online-dot"></div>
+      </div>
+      <div class="portal-user-info">
+        <div class="portal-user-name"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></div>
+        <div class="portal-user-role"><%= currentUser ? (currentUser.job_title || currentUser.role) : 'StaffUser' %></div>
+      </div>
+    </div>
+    
+    <div class="portal-header-actions">
+      <a href="/logout" class="portal-header-icon logout" title="تسجيل الخروج">🚪 خروج</a>
+      <span class="portal-header-icon" title="الأمان وكلمة المرور">🔑</span>
+      <span class="portal-header-icon" title="التنبيهات">🔔</span>
+    </div>
+  </header>
+
+  <!-- MAIN GRID MODULES -->
+  <main class="portal-grid-container">
+    <div class="portal-grid">
+      <!-- 1. حسابات الطلاب -->
+      <a href="/students" class="portal-card">
+        <div class="portal-card-icon-box" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;">
+          👥
+        </div>
+        <h3 class="portal-card-title">حسابات الطلاب</h3>
+      </a>
+
+      <!-- 2. الموارد البشرية -->
+      <a href="/users" class="portal-card">
+        <div class="portal-card-icon-box" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;">
+          👤
+        </div>
+        <h3 class="portal-card-title">الموارد البشرية</h3>
+      </a>
+
+      <!-- 3. المستودعات -->
+      <div class="portal-card" style="opacity:0.9;">
+        <div class="portal-card-icon-box" style="background:#fff7ed;color:#ea580c;border:1px solid #ffedd5;">
+          📦
+        </div>
+        <h3 class="portal-card-title">المستودعات</h3>
+      </div>
+
+      <!-- 4. الحسابات العامة -->
+      <div class="portal-card" style="opacity:0.9;">
+        <div class="portal-card-icon-box" style="background:#eff6ff;color:#2563eb;border:1px solid #dbeafe;">
+          🧮
+        </div>
+        <h3 class="portal-card-title">الحسابات العامة</h3>
+      </div>
+
+      <!-- 5. الداش بورد -->
+      <a href="/analytics" class="portal-card">
+        <div class="portal-card-icon-box" style="background:#fffbeb;color:#d97706;border:1px solid #fef3c7;">
+          📊
+        </div>
+        <h3 class="portal-card-title">الداش بورد</h3>
+      </a>
+
+      <!-- 6. التسجيل الإلكتروني (متابعة الطلاب) -->
+      <a href="/students" class="portal-card" style="border:2px solid #10b981;box-shadow:0 6px 16px rgba(16,185,129,0.12);">
+        <div class="portal-card-icon-box" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;">
+          📋
+        </div>
+        <h3 class="portal-card-title" style="color:#059669;">التسجيل الإلكتروني</h3>
+      </a>
+
+      <!-- 7. التوظيف الإلكتروني -->
+      <div class="portal-card" style="opacity:0.9;">
+        <div class="portal-card-icon-box" style="background:#f0fdfa;color:#0d9488;border:1px solid #ccfbf1;">
+          👔
+        </div>
+        <h3 class="portal-card-title">التوظيف الإلكتروني</h3>
+      </div>
+
+      <!-- 8. الخدمات المساندة -->
+      <div class="portal-card" style="opacity:0.9;">
+        <div class="portal-card-icon-box" style="background:#f0f9ff;color:#0284c7;border:1px solid #e0f2fe;">
+          🎧
+        </div>
+        <h3 class="portal-card-title">الخدمات المساندة</h3>
+      </div>
+    </div>
+  </main>
+
+  <footer class="portal-footer">
+    جميع الحقوق محفوظة © مدارس بواكير الأهلية 2026
+  </footer>
+</body>
+</html>
