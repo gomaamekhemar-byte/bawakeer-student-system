@@ -564,7 +564,7 @@
       const v = input.value.trim();
       const err = document.getElementById(errorId);
       if (!v) { err.style.display = 'none'; input.classList.remove('is-invalid'); return true; }
-      const ok = /^05d{8}$/.test(v);
+      const ok = /^05\d{8}$/.test(v.replace(/\s+/g, ''));
       err.style.display = ok ? 'none' : 'block';
       input.classList.toggle('is-invalid', !ok);
       return ok;
