@@ -4,782 +4,454 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>نظام متابعة تسجيل وقبول الطلاب | مدارس بواكير الأهلية</title>
-  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
   <style>
-    body {
-      font-family: 'Cairo', system-ui, sans-serif;
-      background-color: #f4f6f9;
-      color: #212529;
-      min-height: 100vh;
-    }
-    .navbar-erp {
-      background: #ffffff;
-      border-bottom: 1px solid #e3e8ee;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .erp-sub-header {
-      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-      color: #ffffff;
-      padding: 14px 0;
-      box-shadow: 0 4px 10px rgba(37,99,235,0.15);
-    }
-    .stat-card-custom {
-      background: #ffffff;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-      padding: 16px;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .stat-card-custom:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 16px rgba(0,0,0,0.06);
-    }
-    .stat-card-custom .stat-number {
-      font-size: 26px;
-      font-weight: 800;
-      line-height: 1.2;
-    }
-    .stat-card-custom .stat-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #64748b;
-      margin-top: 4px;
-    }
-    .stat-card-custom .stat-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-    }
+    body { font-family: 'Cairo', system-ui, sans-serif; background-color: #f4f6f9; color: #212529; min-height: 100vh; }
+    .navbar-erp { background: #ffffff; border-bottom: 1px solid #e3e8ee; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .erp-sub-header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 14px 0; }
+    .stat-card-custom { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.03); padding: 16px; transition: transform 0.2s, box-shadow 0.2s; }
+    .stat-card-custom:hover { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(0,0,0,0.06); }
+    .stat-card-custom .stat-number { font-size: 26px; font-weight: 800; line-height: 1.2; }
+    .stat-card-custom .stat-title { font-size: 13px; font-weight: 700; color: #64748b; margin-top: 4px; }
+    .stat-card-custom .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
     .stat-card-blue { border-right: 5px solid #2563eb; }
     .stat-card-green { border-right: 5px solid #10b981; }
     .stat-card-red { border-right: 5px solid #ef4444; }
     .stat-card-cyan { border-right: 5px solid #06b6d4; }
     .stat-card-amber { border-right: 5px solid #f59e0b; }
     .stat-card-purple { border-right: 5px solid #8b5cf6; }
-
-    .table thead th {
-      background-color: #1e3a8a !important;
-      color: #ffffff !important;
-      font-weight: 700;
-      padding: 14px 12px;
-      font-size: 13.5px;
-      vertical-align: middle;
-    }
-    .table tbody td {
-      padding: 14px 12px;
-      vertical-align: middle;
-      font-size: 13.5px;
-    }
-    .table-striped tbody tr:nth-of-type(odd) {
-      background-color: #f8fafc;
-    }
-    .table-hover tbody tr:hover {
-      background-color: #f1f5f9;
-    }
-    .badge-status {
-      font-size: 12px;
-      font-weight: 700;
-      padding: 6px 12px;
-      border-radius: 20px;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
+    .table thead th { background-color: #1e3a8a !important; color: #ffffff !important; font-weight: 700; padding: 12px; font-size: 13px; vertical-align: middle; }
+    .table tbody td { padding: 10px 12px; vertical-align: middle; font-size: 13px; }
+    .table-striped tbody tr:nth-of-type(odd) { background-color: #f8fafc; }
+    .table-hover tbody tr:hover { background-color: #f1f5f9; }
+    .badge-status { font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+    .status-dropdown { font-size: 12px; font-weight: 700; border: 1.5px solid #bfdbfe; border-radius: 20px; padding: 4px 8px; cursor: pointer; outline: none; background: #eff6ff; color: #1e40af; min-width: 140px; }
+    .status-dd-followup { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+    .invalid-feedback-phone { color: #dc2626; font-size: 11.5px; font-weight: 600; display: none; margin-top: 3px; }
+    .toast-pos { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 280px; }
+    .pagination-bar { padding: 12px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
   </style>
 </head>
 <body>
 
-  <!-- TOP NAVBAR -->
+  <div class="toast-pos">
+    <div id="statusToast" class="toast align-items-center border-0 shadow text-bg-success" role="alert">
+      <div class="d-flex"><div class="toast-body fw-bold" id="toastMessage">تم التحديث بنجاح</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+    </div>
+  </div>
+
+  <!-- NAVBAR -->
   <nav class="navbar navbar-expand-lg navbar-erp py-2">
     <div class="container-fluid px-4">
-      <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="/">
-        <i class="fa-solid fa-graduation-cap fs-4"></i>
-        <span>مدارس بواكير الأهلية</span>
-      </a>
-
-      <div class="d-flex align-items-center gap-3 flex-wrap">
-        <a href="/" class="btn btn-outline-secondary btn-sm fw-bold">
-          <i class="fa-solid fa-house me-1"></i> الرئيسية
-        </a>
-
+      <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="/"><i class="fa-solid fa-graduation-cap fs-4"></i><span>مدارس بواكير الأهلية</span></a>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="/" class="btn btn-outline-secondary btn-sm fw-bold"><i class="fa-solid fa-house me-1"></i> الرئيسية</a>
         <div class="dropdown">
-          <button class="btn btn-sm btn-outline-warning text-dark fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            <i class="fa-solid fa-file-export me-1 text-warning"></i> تقارير
-          </button>
+          <button class="btn btn-sm btn-outline-warning text-dark fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="fa-solid fa-file-export me-1 text-warning"></i> تقارير</button>
           <ul class="dropdown-menu dropdown-menu-end shadow-sm">
             <li><a class="dropdown-item fw-bold text-success" href="/export/excel"><i class="fa-solid fa-file-excel me-2"></i>تصدير كشف Excel</a></li>
-            <li><a class="dropdown-item fw-bold text-danger" href="/export/pdf"><i class="fa-solid fa-file-pdf me-2"></i>طباعة تقرير PDF</a></li>
+            <li><a class="dropdown-item fw-bold text-danger" href="/export/pdf" target="_blank"><i class="fa-solid fa-print me-2"></i>طباعة تقرير PDF</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item fw-bold text-primary" href="/reports"><i class="fa-solid fa-filter me-2"></i>التقارير التفصيلية</a></li>
           </ul>
         </div>
-
-        <% if(canManageUsers){ %>
-          <a href="/users" class="btn btn-outline-danger btn-sm fw-bold">
-            <i class="fa-solid fa-shield-halved me-1"></i> الحماية والمستخدمين
-          </a>
-        <% } %>
-
-        <a href="/history" class="btn btn-outline-primary btn-sm fw-bold">
-          <i class="fa-solid fa-clock-rotate-left me-1"></i> سجل العمليات والتعديلات
-        </a>
-
-        <% if(canManageYears){ %>
-          <a href="/branches" class="btn btn-outline-info text-dark btn-sm fw-bold">
-            <i class="fa-solid fa-building me-1"></i> الفروع والأعوام
-          </a>
-        <% } %>
-
-        <a href="/analytics" class="btn btn-outline-success btn-sm fw-bold">
-          <i class="fa-solid fa-chart-pie me-1"></i> الداش بورد
-        </a>
+        <% if(canManageUsers){ %><a href="/users" class="btn btn-outline-danger btn-sm fw-bold"><i class="fa-solid fa-shield-halved me-1"></i> الحماية والمستخدمين</a><% } %>
+        <a href="/history" class="btn btn-outline-primary btn-sm fw-bold"><i class="fa-solid fa-clock-rotate-left me-1"></i> سجل العمليات</a>
+        <% if(canManageYears){ %><a href="/branches" class="btn btn-outline-info text-dark btn-sm fw-bold"><i class="fa-solid fa-building me-1"></i> الفروع والأعوام</a><% } %>
+        <a href="/analytics" class="btn btn-outline-success btn-sm fw-bold"><i class="fa-solid fa-chart-pie me-1"></i> الداش بورد</a>
       </div>
-
-      <div class="d-flex align-items-center gap-3">
-        <div class="text-end">
-          <div class="fw-bold text-dark fs-6"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'مدير النظام' %></div>
+      <div class="d-flex align-items-center gap-2">
+        <div class="text-end d-none d-md-block">
+          <div class="fw-bold text-dark"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'مدير النظام' %></div>
           <small class="text-muted"><%= activeBranch && activeBranch !== 'الكل' ? 'فرع ' + activeBranch : 'جميع الفروع' %></small>
         </div>
-
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal" title="تغيير كلمة المرور">
-          <i class="fa-solid fa-key text-warning"></i>
-        </button>
-
-        <a href="/logout" class="btn btn-outline-danger btn-sm" title="تسجيل الخروج">
-          <i class="fa-solid fa-arrow-right-from-bracket"></i>
-        </a>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal"><i class="fa-solid fa-key text-warning"></i></button>
+        <a href="/logout" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
       </div>
     </div>
   </nav>
 
-  <!-- BLUE SUB-HEADER BANNER -->
+  <!-- SUBHEADER -->
   <div class="erp-sub-header">
     <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
-      <div class="fw-bold fs-5 d-flex align-items-center gap-2">
-        <i class="fa-solid fa-users-line"></i>
-        <span>الشاشة الرئيسية | نظام متابعة وتسجيل الطلاب</span>
-      </div>
-      <div class="badge bg-white text-primary fs-6 px-3 py-2 fw-bold shadow-sm">
-        <i class="fa-regular fa-calendar-check me-1"></i>
-        العام الدراسي: <%= activeYear ? activeYear.year_name : '1448هـ' %> | فرع <%= activeBranch && activeBranch !== 'الكل' ? activeBranch : 'جميع الفروع' %>
-      </div>
+      <div class="fw-bold fs-5 d-flex align-items-center gap-2"><i class="fa-solid fa-users-line"></i><span>الشاشة الرئيسية | نظام متابعة وتسجيل الطلاب</span></div>
+      <div class="badge bg-white text-primary fs-6 px-3 py-2 fw-bold shadow-sm">العام الدراسي: <%= activeYear ? activeYear.year_name : '1448هـ' %> | فرع <%= activeBranch && activeBranch !== 'الكل' ? activeBranch : 'جميع الفروع' %></div>
     </div>
   </div>
 
   <div class="container-fluid px-4 py-4">
 
     <% if(message){ %>
-      <div class="alert alert-primary alert-dismissible fade show shadow-sm fw-bold mb-4" role="alert">
-        <i class="fa-solid fa-circle-info me-2"></i> <%= message %>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
+    <div class="alert alert-primary alert-dismissible fade show shadow-sm fw-bold mb-4" role="alert">
+      <i class="fa-solid fa-circle-info me-2"></i> <%= message %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
     <% } %>
 
-    <!-- 1. DASHBOARD STATS CARDS -->
+    <!-- STATS -->
     <div class="row g-3 mb-4">
-      <div class="col-xl-2 col-md-4 col-6">
-        <div class="stat-card-custom stat-card-blue h-100 d-flex align-items-center justify-content-between">
-          <div>
-            <div class="stat-number text-primary"><%= stats.total %></div>
-            <div class="stat-title">إجمالي الطلاب</div>
-          </div>
-          <div class="stat-icon bg-primary-subtle text-primary">
-            <i class="fa-solid fa-users"></i>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-xl-2 col-md-4 col-6">
-        <div class="stat-card-custom stat-card-green h-100 d-flex align-items-center justify-content-between">
-          <div>
-            <div class="stat-number text-success"><%= stats.accepted %></div>
-            <div class="stat-title">المقبولين</div>
-          </div>
-          <div class="stat-icon bg-success-subtle text-success">
-            <i class="fa-solid fa-circle-check"></i>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-xl-2 col-md-4 col-6">
-        <div class="stat-card-custom stat-card-red h-100 d-flex align-items-center justify-content-between">
-          <div>
-            <div class="stat-number text-danger"><%= stats.rejected %></div>
-            <div class="stat-title">غير مقبول</div>
-          </div>
-          <div class="stat-icon bg-danger-subtle text-danger">
-            <i class="fa-solid fa-circle-xmark"></i>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-xl-2 col-md-4 col-6">
-        <div class="stat-card-custom stat-card-cyan h-100 d-flex align-items-center justify-content-between">
-          <div>
-            <div class="stat-number text-info"><%= stats.registered %></div>
-            <div class="stat-title">تم التسجيل</div>
-          </div>
-          <div class="stat-icon bg-info-subtle text-info">
-            <i class="fa-solid fa-user-check"></i>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-xl-2 col-md-4 col-6">
-        <div class="stat-card-custom stat-card-amber h-100 d-flex align-items-center justify-content-between">
-          <div>
-            <div class="stat-number text-warning"><%= stats.waiting %></div>
-            <div class="stat-title">في انتظار التسجيل</div>
-          </div>
-          <div class="stat-icon bg-warning-subtle text-warning">
-            <i class="fa-solid fa-hourglass-half"></i>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-xl-2 col-md-4 col-6">
-        <div class="stat-card-custom stat-card-purple h-100 d-flex align-items-center justify-content-between">
-          <div>
-            <div class="stat-number" style="color:#8b5cf6;"><%= stats.pending_interview %></div>
-            <div class="stat-title">في انتظار المقابلة</div>
-          </div>
-          <div class="stat-icon bg-secondary-subtle text-secondary">
-            <i class="fa-solid fa-clipboard-question"></i>
-          </div>
-        </div>
-      </div>
+      <div class="col-xl-2 col-md-4 col-6"><div class="stat-card-custom stat-card-blue h-100 d-flex align-items-center justify-content-between"><div><div class="stat-number text-primary"><%= stats.total %></div><div class="stat-title">إجمالي الطلاب</div></div><div class="stat-icon bg-primary-subtle text-primary"><i class="fa-solid fa-users"></i></div></div></div>
+      <div class="col-xl-2 col-md-4 col-6"><div class="stat-card-custom stat-card-green h-100 d-flex align-items-center justify-content-between"><div><div class="stat-number text-success"><%= stats.accepted %></div><div class="stat-title">المقبولين</div></div><div class="stat-icon bg-success-subtle text-success"><i class="fa-solid fa-circle-check"></i></div></div></div>
+      <div class="col-xl-2 col-md-4 col-6"><div class="stat-card-custom stat-card-red h-100 d-flex align-items-center justify-content-between"><div><div class="stat-number text-danger"><%= stats.rejected %></div><div class="stat-title">غير مقبول</div></div><div class="stat-icon bg-danger-subtle text-danger"><i class="fa-solid fa-circle-xmark"></i></div></div></div>
+      <div class="col-xl-2 col-md-4 col-6"><div class="stat-card-custom stat-card-cyan h-100 d-flex align-items-center justify-content-between"><div><div class="stat-number text-info"><%= stats.registered %></div><div class="stat-title">تم التسجيل</div></div><div class="stat-icon bg-info-subtle text-info"><i class="fa-solid fa-user-check"></i></div></div></div>
+      <div class="col-xl-2 col-md-4 col-6"><div class="stat-card-custom stat-card-amber h-100 d-flex align-items-center justify-content-between"><div><div class="stat-number text-warning"><%= stats.waiting %></div><div class="stat-title">انتظار التسجيل</div></div><div class="stat-icon bg-warning-subtle text-warning"><i class="fa-solid fa-hourglass-half"></i></div></div></div>
+      <div class="col-xl-2 col-md-4 col-6"><div class="stat-card-custom stat-card-purple h-100 d-flex align-items-center justify-content-between"><div><div class="stat-number" style="color:#8b5cf6;"><%= stats.pending_interview %></div><div class="stat-title">انتظار المقابلة</div></div><div class="stat-icon bg-secondary-subtle text-secondary"><i class="fa-solid fa-clipboard-question"></i></div></div></div>
     </div>
 
-    <!-- 2. SEARCH & ADVANCED FILTER CARD -->
+    <!-- SEARCH CARD -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
       <div class="card-body p-3">
-        <form method="get" action="/students">
-          
+        <form method="get" action="/students" id="searchForm">
           <div class="row g-3 align-items-end mb-3">
-            <div class="col-lg-3 col-md-4">
-              <label class="form-label fw-bold text-secondary small mb-1">
-                <i class="fa-solid fa-user me-1"></i> اسم الطالب
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                <input type="text" name="q" class="form-control" placeholder="بحث باسم الطالب..." value="<%= typeof query !== 'undefined' ? query : '' %>">
-              </div>
+            <div class="col-lg-3 col-md-6">
+              <label class="form-label fw-bold text-secondary small mb-1"><i class="fa-solid fa-user me-1"></i> اسم الطالب</label>
+              <div class="input-group"><span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span><input type="text" name="q" class="form-control" placeholder="بحث باسم الطالب..." value="<%= typeof query !== 'undefined' ? query : '' %>"></div>
             </div>
-
-            <div class="col-lg-3 col-md-4">
-              <label class="form-label fw-bold text-secondary small mb-1">
-                <i class="fa-solid fa-location-dot me-1"></i> إسم الأب / الحي
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                <input type="text" name="neighborhood" class="form-control" placeholder="الحي السكني...">
-              </div>
+            <div class="col-lg-3 col-md-6">
+              <label class="form-label fw-bold text-secondary small mb-1"><i class="fa-solid fa-person me-1"></i> إسم الأب</label>
+              <div class="input-group"><span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span><input type="text" name="neighborhood" class="form-control" placeholder="بحث باسم الأب..."></div>
             </div>
-
-            <div class="col-lg-3 col-md-4">
-              <label class="form-label fw-bold text-secondary small mb-1">
-                <i class="fa-solid fa-phone me-1"></i> رقم الجوال
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-light"><i class="fa-solid fa-phone text-muted"></i></span>
-                <input type="text" name="phone_search" class="form-control" placeholder="05xxxxxxxx">
-              </div>
+            <div class="col-lg-3 col-md-6">
+              <label class="form-label fw-bold text-secondary small mb-1"><i class="fa-solid fa-phone me-1"></i> رقم الجوال (أب أو أم)</label>
+              <div class="input-group"><span class="input-group-text bg-light"><i class="fa-solid fa-phone text-muted"></i></span><input type="text" name="phone_search" class="form-control" placeholder="05xxxxxxxx"></div>
             </div>
-
-            <div class="col-lg-3 col-md-12 d-flex gap-2 justify-content-end">
-              <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
-                <i class="fa-solid fa-magnifying-glass me-1"></i> بحث
+            <div class="col-lg-3 col-md-6 d-flex gap-2 justify-content-end">
+              <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" id="searchBtn">
+                <span class="search-text"><i class="fa-solid fa-magnifying-glass me-1"></i> بحث</span>
+                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
               </button>
-              
               <% if(canManageStudents){ %>
-                <button type="button" class="btn btn-warning text-white fw-bold px-3 shadow-sm" style="background:#f97316;border-color:#f97316;" data-bs-toggle="modal" data-bs-target="#studentModal">
-                  <i class="fa-solid fa-user-plus me-1"></i> + طالب جديد
-                </button>
+              <button type="button" class="btn btn-warning text-white fw-bold px-3 shadow-sm" style="background:#f97316;border-color:#f97316;" data-bs-toggle="modal" data-bs-target="#studentModal">
+                <i class="fa-solid fa-user-plus me-1"></i> + طالب جديد
+              </button>
               <% } %>
             </div>
           </div>
-
-          <!-- ADVANCED FILTER DROPDOWNS ROW -->
+          <!-- FILTERS -->
           <div class="row g-2 pt-2 border-top align-items-center">
-            <div class="col-auto text-secondary small fw-bold">
-              <i class="fa-solid fa-sliders me-1 text-primary"></i> فلترة متقدمة:
-            </div>
-
-            <div class="col-md-2 col-6">
-              <select name="branch_filter" class="form-select form-select-sm" onchange="this.form.submit()">
-                <option value="">جميع الفروع</option>
-                <% branches.forEach(function(b){ %>
-                  <option value="<%= b %>" <%= typeof branchFilter !== 'undefined' && branchFilter===b ? 'selected' : '' %>>فرع <%= b %></option>
-                <% }) %>
-              </select>
-            </div>
-
-            <div class="col-md-2 col-6">
-              <select name="phase_filter" class="form-select form-select-sm" onchange="this.form.submit()">
-                <option value="">جميع المراحل</option>
-                <% phases.forEach(function(p){ %>
-                  <option value="<%= p %>" <%= typeof phaseFilter !== 'undefined' && phaseFilter===p ? 'selected' : '' %>><%= p %></option>
-                <% }) %>
-              </select>
-            </div>
-
-            <div class="col-md-3 col-6">
-              <select name="interview_filter" class="form-select form-select-sm" onchange="this.form.submit()">
-                <option value="">نتيجة المقابلة (الكل)</option>
-                <% interview_results.forEach(function(r){ %>
-                  <option value="<%= r %>" <%= typeof interviewFilter !== 'undefined' && interviewFilter===r ? 'selected' : '' %>><%= r %></option>
-                <% }) %>
-              </select>
-            </div>
-
-            <div class="col-md-3 col-6">
-              <select name="followup_filter" class="form-select form-select-sm" onchange="this.form.submit()">
-                <option value="">حالة المتابعة (الكل)</option>
-                <% followup_statuses.forEach(function(s){ %>
-                  <option value="<%= s %>" <%= typeof followupFilter !== 'undefined' && followupFilter===s ? 'selected' : '' %>><%= s %></option>
-                <% }) %>
-              </select>
-            </div>
-
-            <div class="col-auto">
-              <a href="/students" class="btn btn-sm btn-light text-muted border" title="إعادة ضبط الفلاتر">
-                <i class="fa-solid fa-rotate-left"></i>
-              </a>
-            </div>
+            <div class="col-auto text-secondary small fw-bold"><i class="fa-solid fa-sliders me-1 text-primary"></i> فلترة متقدمة:</div>
+            <div class="col-md-2 col-6"><select name="branch_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">جميع الفروع</option><% branches.forEach(function(b){ %><option value="<%= b %>" <%= typeof branchFilter !== 'undefined' && branchFilter===b ? 'selected' : '' %>>فرع <%= b %></option><% }) %></select></div>
+            <div class="col-md-2 col-6"><select name="phase_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">جميع المراحل</option><% phases.forEach(function(p){ %><option value="<%= p %>" <%= typeof phaseFilter !== 'undefined' && phaseFilter===p ? 'selected' : '' %>><%= p %></option><% }) %></select></div>
+            <div class="col-md-3 col-6"><select name="interview_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">نتيجة المقابلة (الكل)</option><% interview_results.forEach(function(r){ %><option value="<%= r %>" <%= typeof interviewFilter !== 'undefined' && interviewFilter===r ? 'selected' : '' %>><%= r %></option><% }) %></select></div>
+            <div class="col-md-3 col-6"><select name="followup_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">حالة المتابعة (الكل)</option><% followup_statuses.forEach(function(s){ %><option value="<%= s %>" <%= typeof followupFilter !== 'undefined' && followupFilter===s ? 'selected' : '' %>><%= s %></option><% }) %></select></div>
+            <div class="col-auto"><a href="/students" class="btn btn-sm btn-light text-muted border"><i class="fa-solid fa-rotate-left"></i></a></div>
           </div>
-
         </form>
       </div>
     </div>
 
-    <!-- 3. STUDENTS LIST TABLE -->
+    <!-- TABLE CARD -->
     <div class="card border-0 shadow-sm rounded-3">
       <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
           <i class="fa-solid fa-table-list text-primary"></i>
           <span>قائمة الطلاب المسجلين</span>
-          <span class="badge bg-primary rounded-pill fs-7"><%= students.length %> طالب</span>
+          <span class="badge bg-primary rounded-pill"><%= students.length %> طالب</span>
         </h5>
-        
         <div class="d-flex gap-2">
           <% if(currentUser && currentUser.permissions && currentUser.permissions.export_reports){ %>
-            <a href="/export/excel" class="btn btn-sm btn-outline-success fw-bold">
-              <i class="fa-solid fa-file-excel me-1"></i> تصدير Excel
-            </a>
-            <a href="/export/pdf" class="btn btn-sm btn-outline-danger fw-bold">
-              <i class="fa-solid fa-file-pdf me-1"></i> طباعة PDF
-            </a>
+          <a href="/export/excel" class="btn btn-sm btn-outline-success fw-bold" id="excelBtn">
+            <span><i class="fa-solid fa-file-excel me-1"></i> تصدير Excel</span>
+            <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+          </a>
+          <a href="/export/pdf" target="_blank" class="btn btn-sm btn-outline-danger fw-bold"><i class="fa-solid fa-print me-1"></i> طباعة PDF</a>
           <% } %>
         </div>
       </div>
-
       <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle mb-0 text-nowrap">
+        <table class="table table-striped table-hover align-middle mb-0">
           <thead>
             <tr>
-              <th style="width: 50px;">#</th>
+              <th style="width:45px;">#</th>
               <th>اسم الطالب</th>
-              <th>رقم الجوال</th>
+              <th>جوال الأب</th>
+              <th>جوال الأم</th>
               <th>المرحلة والصف</th>
               <th>الفرع</th>
-              <th>نتيجة المقابلة</th>
-              <th>حالة المتابعة</th>
+              <th style="min-width:155px;">نتيجة المقابلة</th>
+              <th style="min-width:165px;">حالة المتابعة</th>
               <th>الملاحظات</th>
-              <th class="text-center" style="width: 120px;">الإجراءات</th>
+              <th class="text-center" style="width:110px;">الإجراءات</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="studentsTableBody">
             <% if(students && students.length > 0){ %>
-              <% students.forEach(function(s, idx){ %>
-                <tr>
-                  <td class="text-muted fw-bold"><%= idx + 1 %></td>
-                  
-                  <td>
-                    <div class="fw-bold text-dark fs-6"><%= s.name %></div>
-                    <small class="text-muted"><%= s.nationality || 'سعودي' %> <%= s.student_type ? '• ' + s.student_type : '' %></small>
-                  </td>
-
-                  <td>
-                    <% if(s.phone){ %>
-                      <a href="https://wa.me/<%= s.phone.replace(/[^0-9]/g, '') %>" target="_blank" class="text-success text-decoration-none fw-bold">
-                        <i class="fa-brands fa-whatsapp fs-6 me-1"></i> <%= s.phone %>
-                      </a>
-                    <% } else { %>
-                      <span class="text-muted">—</span>
-                    <% } %>
-                  </td>
-
-                  <td>
-                    <span class="badge bg-light text-dark border">
-                      <%= s.phase || '' %> <%= s.grade ? ' - صف ' + s.grade : '' %>
-                    </span>
-                  </td>
-
-                  <td>
-                    <span class="badge bg-secondary-subtle text-secondary border">
-                      <%= s.branch || 'الندى' %>
-                    </span>
-                  </td>
-
-                  <td>
-                    <% if(s.interview_result === 'مقبول'){ %>
-                      <span class="badge-status bg-success-subtle text-success border border-success">
-                        <i class="fa-solid fa-check"></i> مقبول
-                      </span>
-                    <% } else if(s.interview_result === 'غير مقبول'){ %>
-                      <span class="badge-status bg-danger-subtle text-danger border border-danger">
-                        <i class="fa-solid fa-xmark"></i> غير مقبول
-                      </span>
-                    <% } else if(s.interview_result === 'في انتظار المقابلة'){ %>
-                      <span class="badge-status bg-warning-subtle text-warning border border-warning">
-                        <i class="fa-solid fa-clock"></i> في انتظار المقابلة
-                      </span>
-                    <% } else { %>
-                      <span class="badge-status bg-light text-muted border">لم يقابل</span>
-                    <% } %>
-                  </td>
-
-                  <td>
-                    <% if(s.followup_status === 'تم التسجيل'){ %>
-                      <span class="badge-status bg-info-subtle text-info border border-info">
-                        <i class="fa-solid fa-user-check"></i> تم التسجيل
-                      </span>
-                    <% } else if(s.followup_status === 'في انتظار التسجيل'){ %>
-                      <span class="badge-status bg-warning-subtle text-warning border border-warning">
-                        <i class="fa-solid fa-hourglass-start"></i> في انتظار التسجيل
-                      </span>
-                    <% } else if(s.followup_status === 'لا يرغب في التسجيل'){ %>
-                      <span class="badge-status bg-danger-subtle text-danger border border-danger">
-                        <i class="fa-solid fa-ban"></i> لا يرغب
-                      </span>
-                    <% } else { %>
-                      <span class="badge-status bg-light text-muted border">لم يسجل</span>
-                    <% } %>
-                  </td>
-
-                  <td class="text-truncate" style="max-width: 180px;" title="<%= s.notes || '' %>">
-                    <small class="text-muted"><%= s.notes || '—' %></small>
-                  </td>
-
-                  <td class="text-center">
-                    <div class="btn-group btn-group-sm" role="group">
-                      <% if(canManageStudents){ %>
-                        <a href="/students?edit_id=<%= s.id %>" class="btn btn-outline-primary" title="تعديل بيانات الطالب">
-                          <i class="fa-solid fa-pen-to-square"></i>
-                        </a>
-                      <% } %>
-
-                      <!-- STUDENT HISTORY MODAL BUTTON -->
-                      <button type="button" class="btn btn-outline-secondary" onclick="openStudentHistoryModal(<%= s.id %>, '<%= s.name %>')" title="سجل التعديلات المستقل">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                      </button>
-
-                      <% if(canDeleteStudents){ %>
-                        <form method="post" action="/delete/<%= s.id %>" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف الطالب <%= s.name %>؟')">
-                          <button type="submit" class="btn btn-outline-danger" title="حذف">
-                            <i class="fa-solid fa-trash"></i>
-                          </button>
-                        </form>
-                      <% } %>
-                    </div>
-                  </td>
-                </tr>
-              <% }) %>
+            <% students.forEach(function(s, idx){ %>
+            <tr data-student-id="<%= s.id %>">
+              <td class="text-muted fw-bold small"><%= idx+1 %></td>
+              <td>
+                <div class="fw-bold text-dark"><%= s.name %></div>
+                <small class="text-muted"><%= s.nationality || 'سعودي' %><%= s.student_type ? ' • ' + s.student_type : '' %></small>
+              </td>
+              <td>
+                <% if(s.phone){ %>
+                <a href="https://wa.me/<%= s.phone.replace(/[^0-9]/g, '') %>" target="_blank" class="text-success text-decoration-none fw-bold small"><i class="fa-brands fa-whatsapp me-1"></i><%= s.phone %></a>
+                <% } else { %><span class="text-muted">—</span><% } %>
+              </td>
+              <td>
+                <% if(s.mother_phone){ %>
+                <a href="https://wa.me/<%= s.mother_phone.replace(/[^0-9]/g, '') %>" target="_blank" style="color:#db2777;" class="text-decoration-none fw-bold small"><i class="fa-brands fa-whatsapp me-1"></i><%= s.mother_phone %></a>
+                <% } else { %><span class="text-muted">—</span><% } %>
+              </td>
+              <td><span class="badge bg-light text-dark border"><%= s.phase || '' %><%= s.grade ? ' - صف ' + s.grade : '' %></span></td>
+              <td><span class="badge bg-secondary-subtle text-secondary border"><%= s.branch || 'الندى' %></span></td>
+              <% if(canManageStudents){ %>
+              <td>
+                <select class="status-dropdown" onchange="quickUpdateStatus(<%= s.id %>, 'interview_result', this.value, this)">
+                  <option value="" <%= !s.interview_result ? 'selected' : '' %>>لم يقابل</option>
+                  <% interview_results.forEach(function(r){ %><option value="<%= r %>" <%= s.interview_result===r ? 'selected' : '' %>><%= r %></option><% }) %>
+                </select>
+              </td>
+              <td>
+                <select class="status-dropdown status-dd-followup" onchange="quickUpdateStatus(<%= s.id %>, 'followup_status', this.value, this)">
+                  <option value="" <%= !s.followup_status ? 'selected' : '' %>>غير محدد</option>
+                  <% followup_statuses.forEach(function(st){ %><option value="<%= st %>" <%= s.followup_status===st ? 'selected' : '' %>><%= st %></option><% }) %>
+                </select>
+              </td>
+              <% } else { %>
+              <td>
+                <% if(s.interview_result==='مقبول'){ %><span class="badge-status bg-success-subtle text-success border border-success"><i class="fa-solid fa-check"></i> مقبول</span>
+                <% } else if(s.interview_result==='غير مقبول'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-xmark"></i> غير مقبول</span>
+                <% } else if(s.interview_result==='في انتظار المقابلة'){ %><span class="badge-status bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-clock"></i> انتظار المقابلة</span>
+                <% } else { %><span class="badge-status bg-light text-muted border">لم يقابل</span><% } %>
+              </td>
+              <td>
+                <% if(s.followup_status==='تم التسجيل'){ %><span class="badge-status bg-info-subtle text-info border border-info"><i class="fa-solid fa-user-check"></i> تم التسجيل</span>
+                <% } else if(s.followup_status==='في انتظار التسجيل'){ %><span class="badge-status bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-hourglass-start"></i> انتظار التسجيل</span>
+                <% } else if(s.followup_status==='لا يرغب في التسجيل'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-ban"></i> لا يرغب</span>
+                <% } else { %><span class="badge-status bg-light text-muted border">لم يسجل</span><% } %>
+              </td>
+              <% } %>
+              <td class="text-truncate" style="max-width:150px;" title="<%= s.notes || '' %>"><small class="text-muted"><%= s.notes || '—' %></small></td>
+              <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                  <% if(canManageStudents){ %><a href="/students?edit_id=<%= s.id %>" class="btn btn-outline-primary" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></a><% } %>
+                  <button type="button" class="btn btn-outline-secondary" onclick="openStudentHistoryModal(<%= s.id %>, '<%= s.name %>')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                  <% if(canDeleteStudents){ %>
+                  <form method="post" action="/delete/<%= s.id %>" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف الطالب <%= s.name %>؟')">
+                    <button type="submit" class="btn btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                  </form>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
             <% } else { %>
-              <tr>
-                <td colspan="9" class="text-center py-5 text-muted fw-bold">
-                  <i class="fa-solid fa-folder-open fs-2 d-block mb-2 text-secondary"></i>
-                  لا توجد نتائج مطابقة لمعايير البحث
-                </td>
-              </tr>
+            <tr><td colspan="10" class="text-center py-5 text-muted fw-bold"><i class="fa-solid fa-folder-open fs-2 d-block mb-2 text-secondary"></i>لا توجد نتائج مطابقة لمعايير البحث</td></tr>
             <% } %>
           </tbody>
         </table>
       </div>
-    </div>
-
-  </div>
-
-  <!-- 4. BOOTSTRAP 5 MODAL: ADD / EDIT STUDENT -->
-  <div class="modal fade" id="studentModal" tabindex="-1" aria-labelledby="studentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content border-0 shadow">
-        
-        <div class="modal-header bg-light">
-          <h5 class="modal-title fw-bold text-dark" id="studentModalLabel">
-            <i class="fa-solid fa-user-graduate text-primary me-2"></i>
-            <%= editingStudent ? 'تعديل بيانات الطالب: ' + editingStudent.name : 'إضافة طالب جديد' %>
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-
-        <form method="post" action="/students" enctype="multipart/form-data">
-          <div class="modal-body p-4">
-            <input type="hidden" name="student_id" value="<%= editingStudent ? editingStudent.id : '' %>">
-
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">اسم الطالب <span class="text-danger">*</span></label>
-                <input type="text" name="name" class="form-control" required value="<%= editingStudent ? editingStudent.name : '' %>" placeholder="الاسم الثلاثي أو الرباعي">
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">رقم الجوال <span class="text-danger">*</span></label>
-                <input type="text" name="phone" class="form-control" required value="<%= editingStudent ? editingStudent.phone : '' %>" placeholder="05xxxxxxxx">
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">تاريخ الميلاد</label>
-                <input type="date" name="date_of_birth" class="form-control" value="<%= editingStudent ? editingStudent.date_of_birth : '' %>">
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">الجنسية</label>
-                <select name="nationality" class="form-select">
-                  <option value="">اختر الجنسية...</option>
-                  <% nationalities.forEach(function(n){ %>
-                    <option value="<%= n %>" <%= editingStudent && editingStudent.nationality===n ? 'selected' : '' %>><%= n %></option>
-                  <% }) %>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">الحي السكني</label>
-                <input type="text" name="neighborhood" class="form-control" value="<%= editingStudent ? editingStudent.neighborhood : '' %>" placeholder="اسم الحي">
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">نوع الطالب</label>
-                <select name="student_type" class="form-select">
-                  <% student_types.forEach(function(t){ %>
-                    <option value="<%= t %>" <%= editingStudent && editingStudent.student_type===t ? 'selected' : '' %>><%= t %></option>
-                  <% }) %>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">الفرع <span class="text-danger">*</span></label>
-                <select name="student_branch" class="form-select" required>
-                  <% branches.forEach(function(b){ %>
-                    <option value="<%= b %>" <%= editingStudent && editingStudent.branch===b ? 'selected' : '' %>><%= b %></option>
-                  <% }) %>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">المرحلة الدراسية</label>
-                <select name="phase" class="form-select">
-                  <option value="">اختر المرحلة...</option>
-                  <% phases.forEach(function(p){ %>
-                    <option value="<%= p %>" <%= editingStudent && editingStudent.phase===p ? 'selected' : '' %>><%= p %></option>
-                  <% }) %>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">الصف الدراسي</label>
-                <select name="grade" class="form-select">
-                  <option value="">اختر الصف...</option>
-                  <% grades.forEach(function(g){ %>
-                    <option value="<%= g %>" <%= editingStudent && editingStudent.grade===g ? 'selected' : '' %>>صف <%= g %></option>
-                  <% }) %>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">المسار التعليمي</label>
-                <select name="track" class="form-select">
-                  <% tracks.forEach(function(tr){ %>
-                    <option value="<%= tr %>" <%= editingStudent && editingStudent.track===tr ? 'selected' : '' %>><%= tr %></option>
-                  <% }) %>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">نتيجة المقابلة</label>
-                <select name="interview_result" class="form-select">
-                  <option value="">لم تحدد بعد</option>
-                  <% interview_results.forEach(function(r){ %>
-                    <option value="<%= r %>" <%= editingStudent && editingStudent.interview_result===r ? 'selected' : '' %>><%= r %></option>
-                  <% }) %>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">حالة المتابعة والتسجيل</label>
-                <select name="followup_status" class="form-select">
-                  <option value="">لم تحدد بعد</option>
-                  <% followup_statuses.forEach(function(s){ %>
-                    <option value="<%= s %>" <%= editingStudent && editingStudent.followup_status===s ? 'selected' : '' %>><%= s %></option>
-                  <% }) %>
-                </select>
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">سبب عدم الاجتياز (إن وجد)</label>
-                <input type="text" name="interview_reason" class="form-control" value="<%= editingStudent ? editingStudent.interview_reason : '' %>" placeholder="في حال عدم القبول">
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">سبب عدم التسجيل (إن وجد)</label>
-                <input type="text" name="registration_reason" class="form-control" value="<%= editingStudent ? editingStudent.registration_reason : '' %>" placeholder="في حال عدم الرغبة">
-              </div>
-
-              <div class="col-12">
-                <label class="form-label fw-bold text-dark small">ملاحظات إضافية</label>
-                <textarea name="notes" class="form-control" rows="3" placeholder="اكتب أي ملاحظات أو تفاصيل تخص الطالب..."><%= editingStudent ? editingStudent.notes : '' %></textarea>
-              </div>
-
-              <div class="col-12">
-                <label class="form-label fw-bold text-dark small">إرفاق ملفات / شهادات</label>
-                <input type="file" name="attachments" class="form-control" multiple>
-              </div>
-            </div>
-
-          </div>
-
-          <div class="modal-footer bg-light d-flex justify-content-start gap-2">
-            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
-              <i class="fa-solid fa-floppy-disk me-1"></i> حفظ البيانات
-            </button>
-            <button type="button" class="btn btn-secondary px-3 fw-bold" data-bs-dismiss="modal">
-              إلغاء
-            </button>
-          </div>
-        </form>
-
+      <!-- PAGINATION -->
+      <div class="pagination-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="text-muted small fw-bold">عرض <span id="pgStart">1</span>–<span id="pgEnd">20</span> من <span id="pgTotal"><%= students.length %></span> طالب</div>
+        <nav><ul class="pagination pagination-sm mb-0" id="pgControls"></ul></nav>
       </div>
     </div>
   </div>
 
-  <!-- 5. STUDENT HISTORY POPUP MODAL -->
+  <!-- MODAL: ADD/EDIT STUDENT -->
+  <div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-user-graduate text-primary me-2"></i><%= editingStudent ? 'تعديل بيانات الطالب: ' + editingStudent.name : 'إضافة طالب جديد' %></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="post" action="/students" enctype="multipart/form-data" id="studentForm" novalidate>
+          <div class="modal-body p-4">
+            <input type="hidden" name="student_id" value="<%= editingStudent ? editingStudent.id : '' %>">
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">اسم الطالب <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" required value="<%= editingStudent ? editingStudent.name : '' %>" placeholder="الاسم الثلاثي أو الرباعي"></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">الجنسية</label><select name="nationality" class="form-select"><option value="">اختر الجنسية...</option><% nationalities.forEach(function(n){ %><option value="<%= n %>" <%= editingStudent && editingStudent.nationality===n ? 'selected' : '' %>><%= n %></option><% }) %></select></div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark small">رقم جوال الأب <span class="text-danger">*</span></label>
+                <input type="text" name="phone" id="phoneInput" class="form-control" required value="<%= editingStudent ? editingStudent.phone : '' %>" placeholder="05xxxxxxxx" maxlength="10" oninput="validatePhone(this,'phoneError')">
+                <div id="phoneError" class="invalid-feedback-phone">⚠️ يجب أن يبدأ الرقم بـ 05 ويتكون من 10 أرقام</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark small">رقم جوال الأم</label>
+                <input type="text" name="mother_phone" id="motherPhoneInput" class="form-control" value="<%= editingStudent ? (editingStudent.mother_phone || '') : '' %>" placeholder="05xxxxxxxx" maxlength="10" oninput="validatePhone(this,'motherPhoneError')">
+                <div id="motherPhoneError" class="invalid-feedback-phone">⚠️ يجب أن يبدأ الرقم بـ 05 ويتكون من 10 أرقام</div>
+              </div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">تاريخ الميلاد</label><input type="date" name="date_of_birth" class="form-control" value="<%= editingStudent ? editingStudent.date_of_birth : '' %>"></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">الحي السكني / اسم الأب</label><input type="text" name="neighborhood" class="form-control" value="<%= editingStudent ? editingStudent.neighborhood : '' %>" placeholder="اسم الحي أو اسم الأب"></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">نوع الطالب</label><select name="student_type" class="form-select"><% student_types.forEach(function(t){ %><option value="<%= t %>" <%= editingStudent && editingStudent.student_type===t ? 'selected' : '' %>><%= t %></option><% }) %></select></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">الفرع <span class="text-danger">*</span></label><select name="student_branch" class="form-select" required><% branches.forEach(function(b){ %><option value="<%= b %>" <%= editingStudent && editingStudent.branch===b ? 'selected' : '' %>><%= b %></option><% }) %></select></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">المرحلة الدراسية</label><select name="phase" class="form-select"><option value="">اختر المرحلة...</option><% phases.forEach(function(p){ %><option value="<%= p %>" <%= editingStudent && editingStudent.phase===p ? 'selected' : '' %>><%= p %></option><% }) %></select></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">الصف الدراسي</label><select name="grade" class="form-select"><option value="">اختر الصف...</option><% grades.forEach(function(g){ %><option value="<%= g %>" <%= editingStudent && editingStudent.grade===g ? 'selected' : '' %>>صف <%= g %></option><% }) %></select></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">المسار التعليمي</label><select name="track" class="form-select"><% tracks.forEach(function(tr){ %><option value="<%= tr %>" <%= editingStudent && editingStudent.track===tr ? 'selected' : '' %>><%= tr %></option><% }) %></select></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">نتيجة المقابلة</label><select name="interview_result" class="form-select"><option value="">لم تحدد بعد</option><% interview_results.forEach(function(r){ %><option value="<%= r %>" <%= editingStudent && editingStudent.interview_result===r ? 'selected' : '' %>><%= r %></option><% }) %></select></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">حالة المتابعة والتسجيل</label><select name="followup_status" class="form-select"><option value="">لم تحدد بعد</option><% followup_statuses.forEach(function(s){ %><option value="<%= s %>" <%= editingStudent && editingStudent.followup_status===s ? 'selected' : '' %>><%= s %></option><% }) %></select></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">سبب عدم الاجتياز</label><input type="text" name="interview_reason" class="form-control" value="<%= editingStudent ? editingStudent.interview_reason : '' %>" placeholder="في حال عدم القبول"></div>
+              <div class="col-md-6"><label class="form-label fw-bold text-dark small">سبب عدم التسجيل</label><input type="text" name="registration_reason" class="form-control" value="<%= editingStudent ? editingStudent.registration_reason : '' %>" placeholder="في حال عدم الرغبة"></div>
+              <div class="col-12"><label class="form-label fw-bold text-dark small">ملاحظات إضافية</label><textarea name="notes" class="form-control" rows="3" placeholder="اكتب ملاحظات أو تفاصيل..."><%= editingStudent ? editingStudent.notes : '' %></textarea></div>
+              <div class="col-12"><label class="form-label fw-bold text-dark small">إرفاق ملفات / شهادات</label><input type="file" name="attachments" class="form-control" multiple></div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light d-flex justify-content-start gap-2">
+            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" id="saveStudentBtn">
+              <span class="save-text"><i class="fa-solid fa-floppy-disk me-1"></i> حفظ البيانات</span>
+              <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+            </button>
+            <button type="button" class="btn btn-secondary px-3 fw-bold" data-bs-dismiss="modal">إلغاء</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- STUDENT HISTORY MODAL -->
   <div class="modal fade" id="studentHistoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow">
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title fw-bold" id="historyModalStudentName">
-            <i class="fa-solid fa-clock-rotate-left me-2"></i> سجل حركات الطالب
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4" id="studentHistoryModalBody">
-          <div class="text-center py-4">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted mt-2">جاري جلب سجل الحركات...</p>
-          </div>
-        </div>
-        <div class="modal-footer bg-light">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-        </div>
+        <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold" id="histModalTitle"><i class="fa-solid fa-clock-rotate-left me-2"></i> سجل حركات الطالب</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body p-4" id="histModalBody"><div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div></div>
+        <div class="modal-footer bg-light"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button></div>
       </div>
     </div>
   </div>
 
-  <!-- 6. CHANGE PASSWORD MODAL -->
+  <!-- CHANGE PASSWORD MODAL -->
   <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow">
-        <div class="modal-header bg-light">
-          <h5 class="modal-title fw-bold text-dark">
-            <i class="fa-solid fa-key text-warning me-2"></i> تغيير كلمة المرور
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
+      <div class="modal-header bg-light"><h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-key text-warning me-2"></i> تغيير كلمة المرور</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <form method="post" action="/change_password">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-bold small text-dark">كلمة المرور الحالية <span class="text-danger">*</span></label><input type="password" name="current_password" class="form-control" required placeholder="••••••••"></div>
+          <div class="mb-3"><label class="form-label fw-bold small text-dark">كلمة المرور الجديدة <span class="text-danger">*</span></label><input type="password" name="new_password" class="form-control" required placeholder="••••••••"></div>
+          <div class="mb-3"><label class="form-label fw-bold small text-dark">تأكيد كلمة المرور الجديدة <span class="text-danger">*</span></label><input type="password" name="confirm_password" class="form-control" required placeholder="••••••••"></div>
         </div>
-        <form method="post" action="/change_password">
-          <div class="modal-body p-4">
-            
-            <div class="mb-3">
-              <label class="form-label fw-bold small text-dark">كلمة المرور الحالية <span class="text-danger">*</span></label>
-              <input type="password" name="current_password" class="form-control" required placeholder="••••••••">
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label fw-bold small text-dark">كلمة المرور الجديدة <span class="text-danger">*</span></label>
-              <input type="password" name="new_password" class="form-control" required placeholder="••••••••">
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label fw-bold small text-dark">تأكيد كلمة المرور الجديدة <span class="text-danger">*</span></label>
-              <input type="password" name="confirm_password" class="form-control" required placeholder="••••••••">
-            </div>
-
-          </div>
-          <div class="modal-footer bg-light d-flex justify-content-start gap-2">
-            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
-              <i class="fa-solid fa-check me-1"></i> تحديث كلمة المرور
-            </button>
-            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="modal-footer bg-light d-flex justify-content-start gap-2">
+          <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm"><i class="fa-solid fa-check me-1"></i> تحديث كلمة المرور</button>
+          <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+        </div>
+      </form>
+    </div></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
   <script>
-    async function openStudentHistoryModal(studentId, studentName) {
-      document.getElementById('historyModalStudentName').innerHTML = '<i class="fa-solid fa-clock-rotate-left me-2"></i> سجل حركات الطالب: ' + studentName;
-      const modalBody = document.getElementById('studentHistoryModalBody');
-      modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="text-muted mt-2">جاري جلب سجل الحركات...</p></div>';
+    // Phone Validation
+    function validatePhone(input, errorId) {
+      const v = input.value.trim();
+      const err = document.getElementById(errorId);
+      if (!v) { err.style.display = 'none'; input.classList.remove('is-invalid'); return true; }
+      const ok = /^05\d{8}$/.test(v);
+      err.style.display = ok ? 'none' : 'block';
+      input.classList.toggle('is-invalid', !ok);
+      return ok;
+    }
 
-      const myModal = new bootstrap.Modal(document.getElementById('studentHistoryModal'));
-      myModal.show();
+    // Form submit spinner + validation
+    document.getElementById('studentForm').addEventListener('submit', function(e) {
+      const p1 = validatePhone(document.getElementById('phoneInput'), 'phoneError');
+      const p2 = validatePhone(document.getElementById('motherPhoneInput'), 'motherPhoneError');
+      if (!p1 || !p2) { e.preventDefault(); return; }
+      const btn = document.getElementById('saveStudentBtn');
+      btn.querySelector('.save-text').classList.add('d-none');
+      btn.querySelector('.spinner-border').classList.remove('d-none');
+      btn.disabled = true;
+    });
 
+    // Search spinner
+    document.getElementById('searchForm').addEventListener('submit', function() {
+      const btn = document.getElementById('searchBtn');
+      btn.querySelector('.search-text').classList.add('d-none');
+      btn.querySelector('.spinner-border').classList.remove('d-none');
+      btn.disabled = true;
+    });
+
+    // Excel loading
+    const exBtn = document.getElementById('excelBtn');
+    if (exBtn) {
+      exBtn.addEventListener('click', function() {
+        const sp = this.querySelector('.spinner-border');
+        const tx = this.querySelector('span:first-child');
+        if (sp && tx) { tx.classList.add('d-none'); sp.classList.remove('d-none'); setTimeout(()=>{ tx.classList.remove('d-none'); sp.classList.add('d-none'); }, 4000); }
+      });
+    }
+
+    // Quick Status Update
+    async function quickUpdateStatus(id, field, value, sel) {
+      sel.disabled = true;
       try {
-        const res = await fetch('/api/student_history/' + studentId);
-        const data = await res.json();
-        
-        if (!data.entries || data.entries.length === 0) {
-          modalBody.innerHTML = '<div class="text-center py-4 text-muted"><i class="fa-solid fa-folder-open fs-2 text-secondary mb-2 d-block"></i>لا توجد سجلات تعديل مسجلة لهذا الطالب حتى الآن.</div>';
-          return;
-        }
+        const r = await fetch('/api/quick_update_status', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({student_id:id,field,value}) });
+        const d = await r.json();
+        showToast(d.message || 'تم', d.success ? 'success' : 'danger');
+      } catch(e) { showToast('خطأ في الاتصال', 'danger'); }
+      finally { sel.disabled = false; }
+    }
 
-        let html = '<div class="d-flex flex-column gap-3">';
-        data.entries.forEach(entry => {
-          const dateStr = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ar-SA') : '—';
-          html += '<div class="card bg-light border p-3 rounded-3">';
-          html += '<div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">';
-          html += '<div><span class="badge bg-primary me-2">' + entry.action + '</span><strong class="text-dark">' + entry.details + '</strong></div>';
-          html += '<small class="text-muted"><i class="fa-solid fa-user me-1"></i> ' + entry.username + ' • <i class="fa-regular fa-clock me-1"></i> ' + dateStr + '</small>';
-          html += '</div>';
-          
-          if (entry.field_changes && entry.field_changes.length > 0) {
-            html += '<div class="table-responsive bg-white rounded border mt-2">';
-            html += '<table class="table table-sm mb-0 align-middle">';
-            html += '<thead class="table-light"><tr><th>الحقل المعدل</th><th>القيمة السابقة</th><th>القيمة الجديدة</th></tr></thead><tbody>';
-            entry.field_changes.forEach(c => {
-              html += '<tr><td class="fw-bold text-secondary">' + c.field_label + '</td><td class="text-danger"><del>' + c.old_value + '</del></td><td class="text-success fw-bold">' + c.new_value + '</td></tr>';
-            });
-            html += '</tbody></table></div>';
-          }
-          html += '</div>';
+    function showToast(msg, type) {
+      const el = document.getElementById('statusToast');
+      document.getElementById('toastMessage').textContent = msg;
+      el.className = 'toast align-items-center border-0 shadow text-bg-' + (type || 'success');
+      bootstrap.Toast.getOrCreateInstance(el, {delay:3000}).show();
+    }
+
+    // Pagination
+    const PG = 20;
+    let curPage = 1;
+    const rows = Array.from(document.querySelectorAll('#studentsTableBody tr[data-student-id]'));
+    const total = rows.length;
+
+    function goPage(p) {
+      curPage = p;
+      const s = (p-1)*PG, e = s+PG;
+      rows.forEach((r,i) => r.style.display = (i>=s && i<e) ? '' : 'none');
+      document.getElementById('pgStart').textContent = total > 0 ? s+1 : 0;
+      document.getElementById('pgEnd').textContent = Math.min(e, total);
+      document.getElementById('pgTotal').textContent = total;
+      buildPager(p);
+    }
+
+    function buildPager(p) {
+      const tp = Math.ceil(total/PG);
+      if (tp <= 1) { document.querySelector('.pagination-bar').style.display = 'none'; return; }
+      const ul = document.getElementById('pgControls'); ul.innerHTML = '';
+      const mk = (label, page, dis, act) => {
+        const li = document.createElement('li'); li.className = 'page-item' + (dis ? ' disabled' : '') + (act ? ' active' : '');
+        const a = document.createElement('a'); a.className = 'page-link'; a.href = '#';
+        a.onclick = e => { e.preventDefault(); if (!dis) goPage(page); };
+        a.innerHTML = label; li.appendChild(a); return li;
+      };
+      ul.appendChild(mk('&raquo; السابق', p-1, p===1, false));
+      const sp = Math.max(1,p-2), ep = Math.min(tp,sp+4);
+      for (let i=sp;i<=ep;i++) ul.appendChild(mk(i, i, false, i===p));
+      ul.appendChild(mk('التالي &laquo;', p+1, p===tp, false));
+    }
+
+    if (total > PG) { goPage(1); }
+    else { document.getElementById('pgStart').textContent = total>0?1:0; document.getElementById('pgEnd').textContent=total; document.getElementById('pgTotal').textContent=total; }
+
+    // Student History
+    async function openStudentHistoryModal(id, name) {
+      document.getElementById('histModalTitle').innerHTML = '<i class="fa-solid fa-clock-rotate-left me-2"></i> سجل حركات الطالب: ' + name;
+      const mb = document.getElementById('histModalBody');
+      mb.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
+      new bootstrap.Modal(document.getElementById('studentHistoryModal')).show();
+      try {
+        const r = await fetch('/api/student_history/' + id); const d = await r.json();
+        if (!d.entries || !d.entries.length) { mb.innerHTML = '<div class="text-center py-4 text-muted">لا توجد سجلات تعديل لهذا الطالب.</div>'; return; }
+        let h = '<div class="d-flex flex-column gap-3">';
+        d.entries.forEach(e => {
+          const dt = e.timestamp ? new Date(e.timestamp).toLocaleString('ar-SA') : '—';
+          h += '<div class="card bg-light border p-3 rounded-3"><div class="d-flex justify-content-between flex-wrap gap-2 mb-2"><div><span class="badge bg-primary me-2">'+e.action+'</span><strong>'+e.details+'</strong></div><small class="text-muted">'+e.username+' • '+dt+'</small></div>';
+          if (e.field_changes && e.field_changes.length) { h += '<table class="table table-sm mb-0 bg-white rounded border"><thead class="table-light"><tr><th>الحقل</th><th>السابق</th><th>الجديد</th></tr></thead><tbody>'; e.field_changes.forEach(c=>h+='<tr><td class="fw-bold text-secondary">'+c.field_label+'</td><td class="text-danger"><del>'+c.old_value+'</del></td><td class="text-success fw-bold">'+c.new_value+'</td></tr>'); h+='</tbody></table>'; }
+          h += '</div>';
         });
-        html += '</div>';
-        modalBody.innerHTML = html;
-      } catch (err) {
-        modalBody.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء جلب السجل التاريخي.</div>';
-      }
+        mb.innerHTML = h + '</div>';
+      } catch(e) { mb.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء جلب السجل التاريخي.</div>'; }
     }
   </script>
 
   <% if(editingStudent){ %>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        var myModal = new bootstrap.Modal(document.getElementById('studentModal'));
-        myModal.show();
-      });
-    </script>
+  <script>document.addEventListener("DOMContentLoaded",function(){ new bootstrap.Modal(document.getElementById('studentModal')).show(); });</script>
   <% } %>
 
 </body>
