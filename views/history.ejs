@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
@@ -91,9 +91,9 @@
               <th>المستخدم المسؤول</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="historyTbody">
             <% if(typeof entries !== 'undefined' && entries && entries.length > 0){ entries.forEach(function(entry, idx){ %>
-              <tr>
+              <tr data-hist-row="<%= idx %>">
                 <td class="text-muted fw-bold"><%= idx + 1 %></td>
                 <td class="text-muted small">
                   <i class="fa-regular fa-clock me-1 text-secondary"></i>
@@ -119,27 +119,67 @@
           </tbody>
         </table>
       </div>
+      <!-- HISTORY PAGINATION -->
+      <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2" id="histPagBar">
+        <div class="text-muted small fw-bold">عرض <span id="hPgStart">1</span>–<span id="hPgEnd">20</span> من <span id="hPgTotal"><%= entries ? entries.length : 0 %></span> عملية</div>
+        <nav><ul class="pagination pagination-sm mb-0" id="hPgControls"></ul></nav>
+      </div>
     </div>
 
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    // Live search filter
     function filterHistoryTable() {
       const input = document.getElementById("historySearchInput").value.toLowerCase();
-      const rows = document.querySelectorAll("#historyTable tbody tr");
+      const rows = document.querySelectorAll("#historyTbody tr[data-hist-row]");
       let count = 0;
       rows.forEach(row => {
         const text = row.innerText.toLowerCase();
-        if (text.includes(input)) {
-          row.style.display = "";
-          count++;
-        } else {
-          row.style.display = "none";
-        }
+        const show = text.includes(input);
+        row.style.display = show ? "" : "none";
+        if (show) count++;
       });
       document.getElementById("historyCount").innerText = count;
+      // Rebuild pagination on search
+      buildHistPager(1);
     }
+
+    // Pagination
+    const HPG = 20;
+    let hCurPage = 1;
+    const hRows = Array.from(document.querySelectorAll('#historyTbody tr[data-hist-row]'));
+    const hTotal = hRows.length;
+
+    function goHistPage(p) {
+      hCurPage = p;
+      const s = (p-1)*HPG, e = s+HPG;
+      hRows.forEach((r,i) => { if (r.style.display !== 'none' || true) r.style.display = (i>=s && i<e) ? '' : 'none'; });
+      document.getElementById('hPgStart').textContent = hTotal > 0 ? s+1 : 0;
+      document.getElementById('hPgEnd').textContent = Math.min(e, hTotal);
+      document.getElementById('hPgTotal').textContent = hTotal;
+      buildHistPager(p);
+    }
+
+    function buildHistPager(p) {
+      const tp = Math.ceil(hTotal/HPG);
+      if (tp <= 1) { const bar = document.getElementById('histPagBar'); if(bar) bar.style.display='none'; return; }
+      const ul = document.getElementById('hPgControls'); ul.innerHTML = '';
+      const mk = (label, pg, dis, act) => {
+        const li = document.createElement('li'); li.className = 'page-item'+(dis?' disabled':'')+(act?' active':'');
+        const a = document.createElement('a'); a.className = 'page-link'; a.href = '#';
+        a.onclick = ev => { ev.preventDefault(); if(!dis) goHistPage(pg); }; a.innerHTML = label; li.appendChild(a); return li;
+      };
+      ul.appendChild(mk('&raquo; السابق', p-1, p===1, false));
+      const sp=Math.max(1,p-2), ep=Math.min(tp,sp+4);
+      for(let i=sp;i<=ep;i++) ul.appendChild(mk(i,i,false,i===p));
+      ul.appendChild(mk('التالي &laquo;', p+1, p===tp, false));
+    }
+
+    if (hTotal > HPG) { goHistPage(1); }
+    else { document.getElementById('hPgStart').textContent=hTotal>0?1:0; document.getElementById('hPgEnd').textContent=hTotal; document.getElementById('hPgTotal').textContent=hTotal; }
   </script>
 </body>
 </html>
+
