@@ -412,10 +412,63 @@
       </div>
     </div>
 
-    <!-- NATIONALITY DISTRIBUTION -->
+    <!-- 5. SIBLINGS ANALYSIS & NATIONALITY DISTRIBUTION ROW -->
     <div class="row g-3 mt-2 mb-4">
-      <div class="col-12">
-        <div class="card border-0 shadow-sm rounded-3">
+      <!-- SIBLINGS ANALYSIS CARD -->
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
+          <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">
+              <i class="fa-solid fa-people-roof text-warning me-2"></i> تحليل الإخوة (عائلات متعددة الطلاب)
+            </h6>
+            <span class="badge bg-warning-subtle text-dark fw-bold border border-warning">
+              <%= analytics.siblingStats ? analytics.siblingStats.siblingFamiliesCount : 0 %> أسر
+            </span>
+          </div>
+          <div class="card-body p-4 pt-2">
+            <% const sib = analytics.siblingStats || { siblingFamiliesCount: 0, siblingStudentsTotal: 0, siblingFamiliesList: [] }; %>
+            <div class="d-flex align-items-center justify-content-around bg-light p-3 rounded-3 mb-3 text-center border">
+              <div>
+                <div class="fs-4 fw-bold text-warning"><%= sib.siblingFamiliesCount %></div>
+                <div class="small text-muted fw-bold">أسر لديها أكثر من طالب</div>
+              </div>
+              <div class="border-start h-100 mx-2"></div>
+              <div>
+                <div class="fs-4 fw-bold text-primary"><%= sib.siblingStudentsTotal %></div>
+                <div class="small text-muted fw-bold">إجمالي أعداد الإخوة</div>
+              </div>
+            </div>
+
+            <% if (sib.siblingFamiliesList && sib.siblingFamiliesList.length > 0) { %>
+              <div class="small fw-bold text-secondary mb-2"><i class="fa-solid fa-list-ul me-1"></i> أسر الإخوة المسجلين:</div>
+              <div class="list-group list-group-flush border rounded-3 overflow-auto" style="max-height: 180px;">
+                <% sib.siblingFamiliesList.forEach(function(fam) { %>
+                  <div class="list-group-item p-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <span class="fw-bold text-dark small"><i class="fa-solid fa-phone me-1 text-success"></i> <%= fam.phone %></span>
+                      <span class="badge bg-primary-subtle text-primary rounded-pill"><%= fam.count %> إخوة</span>
+                    </div>
+                    <div class="small text-muted">
+                      <% fam.students.forEach(function(st) { %>
+                        <span class="badge bg-light text-dark border me-1"><%= st.name %> (<%= st.phase || '' %> <%= st.grade ? 'صف ' + st.grade : '' %>)</span>
+                      <% }); %>
+                    </div>
+                  </div>
+                <% }); %>
+              </div>
+            <% } else { %>
+              <div class="text-center text-muted py-4 small">
+                <i class="fa-solid fa-user-group fs-3 d-block mb-1 text-secondary"></i>
+                لا توجد أسر لديها إخوة مسجلين حالياً بنفس رقم الجوال
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- NATIONALITY DISTRIBUTION -->
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-3 h-100">
           <div class="card-header bg-white py-3 border-0">
             <h6 class="fw-bold mb-0 text-dark">
               <i class="fa-solid fa-globe text-info me-2"></i> توزيع الطلاب حسب الجنسية
@@ -433,7 +486,7 @@
                   const natPct = analytics.total > 0 ? Math.round(cnt / analytics.total * 100) : 0;
                   const col = natColors[i % natColors.length];
                 %>
-                <div class="col-md-4 col-sm-6">
+                <div class="col-md-6 col-sm-6">
                   <div class="d-flex justify-content-between align-items-center mb-1">
                     <span class="fw-bold text-dark small"><i class="fa-solid fa-flag me-1 text-<%= col %>"></i> <%= nat %></span>
                     <span class="badge bg-<%= col %>-subtle text-<%= col %> border fw-bold"><%= cnt %> (<%= natPct %>%)</span>
