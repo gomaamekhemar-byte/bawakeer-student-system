@@ -109,7 +109,7 @@
     </div>
   </div>
 
-  <!-- MAIN DASHBOARD CONTENT (MUST STAY FULLY INTACT) -->
+  <!-- MAIN DASHBOARD CONTENT -->
   <div class="container-fluid px-4 py-4">
 
     <% if(message){ %>
@@ -161,7 +161,7 @@
                 <span class="spinner-border spinner-border-sm d-none" role="status"></span>
               </button>
               <% if(canManageStudents){ %>
-              <button type="button" class="btn btn-warning text-white fw-bold px-3 shadow-sm" style="background:#f97316;border-color:#f97316;" data-bs-toggle="modal" data-bs-target="#studentModal">
+              <button type="button" class="btn btn-warning text-white fw-bold px-3 shadow-sm" style="background:#f97316;border-color:#f97316;" onclick="openNewStudentModal()">
                 <i class="fa-solid fa-user-plus me-1"></i> + طالب جديد
               </button>
               <% } %>
@@ -293,9 +293,7 @@
     </div>
   </div>
 
-  <!-- ============================================================== -->
-  <!-- BOOTSTRAP 5 MODAL: ADD / EDIT STUDENT (PLACED AT BOTTOM)       -->
-  <!-- ============================================================== -->
+  <!-- BOOTSTRAP 5 MODAL: ADD / EDIT STUDENT -->
   <div class="modal fade" id="studentModal" tabindex="-1" aria-labelledby="studentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow">
@@ -310,7 +308,8 @@
 
         <form method="post" action="/students" enctype="multipart/form-data" id="studentForm" novalidate>
           <div class="modal-body p-4">
-            <input type="hidden" name="student_id" value="<%= editingStudent ? editingStudent.id : '' %>">
+            <!-- FIX 2: Hidden student_id input passed properly for Edit Update -->
+            <input type="hidden" name="student_id" id="studentIdHidden" value="<%= editingStudent ? editingStudent.id : '' %>">
 
             <div class="row g-3">
               <!-- اسم الطالب -->
@@ -524,6 +523,24 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
+    // Open clean new student modal
+    function openNewStudentModal() {
+      if (window.location.search.includes('edit_id')) {
+        window.location.href = '/students?open_modal=1';
+        return;
+      }
+      const form = document.getElementById('studentForm');
+      if (form) {
+        form.reset();
+        const idInp = document.getElementById('studentIdHidden');
+        if (idInp) idInp.value = '';
+      }
+      const title = document.getElementById('studentModalLabel');
+      if (title) title.innerHTML = '<i class="fa-solid fa-user-graduate text-primary me-2"></i> إضافة طالب جديد';
+      toggleInterviewReason();
+      new bootstrap.Modal(document.getElementById('studentModal')).show();
+    }
+
     // Dynamic & Mandatory 'سبب عدم القبول' using d-none class
     function toggleInterviewReason() {
       const select = document.getElementById('interviewResultSelect');
@@ -582,7 +599,6 @@
       btn.disabled = true;
     });
 
-    // Excel loading
     const exBtn = document.getElementById('excelBtn');
     if (exBtn) {
       exBtn.addEventListener('click', function() {
@@ -668,6 +684,10 @@
 
   <% if(editingStudent){ %>
   <script>document.addEventListener("DOMContentLoaded",function(){ new bootstrap.Modal(document.getElementById('studentModal')).show(); });</script>
+  <% } %>
+
+  <% if(typeof openNewModal !== 'undefined' && openNewModal){ %>
+  <script>document.addEventListener("DOMContentLoaded",function(){ openNewStudentModal(); });</script>
   <% } %>
 
 </body>
