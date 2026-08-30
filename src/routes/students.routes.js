@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const { requireAuth } = require("../middleware/auth");
@@ -199,25 +199,40 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
   } else {
     if (!name) return res.redirect("/students?msg=" + encodeURIComponent("يرجى إدخال اسم الطالب"));
     const allStudents = await getStudents();
-    const nameLower = name.toLowerCase();
-    const duplicateByName = allStudents.find(s => (s.name || "").toLowerCase() === nameLower);
-    if (duplicateByName) return res.redirect("/students?msg=" + encodeURIComponent('يوجد طالب مسجل بنفس الاسم: "' + name + '" — يرجى مراجعة البيانات أو تعديل السجل الموجود'));
-    if (phone) {
-      const duplicateByPhone = allStudents.find(s => s.phone === phone || s.mother_phone === phone);
-      if (duplicateByPhone) return res.redirect("/students?msg=" + encodeURIComponent('رقم الجوال ' + phone + ' مسجل مسبقاً باسم: "' + duplicateByPhone.name + '"'));
+    const nameLower = name.trim().toLowerCase();
+    
+    // Requirement 3: Only block if BOTH Name AND Phone match (exact duplicate student)
+    const exactDuplicate = allStudents.find(s => {
+      const matchName = (s.name || "").trim().toLowerCase() === nameLower;
+      const matchPhone = (phone && (s.phone === phone || s.mother_phone === phone)) ||
+                         (mother_phone && (s.phone === mother_phone || s.mother_phone === mother_phone));
+      return matchName && matchPhone;
+    });
+
+    if (exactDuplicate) {
+      return res.redirect("/students?msg=" + encodeURIComponent(`⚠️ الطالب "${name}" مسجل مسبقاً بنفس رقم الجوال`));
     }
-    if (mother_phone) {
-      const duplicateByMother = allStudents.find(s => s.phone === mother_phone || s.mother_phone === mother_phone);
-      if (duplicateByMother) return res.redirect("/students?msg=" + encodeURIComponent('رقم جوال الأم ' + mother_phone + ' مسجل مسبقاً باسم: "' + duplicateByMother.name + '"'));
-    }
+
+    // Check if phone belongs to siblings (different student name)
+    const siblingStudent = allStudents.find(s => 
+      (phone && (s.phone === phone || s.mother_phone === phone)) ||
+      (mother_phone && (s.phone === mother_phone || s.mother_phone === mother_phone))
+    );
+
     const newStudent = { name, phone, mother_phone, date_of_birth, nationality, neighborhood, interview_date, interview_result, interview_reason, followup_status, registration_reason, student_type, track, phase, grade, notes, branch: student_branch || activeBranch, attachments: uploadedFiles, updated_at: new Date().toISOString() };
     const created = await createStudent(newStudent);
-    if (created) {
-      await addStudentHistory(created.id, "student_created", "تم إضافة الطالب " + name, currentUser.username);
-      await addHistory("student_created", "تم إضافة الطالب " + name, currentUser.username);
+    
+    let msg = `تم إضافة الطالب ${name} بنجاح`;
+    if (siblingStudent) {
+      msg = `تم التسجيل بنجاح، ورقم الجوال مرتبط بطلاب آخرين (إخوة: ${siblingStudent.name})`;
     }
+
+    if (created) {
+      await addStudentHistory(created.id, "student_created", `تم إضافة الطالب ${name}`, currentUser.username);
+      await addHistory("student_created", `تم إضافة الطالب ${name}`, currentUser.username);
+    }
+    return res.redirect("/students?msg=" + encodeURIComponent(msg));
   }
-  res.redirect("/students");
 });
 
 router.post("/delete/:id", requireAuth, withUser, async (req, res) => {
