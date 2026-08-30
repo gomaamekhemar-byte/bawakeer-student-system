@@ -412,6 +412,46 @@
       </div>
     </div>
 
+    <!-- NATIONALITY DISTRIBUTION -->
+    <div class="row g-3 mt-2 mb-4">
+      <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3">
+          <div class="card-header bg-white py-3 border-0">
+            <h6 class="fw-bold mb-0 text-dark">
+              <i class="fa-solid fa-globe text-info me-2"></i> توزيع الطلاب حسب الجنسية
+              <span class="badge bg-info-subtle text-info ms-2"><%= analytics.total %> طالب</span>
+            </h6>
+          </div>
+          <div class="card-body p-4 pt-2">
+            <%
+              const natColors = ['primary','success','danger','warning','info','secondary','dark'];
+              const natEntries = Object.entries(analytics.nationalityStats || {}).sort((a,b)=>b[1]-a[1]);
+            %>
+            <div class="row g-3">
+              <% natEntries.forEach(function([nat, cnt], i){ %>
+                <%
+                  const natPct = analytics.total > 0 ? Math.round(cnt / analytics.total * 100) : 0;
+                  const col = natColors[i % natColors.length];
+                %>
+                <div class="col-md-4 col-sm-6">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark small"><i class="fa-solid fa-flag me-1 text-<%= col %>"></i> <%= nat %></span>
+                    <span class="badge bg-<%= col %>-subtle text-<%= col %> border fw-bold"><%= cnt %> (<%= natPct %>%)</span>
+                  </div>
+                  <div class="progress" style="height:10px; border-radius:6px;">
+                    <div class="progress-bar bg-<%= col %>" role="progressbar" style="width:<%= natPct %>%"></div>
+                  </div>
+                </div>
+              <% }) %>
+              <% if(!natEntries.length){ %>
+                <div class="col-12 text-center text-muted py-3"><i class="fa-solid fa-chart-pie me-2"></i> لا توجد بيانات جنسيات متاحة</div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   <!-- SELF CHANGE PASSWORD MODAL -->
   <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
