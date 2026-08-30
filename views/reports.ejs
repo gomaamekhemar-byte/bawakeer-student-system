@@ -248,10 +248,10 @@
               <th>الملاحظات</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="reportsTbody">
             <% if(students && students.length > 0){ %>
               <% students.forEach(function(s, idx){ %>
-                <tr>
+                <tr data-row="<%= idx %>">
                   <td class="text-muted fw-bold"><%= idx + 1 %></td>
                   <td class="fw-bold text-dark fs-6"><%= s.name %></td>
                   <td>
@@ -313,6 +313,11 @@
           </tbody>
         </table>
       </div>
+      <!-- REPORTS PAGINATION -->
+      <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="text-muted small fw-bold">عرض <span id="rPgStart">1</span>–<span id="rPgEnd">20</span> من <span id="rPgTotal"><%= students.length %></span> سجل</div>
+        <nav><ul class="pagination pagination-sm mb-0" id="rPgControls"></ul></nav>
+      </div>
     </div>
 
   <!-- SELF CHANGE PASSWORD MODAL -->
@@ -352,5 +357,49 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Export loading spinners
+    document.querySelectorAll('[data-loading-btn]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const sp = this.querySelector('.spinner-border');
+        const tx = this.querySelector('.btn-text');
+        if (sp && tx) { tx.classList.add('d-none'); sp.classList.remove('d-none'); setTimeout(()=>{ tx.classList.remove('d-none'); sp.classList.add('d-none'); }, 4000); }
+      });
+    });
+
+    // Pagination
+    const PG = 20;
+    let curPage = 1;
+    const rows = Array.from(document.querySelectorAll('#reportsTbody tr[data-row]'));
+    const total = rows.length;
+
+    function goPage(p) {
+      curPage = p;
+      const s = (p-1)*PG, e = s+PG;
+      rows.forEach((r,i) => r.style.display = (i>=s && i<e) ? '' : 'none');
+      document.getElementById('rPgStart').textContent = total > 0 ? s+1 : 0;
+      document.getElementById('rPgEnd').textContent = Math.min(e, total);
+      document.getElementById('rPgTotal').textContent = total;
+      buildPager(p);
+    }
+
+    function buildPager(p) {
+      const tp = Math.ceil(total/PG);
+      if (tp <= 1) { const bar = document.querySelector('.p-3.bg-light.border-top'); if(bar) bar.style.display='none'; return; }
+      const ul = document.getElementById('rPgControls'); ul.innerHTML = '';
+      const mk = (label, pg, dis, act) => {
+        const li = document.createElement('li'); li.className = 'page-item'+(dis?' disabled':'')+(act?' active':'');
+        const a = document.createElement('a'); a.className = 'page-link'; a.href = '#';
+        a.onclick = ev => { ev.preventDefault(); if(!dis) goPage(pg); }; a.innerHTML = label; li.appendChild(a); return li;
+      };
+      ul.appendChild(mk('&raquo; السابق', p-1, p===1, false));
+      const sp=Math.max(1,p-2), ep=Math.min(tp,sp+4);
+      for(let i=sp;i<=ep;i++) ul.appendChild(mk(i,i,false,i===p));
+      ul.appendChild(mk('التالي &laquo;', p+1, p===tp, false));
+    }
+
+    if (total > PG) { goPage(1); }
+    else { document.getElementById('rPgStart').textContent=total>0?1:0; document.getElementById('rPgEnd').textContent=total; document.getElementById('rPgTotal').textContent=total; }
+  </script>
 </body>
 </html>
