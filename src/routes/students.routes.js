@@ -1,3 +1,4 @@
+const { parseTimeTrackMeta, encodeTimeTrackMeta } = require('../utils/timeline');
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -342,6 +343,17 @@ router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) 
     }
   }
 
+    // Update time tracking metadata
+  const existingTimeMeta = parseTimeTrackMeta(existing.notes);
+  const nowIso = new Date().toISOString();
+  if (!existingTimeMeta.init) existingTimeMeta.init = existing.created_at || nowIso;
+  if (field === "interview_result" && value && value !== "في انتظار المقابلة") {
+    existingTimeMeta.interview = nowIso;
+  }
+  if (field === "followup_status" && value && value !== "في انتظار المقابلة" && value !== "في انتظار التسجيل") {
+    existingTimeMeta.registration = nowIso;
+  }
+  updateData.notes = encodeTimeTrackMeta(existing.notes, existingTimeMeta);
   const fieldChanges = computeFieldChanges(existing, updateData);
   const updated = await updateStudent(parseInt(student_id), updateData);
   if (updated) {
@@ -451,6 +463,16 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       }
     }
     
+        const existingTimeMeta = parseTimeTrackMeta(existing.notes);
+    const nowIso = new Date().toISOString();
+    if (!existingTimeMeta.init) existingTimeMeta.init = existing.created_at || nowIso;
+    if (finalInterviewResult && finalInterviewResult !== "في انتظار المقابلة" && (!existingTimeMeta.interview || finalInterviewResult !== existing.interview_result)) {
+      existingTimeMeta.interview = nowIso;
+    }
+    if (finalFollowupStatus && finalFollowupStatus !== "في انتظار المقابلة" && finalFollowupStatus !== "في انتظار التسجيل" && (!existingTimeMeta.registration || finalFollowupStatus !== existing.followup_status)) {
+      existingTimeMeta.registration = nowIso;
+    }
+    const finalNotesWithTime = encodeTimeTrackMeta(finalNotes, existingTimeMeta);
     const newData = {
       name: name || existing.name,
       phone: phone || existing.phone,
@@ -466,7 +488,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       track: track || existing.track,
       phase: phase || existing.phase,
       grade: grade || existing.grade,
-      notes: finalNotes,
+      notes: finalNotesWithTime,
       branch: student_branch || existing.branch || activeBranch,
       attachments: newAttachments,
     };
@@ -499,6 +521,13 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       finalNotes = (finalNotes ? finalNotes + " | " : "") + "جوال الأم: " + mother_phone;
     }
 
+        const nowIso = new Date().toISOString();
+    const timeTrackMeta = {
+      init: nowIso,
+      interview: (interview_result && interview_result !== "في انتظار المقابلة") ? nowIso : "",
+      registration: (followup_status && followup_status !== "في انتظار المقابلة" && followup_status !== "في انتظار التسجيل") ? nowIso : ""
+    };
+    const finalNotesWithTime = encodeTimeTrackMeta(finalNotes, timeTrackMeta);
     const newStudent = {
       name, phone, date_of_birth, nationality, neighborhood,
       interview_date,
@@ -510,7 +539,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       track: track || "عام",
       phase: phase || "ابتدائي",
       grade: grade || "1",
-      notes: finalNotes,
+      notes: finalNotesWithTime,
       branch: student_branch || activeBranch || "الندى",
       academic_year_id: (req.sessionYear && req.sessionYear.id) ? req.sessionYear.id : (activeYear ? activeYear.id : null),
       attachments: uploadedFiles,
