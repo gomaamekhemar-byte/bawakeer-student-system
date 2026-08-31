@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>نظام متابعة تسجيل وقبول الطلاب | مدارس بواكير الأهلية</title>
+  <title>متابعة وتسجيل الطلاب | مدارس بواكير الأهلية</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,15 +55,20 @@
     </div>
   </div>
 
-  <!-- MAIN TOP NAVBAR -->
+  <!-- MAIN TOP NAVBAR (DYNAMIC PAGE INDICATOR & REFRESH BRAND) -->
   <nav class="navbar navbar-expand-lg navbar-erp py-2">
     <div class="container-fluid px-4">
-      <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="/">
+      <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="javascript:location.reload()" title="اضغط لتحديث الصفحة">
         <i class="fa-solid fa-graduation-cap fs-4"></i>
         <span>مدارس بواكير الأهلية</span>
       </a>
+      
+      <!-- DYNAMIC CURRENT SCREEN BADGE & NAVIGATION -->
       <div class="d-flex align-items-center gap-2 flex-wrap">
-        <a href="/" class="btn btn-outline-secondary btn-sm fw-bold"><i class="fa-solid fa-house me-1"></i> الرئيسية</a>
+        <a href="/" class="btn btn-primary btn-sm fw-bold"><i class="fa-solid fa-house me-1"></i> الرئيسية</a>
+        <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 fw-bold fs-6">
+          <i class="fa-solid fa-users-line me-1"></i> متابعة وتسجيل الطلاب
+        </span>
         <div class="dropdown">
           <button class="btn btn-sm btn-outline-warning text-dark fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown">
             <i class="fa-solid fa-file-export me-1 text-warning"></i> تقارير
@@ -82,25 +87,32 @@
         <% if(canManageYears){ %>
           <a href="/branches" class="btn btn-outline-info text-dark btn-sm fw-bold"><i class="fa-solid fa-building me-1"></i> الفروع والأعوام</a>
         <% } %>
-        <a href="/analytics" class="btn btn-outline-success btn-sm fw-bold"><i class="fa-solid fa-chart-pie me-1"></i> الداش بورد</a>
+        <% if(canViewAnalytics){ %>
+          <a href="/analytics" class="btn btn-outline-success btn-sm fw-bold"><i class="fa-solid fa-chart-pie me-1"></i> الداش بورد</a>
+        <% } %>
       </div>
+
       <div class="d-flex align-items-center gap-2">
         <div class="text-end d-none d-md-block">
-          <div class="fw-bold text-dark"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'مدير النظام' %></div>
+          <div class="fw-bold text-dark"><%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %></div>
           <small class="text-muted"><%= activeBranch && activeBranch !== 'الكل' ? 'فرع ' + activeBranch : 'جميع الفروع' %></small>
         </div>
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal"><i class="fa-solid fa-key text-warning"></i></button>
-        <a href="/logout" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+        <button type="button" class="btn btn-outline-warning text-dark btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal" title="تغيير كلمة المرور">
+          <i class="fa-solid fa-key text-warning"></i>
+        </button>
+        <a href="/logout" class="btn btn-outline-danger btn-sm" title="تسجيل الخروج">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </a>
       </div>
     </div>
   </nav>
 
   <!-- SUBHEADER BANNER -->
   <div class="erp-sub-header">
-    <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+    <div class="container-fluid px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div class="fw-bold fs-5 d-flex align-items-center gap-2">
         <i class="fa-solid fa-users-line"></i>
-        <span>الشاشة الرئيسية | نظام متابعة وتسجيل الطلاب</span>
+        <span>متابعة وتسجيل الطلاب | مدارس بواكير الأهلية</span>
       </div>
       <div class="badge bg-white text-primary fs-6 px-3 py-2 fw-bold shadow-sm">
         <i class="fa-regular fa-calendar-check me-1"></i>
@@ -129,34 +141,27 @@
       <div class="col-xl-2 col-md-4 col-6"><div class="stat-card-custom stat-card-purple h-100 d-flex align-items-center justify-content-between"><div><div class="stat-number" style="color:#8b5cf6;"><%= stats.pending_interview %></div><div class="stat-title">انتظار المقابلة</div></div><div class="stat-icon bg-secondary-subtle text-secondary"><i class="fa-solid fa-clipboard-question"></i></div></div></div>
     </div>
 
-    <!-- 2. SEARCH & ADVANCED FILTER TOOLBAR -->
+    <!-- 2. SEARCH & ADVANCED FILTER TOOLBAR (REMOVED FATHER NAME SEARCH) -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
       <div class="card-body p-3">
         <form method="get" action="/students" id="searchForm">
           <div class="row g-3 align-items-end mb-3">
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg-5 col-md-6">
               <label class="form-label fw-bold text-secondary small mb-1"><i class="fa-solid fa-user me-1"></i> اسم الطالب</label>
               <div class="input-group">
                 <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
                 <input type="text" name="q" class="form-control" placeholder="بحث باسم الطالب..." value="<%= typeof query !== 'undefined' ? query : '' %>">
               </div>
             </div>
-            <div class="col-lg-3 col-md-6">
-              <label class="form-label fw-bold text-secondary small mb-1"><i class="fa-solid fa-person me-1"></i> إسم الأب</label>
-              <div class="input-group">
-                <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                <input type="text" name="neighborhood" class="form-control" placeholder="بحث باسم الأب..." value="<%= typeof neighborhoodQuery !== 'undefined' ? neighborhoodQuery : '' %>">
-              </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-              <label class="form-label fw-bold text-secondary small mb-1"><i class="fa-solid fa-phone me-1"></i> رقم الجوال (أب أو أم)</label>
+            <div class="col-lg-4 col-md-6">
+              <label class="form-label fw-bold text-secondary small mb-1"><i class="fa-solid fa-phone me-1"></i> رقم الجوال</label>
               <div class="input-group">
                 <span class="input-group-text bg-light"><i class="fa-solid fa-phone text-muted"></i></span>
                 <input type="text" name="phone_search" class="form-control" placeholder="05xxxxxxxx" value="<%= typeof phoneQuery !== 'undefined' ? phoneQuery : '' %>">
               </div>
             </div>
-            <div class="col-lg-3 col-md-6 d-flex gap-2 justify-content-end">
-              <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" id="searchBtn">
+            <div class="col-lg-3 col-md-12 d-flex gap-2 justify-content-end">
+              <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm flex-grow-1" id="searchBtn">
                 <span class="search-text"><i class="fa-solid fa-magnifying-glass me-1"></i> بحث</span>
                 <span class="spinner-border spinner-border-sm d-none" role="status"></span>
               </button>
@@ -206,8 +211,7 @@
             <tr>
               <th style="width:45px;">#</th>
               <th>اسم الطالب</th>
-              <th>جوال الأب</th>
-              <th>جوال الأم</th>
+              <th>رقم الجوال</th>
               <th>المرحلة والصف</th>
               <th>الفرع</th>
               <th style="min-width:155px;">نتيجة المقابلة</th>
@@ -228,11 +232,6 @@
               <td>
                 <% if(s.phone){ %>
                 <a href="https://wa.me/<%= s.phone.replace(/[^0-9]/g, '') %>" target="_blank" class="text-success text-decoration-none fw-bold small"><i class="fa-brands fa-whatsapp me-1"></i><%= s.phone %></a>
-                <% } else { %><span class="text-muted">—</span><% } %>
-              </td>
-              <td>
-                <% if(s.mother_phone){ %>
-                <a href="https://wa.me/<%= s.mother_phone.replace(/[^0-9]/g, '') %>" target="_blank" style="color:#db2777;" class="text-decoration-none fw-bold small"><i class="fa-brands fa-whatsapp me-1"></i><%= s.mother_phone %></a>
                 <% } else { %><span class="text-muted">—</span><% } %>
               </td>
               <td><span class="badge bg-light text-dark border"><%= s.phase || '' %><%= s.grade ? ' - صف ' + s.grade : '' %></span></td>
@@ -264,14 +263,14 @@
                 <% } else { %><span class="badge-status bg-light text-muted border">لم يسجل</span><% } %>
               </td>
               <% } %>
-              <td class="text-truncate" style="max-width:150px;" title="<%= s.notes || '' %>"><small class="text-muted"><%= s.notes || '—' %></small></td>
+              <td class="text-truncate" style="max-width:180px;" title="<%= s.notes || '' %>"><small class="text-muted"><%= s.notes || '—' %></small></td>
               <td class="text-center">
                 <div class="btn-group btn-group-sm">
                   <% if(canManageStudents){ %><a href="/students?edit_id=<%= s.id %>" class="btn btn-outline-primary" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></a><% } %>
-                  <button type="button" class="btn btn-outline-secondary" onclick="openStudentHistoryModal(<%= s.id %>, '<%= s.name %>')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                  <button type="button" class="btn btn-outline-secondary" onclick="openStudentHistoryModal(<%= s.id %>, '<%= s.name %>')" title="سجل التعديلات"><i class="fa-solid fa-clock-rotate-left"></i></button>
                   <% if(canDeleteStudents){ %>
                   <form method="post" action="/delete/<%= s.id %>" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف الطالب <%= s.name %>؟')">
-                    <button type="submit" class="btn btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                    <button type="submit" class="btn btn-outline-danger" title="حذف"><i class="fa-solid fa-trash"></i></button>
                   </form>
                   <% } %>
                 </div>
@@ -279,7 +278,7 @@
             </tr>
             <% }) %>
             <% } else { %>
-            <tr><td colspan="10" class="text-center py-5 text-muted fw-bold"><i class="fa-solid fa-folder-open fs-2 d-block mb-2 text-secondary"></i>لا توجد نتائج مطابقة لمعايير البحث</td></tr>
+            <tr><td colspan="9" class="text-center py-5 text-muted fw-bold"><i class="fa-solid fa-folder-open fs-2 d-block mb-2 text-secondary"></i>لا توجد نتائج مطابقة لمعايير البحث</td></tr>
             <% } %>
           </tbody>
         </table>
@@ -308,7 +307,7 @@
 
         <form method="post" action="/students" enctype="multipart/form-data" id="studentForm" novalidate>
           <div class="modal-body p-4">
-            <!-- FIX 2: Hidden student_id input passed properly for Edit Update -->
+            <!-- Hidden student_id input passed properly for Edit Update -->
             <input type="hidden" name="student_id" id="studentIdHidden" value="<%= editingStudent ? editingStudent.id : '' %>">
 
             <div class="row g-3">
@@ -331,28 +330,42 @@
 
               <!-- رقم جوال الأب -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">رقم جوال الأب <span class="text-danger">*</span></label>
+                <label class="form-label fw-bold text-dark small">رقم جوال ولي الأمر (الأساسي) <span class="text-danger">*</span></label>
                 <input type="text" name="phone" id="phoneInput" class="form-control" required value="<%= editingStudent ? editingStudent.phone : '' %>" placeholder="05xxxxxxxx" maxlength="10" oninput="validatePhone(this,'phoneError')">
                 <div id="phoneError" class="invalid-feedback-phone">⚠️ يجب أن يبدأ الرقم بـ 05 ويتكون من 10 أرقام</div>
               </div>
 
-              <!-- رقم جوال الأم -->
+              <!-- رقم جوال إضافي / الأم -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">رقم جوال الأم</label>
-                <input type="text" name="mother_phone" id="motherPhoneInput" class="form-control" value="<%= editingStudent ? (editingStudent.mother_phone || '') : '' %>" placeholder="05xxxxxxxx" maxlength="10" oninput="validatePhone(this,'motherPhoneError')">
+                <label class="form-label fw-bold text-dark small">رقم جوال إضافي (اختياري)</label>
+                <input type="text" name="mother_phone" id="motherPhoneInput" class="form-control" placeholder="05xxxxxxxx" maxlength="10" oninput="validatePhone(this,'motherPhoneError')">
                 <div id="motherPhoneError" class="invalid-feedback-phone">⚠️ يجب أن يبدأ الرقم بـ 05 ويتكون من 10 أرقام</div>
               </div>
 
-              <!-- تاريخ الميلاد -->
+              <!-- تاريخ الميلاد ميلادي + هجري (مترابطين مع حساب العمر فوري) -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">تاريخ الميلاد</label>
-                <input type="date" name="date_of_birth" class="form-control" value="<%= editingStudent ? editingStudent.date_of_birth : '' %>">
+                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-calendar-days text-primary me-1"></i> تاريخ الميلاد (ميلادي)</label>
+                <input type="date" name="date_of_birth" id="dobGregorian" class="form-control" value="<%= editingStudent ? (editingStudent.date_of_birth || '') : '' %>" oninput="onGregorianChange(this.value)">
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-moon text-warning me-1"></i> تاريخ الميلاد (هجري)</label>
+                <input type="text" id="dobHijri" class="form-control" placeholder="مثال: 1440-05-15 (سنة-شهر-يوم)" oninput="onHijriChange(this.value)">
+              </div>
+
+              <!-- قسم حساب عمر الطالب فوري -->
+              <div class="col-12">
+                <div class="p-2 rounded bg-light border d-flex align-items-center gap-2">
+                  <i class="fa-solid fa-hourglass-half text-primary fs-5"></i>
+                  <span class="fw-bold small text-secondary">عمر الطالب المحسوب:</span>
+                  <span class="badge bg-primary fs-6 px-3 py-1" id="studentAgeDisplay">يرجى إدخال تاريخ الميلاد</span>
+                </div>
               </div>
 
               <!-- الحي السكني -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">الحي السكني / اسم الأب</label>
-                <input type="text" name="neighborhood" class="form-control" value="<%= editingStudent ? editingStudent.neighborhood : '' %>" placeholder="اسم الحي أو اسم الأب">
+                <label class="form-label fw-bold text-dark small">الحي السكني</label>
+                <input type="text" name="neighborhood" class="form-control" value="<%= editingStudent ? editingStudent.neighborhood : '' %>" placeholder="اسم الحي">
               </div>
 
               <!-- نوع الطالب -->
@@ -421,7 +434,7 @@
               <!-- حالة المتابعة والتسجيل -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small">حالة المتابعة والتسجيل</label>
-                <select name="followup_status" class="form-select">
+                <select name="followup_status" id="followupStatusSelect" class="form-select" onchange="toggleInterviewReason()">
                   <option value="">لم تحدد بعد</option>
                   <% followup_statuses.forEach(function(s){ %>
                     <option value="<%= s %>" <%= editingStudent && editingStudent.followup_status===s ? 'selected' : '' %>><%= s %></option>
@@ -429,10 +442,10 @@
                 </select>
               </div>
 
-              <!-- سبب عدم القبول (d-none مخفي افتراضياً وإجباري عند اختيار غير مقبول) -->
-              <div class="col-md-6 <%= editingStudent && editingStudent.interview_result==='غير مقبول' ? '' : 'd-none' %>" id="interviewReasonCol">
-                <label class="form-label fw-bold text-danger small">سبب عدم القبول <span class="text-danger">*</span></label>
-                <input type="text" name="interview_reason" id="interviewReasonInput" class="form-control border-danger" value="<%= editingStudent ? (editingStudent.interview_reason || '') : '' %>" placeholder="اكتب سبب عدم القبول التفصيلي..." <%= editingStudent && editingStudent.interview_result==='غير مقبول' ? 'required' : '' %>>
+              <!-- سبب عدم القبول (Textarea إجباري وديناميكي عند اختيار غير مقبول) -->
+              <div class="col-12 <%= editingStudent && editingStudent.interview_result==='غير مقبول' ? '' : 'd-none' %>" id="interviewReasonCol">
+                <label class="form-label fw-bold text-danger small"><i class="fa-solid fa-circle-exclamation me-1"></i> سبب عدم القبول <span class="text-danger">*</span></label>
+                <textarea name="interview_reason" id="interviewReasonInput" class="form-control border-danger" rows="2" placeholder="اكتب سبب عدم القبول التفصيلي الإجباري..."><%= editingStudent ? (editingStudent.interview_reason || '') : '' %></textarea>
               </div>
 
               <!-- سبب عدم التسجيل -->
@@ -442,9 +455,9 @@
               </div>
 
               <!-- ملاحظات -->
-              <div class="col-12">
+              <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small">ملاحظات إضافية</label>
-                <textarea name="notes" class="form-control" rows="3" placeholder="اكتب ملاحظات أو تفاصيل..."><%= editingStudent ? editingStudent.notes : '' %></textarea>
+                <textarea name="notes" class="form-control" rows="2" placeholder="اكتب ملاحظات أو تفاصيل..."><%= editingStudent ? editingStudent.notes : '' %></textarea>
               </div>
 
               <!-- مرفقات -->
@@ -523,7 +536,118 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    // Open clean new student modal
+    // =============================================
+    // Hijri <-> Gregorian Conversion & Exact Age
+    // =============================================
+    function gregorianToHijri(gDateStr) {
+      if (!gDateStr) return '';
+      const d = new Date(gDateStr);
+      if (isNaN(d.getTime())) return '';
+      try {
+        const formatter = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+        const parts = formatter.formatToParts(d);
+        let day = '', month = '', year = '';
+        parts.forEach(p => {
+          if (p.type === 'day') day = p.value.padStart(2, '0');
+          if (p.type === 'month') month = p.value.padStart(2, '0');
+          if (p.type === 'year') year = p.value.replace(/[^0-9]/g, '');
+        });
+        if (year && month && day) return year + '-' + month + '-' + day;
+      } catch (e) {}
+      return '';
+    }
+
+    function hijriToGregorian(hDateStr) {
+      if (!hDateStr) return '';
+      const parts = hDateStr.trim().replace(/\//g, '-').split('-');
+      if (parts.length !== 3) return '';
+      const hYear = parseInt(parts[0], 10);
+      const hMonth = parseInt(parts[1], 10);
+      const hDay = parseInt(parts[2], 10);
+      if (isNaN(hYear) || isNaN(hMonth) || isNaN(hDay)) return '';
+      if (hYear < 1300 || hYear > 1500 || hMonth < 1 || hMonth > 12 || hDay < 1 || hDay > 30) return '';
+
+      // Umm al-Qura math conversion
+      const jd = Math.floor((11 * hYear + 3) / 30) + 354 * hYear + 30 * hMonth - Math.floor((hMonth - 1) / 2) + hDay + 1948440 - 385;
+      const l = jd + 68569;
+      const n = Math.floor((4 * l) / 146097);
+      const l2 = l - Math.floor((146097 * n + 3) / 4);
+      const i = Math.floor((4000 * (l2 + 1)) / 1461001);
+      const l3 = l2 - Math.floor((1461 * i) / 4) + 31;
+      const j = Math.floor((80 * l3) / 2447);
+      const d = l3 - Math.floor((2447 * j) / 80);
+      const l4 = Math.floor(j / 11);
+      const m = j + 2 - 12 * l4;
+      const y = 100 * (n - 49) + i + l4;
+      
+      const mm = String(m).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      return y + '-' + mm + '-' + dd;
+    }
+
+    function calculateAgeLive(gDateStr) {
+      const display = document.getElementById('studentAgeDisplay');
+      if (!display) return;
+      if (!gDateStr) {
+        display.textContent = 'يرجى إدخال تاريخ الميلاد';
+        display.className = 'badge bg-secondary fs-6 px-3 py-1';
+        return;
+      }
+      const birth = new Date(gDateStr);
+      const today = new Date();
+      if (isNaN(birth.getTime()) || birth > today) {
+        display.textContent = 'تاريخ غير صالح (في المستقبل)';
+        display.className = 'badge bg-danger fs-6 px-3 py-1';
+        return;
+      }
+
+      let years = today.getFullYear() - birth.getFullYear();
+      let months = today.getMonth() - birth.getMonth();
+      let days = today.getDate() - birth.getDate();
+
+      if (days < 0) {
+        const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+        days += prevMonth.getDate();
+        months -= 1;
+      }
+      if (months < 0) {
+        months += 12;
+        years -= 1;
+      }
+
+      const parts = [];
+      if (years > 0) parts.push(years + ' سنة');
+      if (months > 0) parts.push(months + ' شهر');
+      if (days > 0) parts.push(days + ' يوم');
+      
+      const resultText = parts.length > 0 ? parts.join(' و ') : 'مولود حديثاً';
+      display.textContent = resultText;
+      display.className = 'badge bg-success fs-6 px-3 py-1';
+    }
+
+    function onGregorianChange(val) {
+      if (val) {
+        const hVal = gregorianToHijri(val);
+        if (hVal) document.getElementById('dobHijri').value = hVal;
+      }
+      calculateAgeLive(val);
+    }
+
+    function onHijriChange(val) {
+      if (val && val.length >= 8) {
+        const gVal = hijriToGregorian(val);
+        if (gVal) {
+          document.getElementById('dobGregorian').value = gVal;
+          calculateAgeLive(gVal);
+        }
+      }
+    }
+
+    // =============================================
+    // Modal Helpers & Logic
+    // =============================================
     function openNewStudentModal() {
       if (window.location.search.includes('edit_id')) {
         window.location.href = '/students?open_modal=1';
@@ -537,11 +661,14 @@
       }
       const title = document.getElementById('studentModalLabel');
       if (title) title.innerHTML = '<i class="fa-solid fa-user-graduate text-primary me-2"></i> إضافة طالب جديد';
+      
+      document.getElementById('dobHijri').value = '';
+      calculateAgeLive('');
       toggleInterviewReason();
       new bootstrap.Modal(document.getElementById('studentModal')).show();
     }
 
-    // Dynamic & Mandatory 'سبب عدم القبول' using d-none class
+    // Dynamic & Mandatory 'سبب عدم القبول' (Textarea)
     function toggleInterviewReason() {
       const select = document.getElementById('interviewResultSelect');
       const col = document.getElementById('interviewReasonCol');
@@ -557,9 +684,8 @@
         input.value = '';
       }
     }
-    document.addEventListener('DOMContentLoaded', toggleInterviewReason);
 
-    // Phone Validation
+    // Phone Validation (05xxxxxxxx - 10 digits)
     function validatePhone(input, errorId) {
       const v = input.value.trim();
       const err = document.getElementById(errorId);
@@ -680,14 +806,31 @@
         mb.innerHTML = h + '</div>';
       } catch(e) { mb.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء جلب السجل التاريخي.</div>'; }
     }
+
+    // Init on DOM load
+    document.addEventListener('DOMContentLoaded', function() {
+      toggleInterviewReason();
+      const dobVal = document.getElementById('dobGregorian').value;
+      if (dobVal) {
+        onGregorianChange(dobVal);
+      }
+    });
   </script>
 
   <% if(editingStudent){ %>
-  <script>document.addEventListener("DOMContentLoaded",function(){ new bootstrap.Modal(document.getElementById('studentModal')).show(); });</script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      new bootstrap.Modal(document.getElementById('studentModal')).show();
+    });
+  </script>
   <% } %>
 
   <% if(typeof openNewModal !== 'undefined' && openNewModal){ %>
-  <script>document.addEventListener("DOMContentLoaded",function(){ openNewStudentModal(); });</script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      openNewStudentModal();
+    });
+  </script>
   <% } %>
 
 </body>
