@@ -108,7 +108,10 @@ async function updateStudent(id, studentData) {
 }
 
 async function deleteStudent(id) {
-  const { error } = await supabase.from('students').delete().eq('id', id);
+  const idNum = parseInt(id);
+  // Cascade clean student history records for this student ID to prevent orphaned records
+  await supabase.from('student_history').delete().eq('student_id', idNum);
+  const { error } = await supabase.from('students').delete().eq('id', idNum);
   return !error;
 }
 
