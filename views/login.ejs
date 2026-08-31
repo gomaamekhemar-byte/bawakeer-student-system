@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
@@ -79,12 +79,30 @@
         </div>
       </div>
 
+      <!-- ACADEMIC YEAR DROPDOWN -->
+      <div class="mb-3">
+        <label class="form-label fw-bold text-dark small">العام الدراسي</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light"><i class="fa-solid fa-calendar-days text-muted"></i></span>
+          <select name="academic_year_id" class="form-select fw-bold" required>
+            <% if(typeof academic_years !== 'undefined' && academic_years.length){ %>
+              <% academic_years.forEach(function(y){ %>
+                <option value="<%= y.id %>" <%= y.is_active ? 'selected' : '' %>>
+                  <%= y.year_name %> <%= y.is_active ? '(العام الحالي النشط ✅)' : '(أرشيف - قراءة فقط 🔒)' %>
+                </option>
+              <% }) %>
+            <% } else { %>
+              <option value="">العام الحالي</option>
+            <% } %>
+          </select>
+        </div>
+      </div>
+
       <div class="mb-4">
         <label class="form-label fw-bold text-dark small">الفرع</label>
         <div class="input-group">
           <span class="input-group-text bg-light"><i class="fa-solid fa-building text-muted"></i></span>
           <select name="branch" class="form-select" required>
-            <option value="">-- اختر الفرع --</option>
             <option value="الكل">جميع الفروع</option>
             <% branches.forEach(function(branch){ %>
               <option value="<%= branch %>">فرع <%= branch %></option>
