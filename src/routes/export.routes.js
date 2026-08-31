@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const router = express.Router();
 const { requireAuth } = require("../middleware/auth");
 const { withUser, userHasPermission } = require("../middleware/permissions");
@@ -6,69 +6,68 @@ const { getStudents } = require("../services/students.service");
 const { addHistory } = require("../services/history.service");
 const XLSX = require("xlsx");
 
-// GET /export/excel - Export students as XLSX (fixed for Excel compatibility)
+// GET /export/excel - Export students as 100% valid XLSX
 router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userHasPermission(currentUser, "export_reports")) return res.redirect("/");
+  
   const students = await getStudents();
-  const rows = students.map(s => ({
-    "الاسم": s.name || "",
-    "رقم جوال الأب": s.phone || "",
-    "رقم جوال الأم": s.mother_phone || "",
+  const rows = students.map((s, idx) => ({
+    "م": idx + 1,
+    "اسم الطالب": s.name || "",
+    "رقم جوال ولي الأمر": s.phone || "",
+    "رقم جوال إضافي": s.mother_phone || "",
     "تاريخ الميلاد": s.date_of_birth || "",
-    "العمر": s.age || "",
-    "الجنسية": s.nationality || "",
+    "الجنسية": s.nationality || "سعودي",
     "الحي السكني": s.neighborhood || "",
-    "نتيجة المقابلة": s.interview_result || "",
-    "سبب عدم الاجتياز": s.interview_reason || "",
-    "حالة المتابعة": s.followup_status || "",
-    "سبب عدم التسجيل": s.registration_reason || "",
-    "نوع الطالب": s.student_type || "",
-    "المسار": s.track || "",
-    "المرحلة": s.phase || "",
+    "المرحلة الدراسية": s.phase || "",
     "الصف": s.grade || "",
+    "المسار": s.track || "",
+    "نوع الطالب": s.student_type || "بنين",
     "الفرع": s.branch || "",
-    "ملاحظات": s.notes || "",
-    "تاريخ التحديث": s.updated_at || "",
+    "نتيجة المقابلة": s.interview_result || "لم يقابل",
+    "سبب عدم القبول": s.interview_reason || "",
+    "حالة المتابعة": s.followup_status || "غير محدد",
+    "سبب عدم التسجيل": s.registration_reason || "",
+    "الملاحظات": s.notes || "",
+    "عدد المرفقات": (Array.isArray(s.attachments) ? s.attachments.length : 0)
   }));
+
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);
 
-  // Set column widths for readability
+  // Column widths
   ws["!cols"] = [
-    { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 14 }, { wch: 6 },
-    { wch: 10 }, { wch: 14 }, { wch: 18 }, { wch: 20 }, { wch: 20 },
-    { wch: 20 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 6 },
-    { wch: 10 }, { wch: 25 }, { wch: 20 },
+    { wch: 5 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
+    { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 8 }, { wch: 10 },
+    { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 22 }, { wch: 18 },
+    { wch: 20 }, { wch: 25 }, { wch: 12 }
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, "الطلاب");
+  XLSX.utils.book_append_sheet(wb, ws, "كشف الطلاب");
 
-  // Use buffer type for binary-safe transmission
   const buf = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
-
-  await addHistory("export_excel", "تم تصدير ملف Excel", currentUser.username);
+  await addHistory("export_excel", "تم تصدير كشف الطلاب بصيغة Excel", currentUser.username);
 
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-  res.setHeader("Content-Disposition", 'attachment; filename="students_bawakeer.xlsx"');
+  res.setHeader("Content-Disposition", 'attachment; filename="bawakeer_students.xlsx"');
   res.setHeader("Content-Length", buf.length);
   res.setHeader("Cache-Control", "no-cache");
   res.end(buf);
 });
 
-// GET /export/pdf - Print-ready Arabic RTL page (opens in new window for browser print)
+// GET /export/pdf - Print-ready HTML report
 router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userHasPermission(currentUser, "export_reports")) return res.redirect("/");
   const students = await getStudents();
-  await addHistory("export_pdf", "تم فتح صفحة طباعة PDF", currentUser.username);
+  await addHistory("export_pdf", "تم فتح صفحة طباعة تقرير PDF", currentUser.username);
 
   const rows = students.map((s, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${s.name || ""}</td>
+      <td><strong>${s.name || ""}</strong></td>
       <td>${s.phone || ""}</td>
-      <td>${s.mother_phone || ""}</td>
       <td>${s.nationality || ""}</td>
       <td>${s.phase || ""} ${s.grade ? "- صف " + s.grade : ""}</td>
       <td>${s.branch || ""}</td>
@@ -82,20 +81,19 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>تقرير طلاب مدارس بواكير الأهلية</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Cairo', 'Segoe UI', Arial, sans-serif; background: #fff; color: #1a1a1a; direction: rtl; font-size: 11pt; }
+    body { font-family: 'Cairo', Arial, sans-serif; background: #fff; color: #1a1a1a; direction: rtl; font-size: 11pt; }
     .print-header { background: #1e3a8a; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .print-header h1 { font-size: 16pt; font-weight: 800; }
     .print-header .meta { font-size: 10pt; text-align: left; }
     .summary-cards { display: flex; gap: 10px; margin: 0 20px 16px; flex-wrap: wrap; }
     .summary-card { background: #f0f4ff; border: 1px solid #dbe4ff; border-radius: 8px; padding: 10px 16px; flex: 1; min-width: 120px; text-align: center; }
-    .summary-card .num { font-size: 20pt; font-weight: 800; color: #1e3a8a; }
+    .summary-card .num { font-size: 18pt; font-weight: 800; color: #1e3a8a; }
     .summary-card .lbl { font-size: 9pt; color: #555; font-weight: 600; }
-    .table-wrapper { margin: 0 20px 20px; overflow: hidden; }
+    .table-wrapper { margin: 0 20px 20px; }
     table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
     thead tr { background: #1e3a8a; color: white; }
     thead th { padding: 10px 8px; font-weight: 700; text-align: right; border: 1px solid #2d4fa0; }
@@ -116,8 +114,6 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
     @media print {
       .no-print { display: none !important; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .print-header { -webkit-print-color-adjust: exact; }
-      thead tr { -webkit-print-color-adjust: exact; }
       @page { margin: 1cm; size: A4 landscape; }
     }
   </style>
@@ -132,7 +128,6 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
     <div class="meta">
       <div>إجمالي الطلاب: ${students.length}</div>
       <div>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-SA")}</div>
-      <div>طبع بواسطة: ${currentUser.full_name || currentUser.username}</div>
     </div>
   </div>
   <div class="summary-cards">
@@ -141,7 +136,6 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
     <div class="summary-card"><div class="num">${students.filter(s => s.interview_result === "غير مقبول").length}</div><div class="lbl">غير مقبول</div></div>
     <div class="summary-card"><div class="num">${students.filter(s => s.followup_status === "تم التسجيل").length}</div><div class="lbl">تم التسجيل</div></div>
     <div class="summary-card"><div class="num">${students.filter(s => s.followup_status === "في انتظار التسجيل").length}</div><div class="lbl">انتظار التسجيل</div></div>
-    <div class="summary-card"><div class="num">${students.filter(s => s.interview_result === "في انتظار المقابلة").length}</div><div class="lbl">انتظار المقابلة</div></div>
   </div>
   <div class="table-wrapper">
     <table>
@@ -149,8 +143,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
         <tr>
           <th>#</th>
           <th>اسم الطالب</th>
-          <th>جوال الأب</th>
-          <th>جوال الأم</th>
+          <th>رقم الجوال</th>
           <th>الجنسية</th>
           <th>المرحلة والصف</th>
           <th>الفرع</th>
@@ -162,7 +155,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
       <tbody>${rows}</tbody>
     </table>
   </div>
-  <div class="print-footer">نظام إدارة قبول وتسجيل الطلاب — مدارس بواكير الأهلية | ${new Date().toLocaleDateString("ar-SA")}</div>
+  <div class="print-footer">نظام إدارة قبول وتسجيل الطلاب — مدارس بواكير الأهلية</div>
 </body>
 </html>`;
 
