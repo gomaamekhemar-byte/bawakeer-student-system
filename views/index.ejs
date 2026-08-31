@@ -117,6 +117,18 @@
       </div>
     </div>
   </nav>
+  <!-- READ-ONLY ARCHIVE BANNER -->
+  <% if(typeof isReadOnlyYear !== 'undefined' && isReadOnlyYear){ %>
+    <div class="alert alert-warning border-warning d-flex align-items-center justify-content-between mb-0 rounded-0 py-2 px-4 shadow-sm" style="background-color: #fffbeb; border-bottom: 2px solid #f59e0b;">
+      <div class="d-flex align-items-center gap-2 fw-bold text-dark">
+        <i class="fa-solid fa-lock text-warning fs-5"></i>
+        <span>أنت تتصفح أرشيف العام الدراسي (<%= (typeof sessionYear !== 'undefined' && sessionYear) ? sessionYear.name : '' %>) - وضع القراءة فقط 🔒 (لا يمكن الإضافة أو التعديل أو الحذف)</span>
+      </div>
+      <a href="/login" class="btn btn-warning btn-sm fw-bold shadow-sm">
+        <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> العودة للعام النشط
+      </a>
+    </div>
+  <% } %>
 
   <!-- SUBHEADER BANNER -->
   <div class="erp-sub-header">
@@ -176,7 +188,7 @@
                 <span class="search-text"><i class="fa-solid fa-magnifying-glass me-1"></i> بحث</span>
                 <span class="spinner-border spinner-border-sm d-none" role="status"></span>
               </button>
-              <% if(canManageStudents){ %>
+              <% if(canManageStudents && (!locals.isReadOnlyYear)){ %>
               <button type="button" class="btn btn-warning text-white fw-bold px-3 shadow-sm" style="background:#f97316;border-color:#f97316;" data-bs-toggle="modal" data-bs-target="#studentModal" onclick="openNewStudentModal(event)">
                 <i class="fa-solid fa-user-plus me-1"></i> + طالب جديد
               </button>
@@ -1047,6 +1059,38 @@
         } else if (val === 'غير مقبول') {
           folSelect.value = 'لم يجتز المقابلة';
         }
+      }
+    }
+
+        // Live Parent History Lookup
+    async function checkParentHistory(phoneVal) {
+      const alertBox = document.getElementById('parentLookupAlert');
+      const msgSpan = document.getElementById('parentLookupMsg');
+      if (!phoneVal || phoneVal.trim().length < 8) {
+        if (alertBox) alertBox.style.display = 'none';
+        return;
+      }
+      try {
+        const res = await fetch('/api/lookup_parent?phone=' + encodeURIComponent(phoneVal.trim()));
+        const data = await res.json();
+        if (data.found && alertBox && msgSpan) {
+          msgSpan.textContent = data.message;
+          alertBox.style.display = 'flex';
+
+          // Auto-fill neighborhood and nationality if empty
+          const neighInput = document.getElementById('neighborhoodInput') || document.querySelector('input[name="neighborhood"]');
+          if (neighInput && !neighInput.value.trim() && data.student.neighborhood) {
+            neighInput.value = data.student.neighborhood;
+          }
+          const natSelect = document.querySelector('select[name="nationality"]');
+          if (natSelect && !natSelect.value && data.student.nationality) {
+            natSelect.value = data.student.nationality;
+          }
+        } else if (alertBox) {
+          alertBox.style.display = 'none';
+        }
+      } catch(e) {
+        if (alertBox) alertBox.style.display = 'none';
       }
     }
 
