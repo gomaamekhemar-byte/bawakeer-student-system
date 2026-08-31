@@ -123,18 +123,9 @@
     <% } %>
 
     <!-- WELCOME HERO BANNER -->
-    <div class="p-4 mb-4 rounded-4 shadow-sm" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff;">
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-          <h3 class="fw-bold mb-1">مرحباً بك، <%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %> 👋</h3>
-          <p class="mb-0 text-white-50 fs-6">نظام متابعة تسجيل وقبول الطلاب بمدارس بواكير الأهلية — اختر القسم الذي ترغب في العمل عليه أدناه.</p>
-        </div>
-        <div>
-          <a href="/students?open_modal=1" class="btn btn-warning text-white fw-bold px-4 py-2 shadow" style="background:#f97316;border-color:#f97316;">
-            <i class="fa-solid fa-user-plus me-1"></i> + تسجيل طالب جديد
-          </a>
-        </div>
-      </div>
+    <div class="p-4 mb-4 rounded-4 shadow-sm text-center text-md-start" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff;">
+      <h3 class="fw-bold mb-2">مرحباً بك، <%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %> 👋</h3>
+      <p class="mb-0 text-white-50 fs-6">نظام متابعة تسجيل وقبول الطلاب بمدارس بواكير الأهلية — يرجى اختيار القسم المطلوب للمتابعة أو إدارة العمليات أدناه.</p>
     </div>
 
     <!-- MAIN SYSTEM MODULES GRID (LARGE CARDS) -->
