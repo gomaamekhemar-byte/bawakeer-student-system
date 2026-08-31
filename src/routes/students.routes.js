@@ -239,17 +239,21 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     (mother_phone && (s.phone === mother_phone || s.mother_phone === mother_phone))
   );
 
-  if (currentId) {
-    // FIX 2: UPDATE logic handles student_id cleanly
+    if (currentId) {
+    // FIX UPDATE logic: Handles student_id cleanly and updates database
     const existing = await getStudentById(currentId);
     if (!existing) return res.redirect("/students");
     const existingAttachments = Array.isArray(existing.attachments) ? existing.attachments : [];
     const newAttachments = [...existingAttachments, ...uploadedFiles];
+
+    let finalNotes = notes || existing.notes || "";
+    if (mother_phone && !finalNotes.includes("جوال الأم:")) {
+      finalNotes = (finalNotes ? finalNotes + " | " : "") + "جوال الأم: " + mother_phone;
+    }
     
     const newData = {
       name: name || existing.name,
       phone: phone || existing.phone,
-      mother_phone: mother_phone || existing.mother_phone || "",
       date_of_birth: date_of_birth || existing.date_of_birth,
       nationality: nationality || existing.nationality,
       neighborhood: neighborhood || existing.neighborhood,
@@ -262,13 +266,18 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       track: track || existing.track,
       phase: phase || existing.phase,
       grade: grade || existing.grade,
-      notes: notes || existing.notes,
+      notes: finalNotes,
       branch: student_branch || existing.branch || activeBranch,
       attachments: newAttachments,
     };
     
     const fieldChanges = computeFieldChanges(existing, newData);
-    await updateStudent(currentId, newData);
+    const updatedResult = await updateStudent(currentId, newData);
+
+    if (!updatedResult) {
+      console.error("Failed to update student ID:", currentId);
+      return res.redirect("/students?msg=" + encodeURIComponent("❌ تعذر حفظ التعديلات في قاعدة البيانات"));
+    }
 
     const actionLabel = statusUpdateMode ? "student_status_updated" : "student_updated";
     const details = statusUpdateMode ? "تم تحديث حالة الطالب " + newData.name : "تم تعديل بيانات الطالب " + newData.name;
