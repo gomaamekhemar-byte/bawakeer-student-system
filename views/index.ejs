@@ -11,8 +11,12 @@
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-hijri-datepicker@1.0.12/dist/css/bootstrap-datetimepicker.min.css">
+  
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/moment-hijri@2.1.2/moment-hijri.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap-hijri-datepicker@1.0.12/dist/js/bootstrap-hijri-datetimepicker.min.js"></script>
 
   <style>
     body { font-family: 'Cairo', system-ui, sans-serif; background-color: #f4f6f9; color: #212529; min-height: 100vh; }
@@ -43,8 +47,11 @@
     
     /* Smooth modal scrolling */
     .modal-dialog-scrollable .modal-body { max-height: 70vh; overflow-y: auto; }
-    .attachment-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; transition: background 0.2s; }
-    .attachment-card:hover { background: #f1f5f9; }
+    .attachment-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; transition: all 0.2s; }
+    .attachment-card:hover { background: #f1f5f9; border-color: #cbd5e1; }
+    
+    /* Hijri Datepicker Tweaks */
+    .bootstrap-datetimepicker-widget { z-index: 99999 !important; font-family: 'Cairo', sans-serif !important; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; }
   </style>
 </head>
 <body>
@@ -272,11 +279,11 @@
                 <div class="btn-group btn-group-sm">
                   <% if(canManageStudents){ %><a href="/students?edit_id=<%= s.id %>" class="btn btn-outline-primary" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></a><% } %>
                   
-                  <!-- ATTACHMENTS BUTTON -->
-                  <button type="button" class="btn btn-outline-info" title="المرفقات" onclick='showStudentAttachments(<%= JSON.stringify(s.attachments || []) %>, "<%= (s.name || "").replace(/"/g, "") %>")'>
+                  <!-- ATTACHMENTS BUTTON WITH COUNT BADGE -->
+                  <button type="button" class="btn btn-outline-info" id="attBtn_<%= s.id %>" title="المرفقات (عرض، تنزيل، حذف)" onclick='showStudentAttachments(<%= s.id %>, <%= JSON.stringify(s.attachments || []) %>, "<%= (s.name || "").replace(/"/g, "") %>")'>
                     <i class="fa-solid fa-paperclip"></i>
                     <% if(s.attachments && s.attachments.length > 0){ %>
-                      <span class="badge bg-primary ms-1"><%= s.attachments.length %></span>
+                      <span class="badge bg-primary ms-1" id="attBadge_<%= s.id %>"><%= s.attachments.length %></span>
                     <% } %>
                   </button>
 
@@ -355,15 +362,18 @@
                 <div id="motherPhoneError" class="invalid-feedback-phone">⚠️ يجب أن يبدأ الرقم بـ 05 ويتكون من 10 أرقام</div>
               </div>
 
-              <!-- تاريخ الميلاد ميلادي + هجري (مترابطين مع حساب العمر فوري) -->
+              <!-- تاريخ الميلاد ميلادي + هجري (مترابطين مع تقويم هجري تفاعلي وحساب العمر) -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-calendar-days text-primary me-1"></i> تاريخ الميلاد (ميلادي)</label>
                 <input type="date" name="date_of_birth" id="dobGregorian" class="form-control" value="<%= editingStudent ? (editingStudent.date_of_birth || '') : '' %>" oninput="onGregorianChange(this.value)">
               </div>
 
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-moon text-warning me-1"></i> تاريخ الميلاد (هجري)</label>
-                <input type="text" id="dobHijri" class="form-control" placeholder="1440/05/15 هـ" oninput="onHijriChange(this.value)">
+                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-moon text-warning me-1"></i> تاريخ الميلاد (هجري - تقويم تفاعلي)</label>
+                <div class="input-group">
+                  <input type="text" id="dobHijri" class="form-control" placeholder="YYYY/MM/DD هـ" oninput="onHijriChange(this.value)" autocomplete="off">
+                  <span class="input-group-text bg-light"><i class="fa-solid fa-calendar-alt text-warning"></i></span>
+                </div>
               </div>
 
               <!-- قسم حساب عمر الطالب فوري -->
@@ -479,20 +489,21 @@
                 <input type="file" name="attachments" class="form-control" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
                 <small class="text-muted">يمكنك اختيار أكثر من ملف دفعة واحدة.</small>
 
-                <!-- Existing Attachments in Edit Mode -->
+                <!-- Existing Attachments in Edit Mode with 3 Actions -->
                 <% if(editingStudent && editingStudent.attachments && editingStudent.attachments.length > 0){ %>
-                  <div class="mt-3 p-3 bg-light rounded border">
+                  <div class="mt-3 p-3 bg-light rounded border" id="editModalAttachmentsBox">
                     <div class="fw-bold small text-secondary mb-2"><i class="fa-solid fa-folder-open me-1"></i> المرفقات الحالية المسجلة للطالب:</div>
-                    <div class="d-flex flex-column gap-2">
+                    <div class="d-flex flex-column gap-2" id="editModalAttachmentsList">
                       <% editingStudent.attachments.forEach(function(att, idx){ %>
-                        <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded border">
+                        <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded border" id="editAttItem_<%= idx %>">
                           <div class="d-flex align-items-center gap-2 text-truncate">
                             <i class="fa-solid fa-file text-primary"></i>
                             <span class="fw-bold small text-dark"><%= att.name || att.original_name || ('مرفق ' + (idx+1)) %></span>
                           </div>
                           <div class="d-flex gap-1">
-                            <a href="<%= att.url %>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-eye me-1"></i> معاينة</a>
-                            <a href="<%= att.url %>" download="<%= att.name || 'attachment' %>" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-download me-1"></i> تنزيل</a>
+                            <a href="<%= att.url %>" target="_blank" class="btn btn-sm btn-outline-primary fw-bold"><i class="fa-solid fa-eye me-1"></i> معاينة</a>
+                            <a href="<%= att.url %>" download="<%= att.name || 'attachment' %>" target="_blank" class="btn btn-sm btn-outline-success fw-bold"><i class="fa-solid fa-download me-1"></i> تنزيل</a>
+                            <button type="button" class="btn btn-sm btn-outline-danger fw-bold" onclick="confirmDeleteAttachment(<%= editingStudent.id %>, <%= idx %>, '<%= att.url %>', '<%= (att.name || att.original_name || 'ملف').replace(/'/g, "\\'") %>', this, 'editModal')"><i class="fa-solid fa-trash me-1"></i> حذف</button>
                           </div>
                         </div>
                       <% }) %>
@@ -517,7 +528,7 @@
     </div>
   </div>
 
-  <!-- ATTACHMENTS VIEW/DOWNLOAD MODAL -->
+  <!-- ATTACHMENTS VIEW/DOWNLOAD/DELETE MODAL -->
   <div class="modal fade" id="attachmentsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content border-0 shadow">
@@ -526,7 +537,7 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body p-4" id="attModalBody">
-          <!-- Populated by JavaScript -->
+          <!-- Populated dynamically by JavaScript -->
         </div>
         <div class="modal-footer bg-light">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
@@ -590,7 +601,7 @@
 
   <script>
     // =============================================
-    // Hijri <-> Gregorian Bidirectional Conversion & Exact Age (moment-hijri)
+    // Hijri <-> Gregorian Bidirectional & Datepicker
     // =============================================
     function calculateAgeExact(gDateStr) {
       const display = document.getElementById('studentAgeDisplay');
@@ -654,7 +665,12 @@
           if (m.isValid()) {
             const hStr = m.format('iYYYY/iMM/iDD');
             const hInput = document.getElementById('dobHijri');
-            if (hInput) hInput.value = hStr;
+            if (hInput) {
+              hInput.value = hStr;
+              if (typeof $ !== 'undefined' && $('#dobHijri').data('DateTimePicker')) {
+                $('#dobHijri').data('DateTimePicker').date(m);
+              }
+            }
           }
         } catch(e) {}
       }
@@ -681,13 +697,38 @@
       }
     }
 
+    // Initialize Hijri Datepicker when DOM is ready
+    $(document).ready(function () {
+      try {
+        if ($.fn.hijriDatePicker) {
+          $("#dobHijri").hijriDatePicker({
+            hijri: true,
+            format: "YYYY/MM/DD",
+            hijriFormat: "iYYYY/iMM/iDD",
+            showSwitcher: false,
+            showTodayButton: true,
+            useCurrent: false
+          }).on('dp.change', function(e) {
+            if (e.date) {
+              const gStr = e.date.format('YYYY-MM-DD');
+              const hStr = e.date.format('iYYYY/iMM/iDD');
+              document.getElementById('dobGregorian').value = gStr;
+              document.getElementById('dobHijri').value = hStr;
+              calculateAgeExact(gStr);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Hijri datepicker init:', err);
+      }
+    });
+
     // =============================================
     // Modal Helpers & Logic
     // =============================================
     function openNewStudentModal(e) {
       if (e) e.preventDefault();
       
-      // If currently on an edit URL, navigate cleanly
       if (window.location.search.includes('edit_id')) {
         window.location.href = '/students?open_modal=1';
         return;
@@ -813,16 +854,16 @@
     }
 
     // =============================================
-    // Attachments Modal
+    // Attachments System: Preview, Download, Delete
     // =============================================
-    function showStudentAttachments(attachments, studentName) {
+    function showStudentAttachments(studentId, attachments, studentName) {
       document.getElementById('attModalTitle').innerHTML = '<i class="fa-solid fa-paperclip me-2"></i> مرفقات الطالب: ' + studentName;
       const mb = document.getElementById('attModalBody');
       
       if (!attachments || !attachments.length) {
         mb.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-folder-open fs-1 text-secondary mb-3 d-block"></i><h6 class="fw-bold">لا توجد مرفقات مسجلة لهذا الطالب</h6><small>يمكنك رفع ملفات أثناء تعديل بيانات الطالب.</small></div>';
       } else {
-        let h = '<div class="d-flex flex-column gap-3">';
+        let h = '<div class="d-flex flex-column gap-3" id="attContainer_' + studentId + '">';
         attachments.forEach((att, idx) => {
           const name = att.name || att.original_name || ('مرفق رقم ' + (idx + 1));
           const url = att.url || '#';
@@ -833,7 +874,7 @@
           else if (['doc', 'docx'].includes(ext)) icon = 'fa-solid fa-file-word text-primary';
           else if (['xls', 'xlsx'].includes(ext)) icon = 'fa-solid fa-file-excel text-success';
 
-          h += '<div class="attachment-card d-flex justify-content-between align-items-center flex-wrap gap-2">';
+          h += '<div class="attachment-card d-flex justify-content-between align-items-center flex-wrap gap-2" id="attCard_' + studentId + '_' + idx + '">';
           h += '  <div class="d-flex align-items-center gap-3">';
           h += '    <i class="' + icon + ' fs-3"></i>';
           h += '    <div>';
@@ -846,6 +887,7 @@
           h += '  <div class="d-flex gap-2">';
           h += '    <a href="' + url + '" target="_blank" class="btn btn-sm btn-primary fw-bold"><i class="fa-solid fa-eye me-1"></i> معاينة</a>';
           h += '    <a href="' + url + '" download="' + name + '" target="_blank" class="btn btn-sm btn-success fw-bold"><i class="fa-solid fa-download me-1"></i> تنزيل</a>';
+          h += '    <button type="button" class="btn btn-sm btn-danger fw-bold" onclick="confirmDeleteAttachment(' + studentId + ', ' + idx + ', \'' + url + '\', \'' + name.replace(/'/g, "\\'") + '\', this, \'modal\')"><i class="fa-solid fa-trash me-1"></i> حذف</button>';
           h += '  </div>';
           h += '</div>';
         });
@@ -854,6 +896,67 @@
       }
       
       bootstrap.Modal.getOrCreateInstance(document.getElementById('attachmentsModal')).show();
+    }
+
+    async function confirmDeleteAttachment(studentId, fileIndex, fileUrl, fileName, btnEl, context) {
+      if (!confirm('⚠️ هل أنت متأكد من حذف هذا المرفق نهائياً؟\n\n' + fileName)) {
+        return;
+      }
+
+      btnEl.disabled = true;
+      const originalHtml = btnEl.innerHTML;
+      btnEl.innerHTML = '<span class="spinner-border spinner-border-sm"></span> جاري الحذف...';
+
+      try {
+        const res = await fetch('/api/delete_attachment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: studentId,
+            file_index: fileIndex,
+            file_url: fileUrl,
+            filename: fileName
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          showToast('✅ ' + data.message, 'success');
+
+          // Remove element from UI
+          if (context === 'modal') {
+            const card = document.getElementById('attCard_' + studentId + '_' + fileIndex);
+            if (card) card.remove();
+            
+            // Check if container is empty
+            const container = document.getElementById('attContainer_' + studentId);
+            if (container && container.children.length === 0) {
+              document.getElementById('attModalBody').innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-folder-open fs-1 text-secondary mb-3 d-block"></i><h6 class="fw-bold">لا توجد مرفقات مسجلة لهذا الطالب</h6></div>';
+            }
+          } else if (context === 'editModal') {
+            const item = document.getElementById('editAttItem_' + fileIndex);
+            if (item) item.remove();
+          }
+
+          // Update table row badge
+          const badge = document.getElementById('attBadge_' + studentId);
+          if (badge) {
+            if (data.remainingCount > 0) {
+              badge.textContent = data.remainingCount;
+            } else {
+              badge.remove();
+            }
+          }
+        } else {
+          showToast('❌ ' + (data.message || 'تعذر حذف المرفق'), 'danger');
+          btnEl.disabled = false;
+          btnEl.innerHTML = originalHtml;
+        }
+      } catch (err) {
+        showToast('❌ حدث خطأ في الاتصال بالسيرفر', 'danger');
+        btnEl.disabled = false;
+        btnEl.innerHTML = originalHtml;
+      }
     }
 
     // Pagination (20 records / page)
