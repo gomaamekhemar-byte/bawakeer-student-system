@@ -95,6 +95,18 @@
       </div>
     </div>
   </nav>
+  <!-- READ-ONLY ARCHIVE BANNER -->
+  <% if(typeof isReadOnlyYear !== 'undefined' && isReadOnlyYear){ %>
+    <div class="alert alert-warning border-warning d-flex align-items-center justify-content-between mb-0 rounded-0 py-2 px-4 shadow-sm" style="background-color: #fffbeb; border-bottom: 2px solid #f59e0b;">
+      <div class="d-flex align-items-center gap-2 fw-bold text-dark">
+        <i class="fa-solid fa-lock text-warning fs-5"></i>
+        <span>أنت تتصفح أرشيف العام الدراسي (<%= (typeof sessionYear !== 'undefined' && sessionYear) ? sessionYear.name : '' %>) - وضع القراءة فقط 🔒 (لا يمكن الإضافة أو التعديل أو الحذف)</span>
+      </div>
+      <a href="/login" class="btn btn-warning btn-sm fw-bold shadow-sm">
+        <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> العودة للعام النشط
+      </a>
+    </div>
+  <% } %>
 
   <!-- SUBHEADER BANNER -->
   <div class="erp-sub-header">
