@@ -339,8 +339,8 @@
 
               <!-- الجنسية -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">الجنسية</label>
-                <select name="nationality" class="form-select">
+                <label class="form-label fw-bold text-dark small">الجنسية <span class="text-danger">*</span></label>
+                <select name="nationality" class="form-select" required>
                   <option value="">اختر الجنسية...</option>
                   <% nationalities.forEach(function(n){ %>
                     <option value="<%= n %>" <%= editingStudent && editingStudent.nationality===n ? 'selected' : '' %>><%= n %></option>
@@ -424,8 +424,8 @@
 
               <!-- نوع الطالب -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">نوع الطالب</label>
-                <select name="student_type" class="form-select">
+                <label class="form-label fw-bold text-dark small">نوع الطالب <span class="text-danger">*</span></label>
+                <select name="student_type" class="form-select" required>
                   <% student_types.forEach(function(t){ %>
                     <option value="<%= t %>" <%= editingStudent && editingStudent.student_type===t ? 'selected' : '' %>><%= t %></option>
                   <% }) %>
@@ -444,8 +444,8 @@
 
               <!-- المرحلة الدراسية -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">المرحلة الدراسية</label>
-                <select name="phase" class="form-select">
+                <label class="form-label fw-bold text-dark small">المرحلة الدراسية <span class="text-danger">*</span></label>
+                <select name="phase" class="form-select" required>
                   <option value="">اختر المرحلة...</option>
                   <% phases.forEach(function(p){ %>
                     <option value="<%= p %>" <%= editingStudent && editingStudent.phase===p ? 'selected' : '' %>><%= p %></option>
@@ -455,8 +455,8 @@
 
               <!-- الصف الدراسي -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">الصف الدراسي</label>
-                <select name="grade" class="form-select">
+                <label class="form-label fw-bold text-dark small">الصف الدراسي <span class="text-danger">*</span></label>
+                <select name="grade" class="form-select" required>
                   <option value="">اختر الصف...</option>
                   <% grades.forEach(function(g){ %>
                     <option value="<%= g %>" <%= editingStudent && editingStudent.grade===g ? 'selected' : '' %>>صف <%= g %></option>
@@ -466,8 +466,8 @@
 
               <!-- المسار التعليمي -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">المسار التعليمي</label>
-                <select name="track" class="form-select">
+                <label class="form-label fw-bold text-dark small">المسار التعليمي <span class="text-danger">*</span></label>
+                <select name="track" class="form-select" required>
                   <% tracks.forEach(function(tr){ %>
                     <option value="<%= tr %>" <%= editingStudent && editingStudent.track===tr ? 'selected' : '' %>><%= tr %></option>
                   <% }) %>
@@ -476,8 +476,8 @@
 
               <!-- نتيجة المقابلة -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">نتيجة المقابلة</label>
-                <select name="interview_result" id="interviewResultSelect" class="form-select" onchange="toggleInterviewReason()">
+                <label class="form-label fw-bold text-dark small">نتيجة المقابلة <span class="text-danger">*</span></label>
+                <select name="interview_result" id="interviewResultSelect" class="form-select" required onchange="toggleInterviewReason()">
                   <option value="">لم تحدد بعد</option>
                   <% interview_results.forEach(function(r){ %>
                     <option value="<%= r %>" <%= editingStudent && editingStudent.interview_result===r ? 'selected' : '' %>><%= r %></option>
@@ -487,8 +487,8 @@
 
               <!-- حالة المتابعة والتسجيل -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">حالة المتابعة والتسجيل</label>
-                <select name="followup_status" id="followupStatusSelect" class="form-select" onchange="toggleInterviewReason()">
+                <label class="form-label fw-bold text-dark small">حالة المتابعة والتسجيل <span class="text-danger">*</span></label>
+                <select name="followup_status" id="followupStatusSelect" class="form-select" required onchange="toggleInterviewReason()">
                   <option value="">لم تحدد بعد</option>
                   <% followup_statuses.forEach(function(s){ %>
                     <option value="<%= s %>" <%= editingStudent && editingStudent.followup_status===s ? 'selected' : '' %>><%= s %></option>
@@ -514,11 +514,17 @@
                 <textarea name="notes" class="form-control" rows="2" placeholder="اكتب ملاحظات أو تفاصيل..."><%= editingStudent ? editingStudent.notes : '' %></textarea>
               </div>
 
-              <!-- مرفقات -->
-              <div class="col-12">
-                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-paperclip text-primary me-1"></i> إرفاق ملفات / وثائق / شهادات (صور، PDF، Word، Excel)</label>
+              <!-- مرفقات مع اسم المرفق -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-tag text-primary me-1"></i> اسم / وصف المرفق</label>
+                <input type="text" name="attachment_title" class="form-control" placeholder="مثال: شهادة الميلاد، كشف الدرجات، الهوية...">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-paperclip text-primary me-1"></i> اختيار الملفات (صور، PDF، Word، Excel)</label>
                 <input type="file" name="attachments" class="form-control" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
-                <small class="text-muted">يمكنك اختيار أكثر من ملف دفعة واحدة.</small>
+              </div>
+              <div class="col-12 mt-0">
+                <small class="text-muted">يمكنك اختيار أكثر من ملف دفعة واحدة، وكتابة اسم واضح للمرفق للرجوع إليه لاحقاً.</small>
 
                 <!-- Existing Attachments in Edit Mode with 3 Actions -->
                 <% if(editingStudent && editingStudent.attachments && editingStudent.attachments.length > 0){ %>
