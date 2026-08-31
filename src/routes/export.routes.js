@@ -1,17 +1,36 @@
 const express = require("express");
 const router = express.Router();
 const { requireAuth } = require("../middleware/auth");
-const { withUser, userHasPermission } = require("../middleware/permissions");
+const { withUser, userHasPermission, userMatchesScope } = require("../middleware/permissions");
 const { getStudents } = require("../services/students.service");
 const { addHistory } = require("../services/history.service");
 const XLSX = require("xlsx");
 
-// GET /export/excel - Export students as 100% valid XLSX
+// GET /export/excel - Export students matching filters as 100% valid XLSX
 router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userHasPermission(currentUser, "export_reports")) return res.redirect("/");
   
-  const students = await getStudents();
+  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  let students = await getStudents();
+
+  if (activeBranch && activeBranch !== "الكل") {
+    students = students.filter(s => s.branch === activeBranch);
+  }
+  if (currentUser && ["manager", "employee"].includes(currentUser.role)) {
+    students = students.filter(s => userMatchesScope(currentUser, s));
+  }
+
+  const interviewFilter = req.query.interview_filter || "";
+  const followupFilter = req.query.followup_filter || "";
+  const phaseFilter = req.query.phase_filter || "";
+  const branchFilter = req.query.branch_filter || "";
+
+  if (interviewFilter) students = students.filter(s => s.interview_result === interviewFilter);
+  if (followupFilter) students = students.filter(s => s.followup_status === followupFilter);
+  if (phaseFilter) students = students.filter(s => s.phase === phaseFilter);
+  if (branchFilter) students = students.filter(s => s.branch === branchFilter);
+
   const rows = students.map((s, idx) => ({
     "م": idx + 1,
     "اسم الطالب": s.name || "",
@@ -36,7 +55,6 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);
 
-  // Column widths
   ws["!cols"] = [
     { wch: 5 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
     { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 8 }, { wch: 10 },
@@ -60,7 +78,27 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
 router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userHasPermission(currentUser, "export_reports")) return res.redirect("/");
-  const students = await getStudents();
+  
+  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  let students = await getStudents();
+
+  if (activeBranch && activeBranch !== "الكل") {
+    students = students.filter(s => s.branch === activeBranch);
+  }
+  if (currentUser && ["manager", "employee"].includes(currentUser.role)) {
+    students = students.filter(s => userMatchesScope(currentUser, s));
+  }
+
+  const interviewFilter = req.query.interview_filter || "";
+  const followupFilter = req.query.followup_filter || "";
+  const phaseFilter = req.query.phase_filter || "";
+  const branchFilter = req.query.branch_filter || "";
+
+  if (interviewFilter) students = students.filter(s => s.interview_result === interviewFilter);
+  if (followupFilter) students = students.filter(s => s.followup_status === followupFilter);
+  if (phaseFilter) students = students.filter(s => s.phase === phaseFilter);
+  if (branchFilter) students = students.filter(s => s.branch === branchFilter);
+
   await addHistory("export_pdf", "تم فتح صفحة طباعة تقرير PDF", currentUser.username);
 
   const rows = students.map((s, i) => `
