@@ -42,7 +42,9 @@
     .pagination-bar { padding: 12px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; }
     
     /* Smooth modal scrolling */
-    .modal-dialog-scrollable .modal-body { max-height: 68vh; overflow-y: auto; }
+    .modal-dialog-scrollable .modal-body { max-height: 70vh; overflow-y: auto; }
+    .attachment-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; transition: background 0.2s; }
+    .attachment-card:hover { background: #f1f5f9; }
   </style>
 </head>
 <body>
@@ -143,7 +145,7 @@
       <div class="col-xl-2 col-md-4 col-6"><div class="stat-card-custom stat-card-purple h-100 d-flex align-items-center justify-content-between"><div><div class="stat-number" style="color:#8b5cf6;"><%= stats.pending_interview %></div><div class="stat-title">انتظار المقابلة</div></div><div class="stat-icon bg-secondary-subtle text-secondary"><i class="fa-solid fa-clipboard-question"></i></div></div></div>
     </div>
 
-    <!-- 2. SEARCH & ADVANCED FILTER TOOLBAR (REMOVED FATHER NAME SEARCH) -->
+    <!-- 2. SEARCH & ADVANCED FILTER TOOLBAR -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
       <div class="card-body p-3">
         <form method="get" action="/students" id="searchForm">
@@ -168,7 +170,7 @@
                 <span class="spinner-border spinner-border-sm d-none" role="status"></span>
               </button>
               <% if(canManageStudents){ %>
-              <button type="button" class="btn btn-warning text-white fw-bold px-3 shadow-sm" style="background:#f97316;border-color:#f97316;" onclick="openNewStudentModal()">
+              <button type="button" class="btn btn-warning text-white fw-bold px-3 shadow-sm" style="background:#f97316;border-color:#f97316;" data-bs-toggle="modal" data-bs-target="#studentModal" onclick="openNewStudentModal(event)">
                 <i class="fa-solid fa-user-plus me-1"></i> + طالب جديد
               </button>
               <% } %>
@@ -219,7 +221,7 @@
               <th style="min-width:155px;">نتيجة المقابلة</th>
               <th style="min-width:165px;">حالة المتابعة</th>
               <th>الملاحظات</th>
-              <th class="text-center" style="width:110px;">الإجراءات</th>
+              <th class="text-center" style="width:145px;">الإجراءات</th>
             </tr>
           </thead>
           <tbody id="studentsTableBody">
@@ -265,11 +267,21 @@
                 <% } else { %><span class="badge-status bg-light text-muted border">لم يسجل</span><% } %>
               </td>
               <% } %>
-              <td class="text-truncate" style="max-width:180px;" title="<%= s.notes || '' %>"><small class="text-muted"><%= s.notes || '—' %></small></td>
+              <td class="text-truncate" style="max-width:160px;" title="<%= s.notes || '' %>"><small class="text-muted"><%= s.notes || '—' %></small></td>
               <td class="text-center">
                 <div class="btn-group btn-group-sm">
                   <% if(canManageStudents){ %><a href="/students?edit_id=<%= s.id %>" class="btn btn-outline-primary" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></a><% } %>
-                  <button type="button" class="btn btn-outline-secondary" onclick="openStudentHistoryModal(<%= s.id %>, '<%= s.name %>')" title="سجل التعديلات"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                  
+                  <!-- ATTACHMENTS BUTTON -->
+                  <button type="button" class="btn btn-outline-info" title="المرفقات" onclick='showStudentAttachments(<%= JSON.stringify(s.attachments || []) %>, "<%= (s.name || "").replace(/"/g, "") %>")'>
+                    <i class="fa-solid fa-paperclip"></i>
+                    <% if(s.attachments && s.attachments.length > 0){ %>
+                      <span class="badge bg-primary ms-1"><%= s.attachments.length %></span>
+                    <% } %>
+                  </button>
+
+                  <button type="button" class="btn btn-outline-secondary" onclick="openStudentHistoryModal(<%= s.id %>, '<%= (s.name || "").replace(/"/g, "") %>')" title="سجل التعديلات"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                  
                   <% if(canDeleteStudents){ %>
                   <form method="post" action="/delete/<%= s.id %>" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف الطالب <%= s.name %>؟')">
                     <button type="submit" class="btn btn-outline-danger" title="حذف"><i class="fa-solid fa-trash"></i></button>
@@ -309,7 +321,6 @@
 
         <form method="post" action="/students" enctype="multipart/form-data" id="studentForm" novalidate>
           <div class="modal-body p-4">
-            <!-- Hidden student_id input passed properly for Edit Update -->
             <input type="hidden" name="student_id" id="studentIdHidden" value="<%= editingStudent ? editingStudent.id : '' %>">
 
             <div class="row g-3">
@@ -352,7 +363,7 @@
 
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-moon text-warning me-1"></i> تاريخ الميلاد (هجري)</label>
-                <input type="text" id="dobHijri" class="form-control" placeholder="مثال: 1440-05-15 (سنة-شهر-يوم)" oninput="onHijriChange(this.value)">
+                <input type="text" id="dobHijri" class="form-control" placeholder="1440/05/15 هـ" oninput="onHijriChange(this.value)">
               </div>
 
               <!-- قسم حساب عمر الطالب فوري -->
@@ -464,8 +475,30 @@
 
               <!-- مرفقات -->
               <div class="col-12">
-                <label class="form-label fw-bold text-dark small">إرفاق ملفات / شهادات</label>
-                <input type="file" name="attachments" class="form-control" multiple>
+                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-paperclip text-primary me-1"></i> إرفاق ملفات / وثائق / شهادات (صور، PDF، Word، Excel)</label>
+                <input type="file" name="attachments" class="form-control" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+                <small class="text-muted">يمكنك اختيار أكثر من ملف دفعة واحدة.</small>
+
+                <!-- Existing Attachments in Edit Mode -->
+                <% if(editingStudent && editingStudent.attachments && editingStudent.attachments.length > 0){ %>
+                  <div class="mt-3 p-3 bg-light rounded border">
+                    <div class="fw-bold small text-secondary mb-2"><i class="fa-solid fa-folder-open me-1"></i> المرفقات الحالية المسجلة للطالب:</div>
+                    <div class="d-flex flex-column gap-2">
+                      <% editingStudent.attachments.forEach(function(att, idx){ %>
+                        <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded border">
+                          <div class="d-flex align-items-center gap-2 text-truncate">
+                            <i class="fa-solid fa-file text-primary"></i>
+                            <span class="fw-bold small text-dark"><%= att.name || att.original_name || ('مرفق ' + (idx+1)) %></span>
+                          </div>
+                          <div class="d-flex gap-1">
+                            <a href="<%= att.url %>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-eye me-1"></i> معاينة</a>
+                            <a href="<%= att.url %>" download="<%= att.name || 'attachment' %>" target="_blank" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-download me-1"></i> تنزيل</a>
+                          </div>
+                        </div>
+                      <% }) %>
+                    </div>
+                  </div>
+                <% } %>
               </div>
             </div>
           </div>
@@ -480,6 +513,24 @@
           </div>
         </form>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- ATTACHMENTS VIEW/DOWNLOAD MODAL -->
+  <div class="modal fade" id="attachmentsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold" id="attModalTitle"><i class="fa-solid fa-paperclip me-2"></i> مرفقات الطالب</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4" id="attModalBody">
+          <!-- Populated by JavaScript -->
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+        </div>
       </div>
     </div>
   </div>
@@ -551,6 +602,12 @@
       }
       
       try {
+        if (typeof moment === 'undefined') {
+          display.textContent = 'تم تحديد التاريخ: ' + gDateStr;
+          display.className = 'badge bg-primary fs-6 px-3 py-1';
+          return;
+        }
+
         const birth = moment(gDateStr, 'YYYY-MM-DD');
         const today = moment();
         
@@ -591,7 +648,7 @@
 
     // Bidirectional Converter: Gregorian -> Hijri
     function onGregorianChange(val) {
-      if (val) {
+      if (val && typeof moment !== 'undefined') {
         try {
           const m = moment(val, 'YYYY-MM-DD');
           if (m.isValid()) {
@@ -611,7 +668,7 @@
         return;
       }
       const clean = val.trim().replace(/[-.]/g, '/');
-      if (clean.length >= 8) {
+      if (clean.length >= 8 && typeof moment !== 'undefined') {
         try {
           const m = moment(clean, ['iYYYY/iM/iD', 'iYYYY/iMM/iDD', 'iYYYY/MM/DD']);
           if (m.isValid() && m.iYear() >= 1300 && m.iYear() <= 1500) {
@@ -627,24 +684,48 @@
     // =============================================
     // Modal Helpers & Logic
     // =============================================
-    function openNewStudentModal() {
+    function openNewStudentModal(e) {
+      if (e) e.preventDefault();
+      
+      // If currently on an edit URL, navigate cleanly
       if (window.location.search.includes('edit_id')) {
         window.location.href = '/students?open_modal=1';
         return;
       }
+      
       const form = document.getElementById('studentForm');
       if (form) {
         form.reset();
         const idInp = document.getElementById('studentIdHidden');
         if (idInp) idInp.value = '';
+        const nameInp = form.querySelector('input[name="name"]');
+        if (nameInp) nameInp.value = '';
+        const phoneInp = document.getElementById('phoneInput');
+        if (phoneInp) phoneInp.value = '';
+        const mPhoneInp = document.getElementById('motherPhoneInput');
+        if (mPhoneInp) mPhoneInp.value = '';
+        const dobG = document.getElementById('dobGregorian');
+        if (dobG) dobG.value = '';
+        const dobH = document.getElementById('dobHijri');
+        if (dobH) dobH.value = '';
       }
+      
       const title = document.getElementById('studentModalLabel');
       if (title) title.innerHTML = '<i class="fa-solid fa-user-graduate text-primary me-2"></i> إضافة طالب جديد';
       
-      document.getElementById('dobHijri').value = '';
-      calculateAgeLive('');
+      const ageDisp = document.getElementById('studentAgeDisplay');
+      if (ageDisp) {
+        ageDisp.textContent = 'يرجى إدخال تاريخ الميلاد';
+        ageDisp.className = 'badge bg-secondary fs-6 px-3 py-1';
+      }
+      
       toggleInterviewReason();
-      new bootstrap.Modal(document.getElementById('studentModal')).show();
+      
+      const modalEl = document.getElementById('studentModal');
+      if (modalEl) {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+      }
     }
 
     // Dynamic & Mandatory 'سبب عدم القبول' (Textarea)
@@ -731,6 +812,50 @@
       bootstrap.Toast.getOrCreateInstance(el, {delay:3000}).show();
     }
 
+    // =============================================
+    // Attachments Modal
+    // =============================================
+    function showStudentAttachments(attachments, studentName) {
+      document.getElementById('attModalTitle').innerHTML = '<i class="fa-solid fa-paperclip me-2"></i> مرفقات الطالب: ' + studentName;
+      const mb = document.getElementById('attModalBody');
+      
+      if (!attachments || !attachments.length) {
+        mb.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-folder-open fs-1 text-secondary mb-3 d-block"></i><h6 class="fw-bold">لا توجد مرفقات مسجلة لهذا الطالب</h6><small>يمكنك رفع ملفات أثناء تعديل بيانات الطالب.</small></div>';
+      } else {
+        let h = '<div class="d-flex flex-column gap-3">';
+        attachments.forEach((att, idx) => {
+          const name = att.name || att.original_name || ('مرفق رقم ' + (idx + 1));
+          const url = att.url || '#';
+          const ext = name.split('.').pop().toLowerCase();
+          let icon = 'fa-solid fa-file text-secondary';
+          if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) icon = 'fa-solid fa-file-image text-success';
+          else if (ext === 'pdf') icon = 'fa-solid fa-file-pdf text-danger';
+          else if (['doc', 'docx'].includes(ext)) icon = 'fa-solid fa-file-word text-primary';
+          else if (['xls', 'xlsx'].includes(ext)) icon = 'fa-solid fa-file-excel text-success';
+
+          h += '<div class="attachment-card d-flex justify-content-between align-items-center flex-wrap gap-2">';
+          h += '  <div class="d-flex align-items-center gap-3">';
+          h += '    <i class="' + icon + ' fs-3"></i>';
+          h += '    <div>';
+          h += '      <div class="fw-bold text-dark">' + name + '</div>';
+          if (att.uploaded_at) {
+            h += '    <small class="text-muted">' + new Date(att.uploaded_at).toLocaleDateString('ar-SA') + '</small>';
+          }
+          h += '    </div>';
+          h += '  </div>';
+          h += '  <div class="d-flex gap-2">';
+          h += '    <a href="' + url + '" target="_blank" class="btn btn-sm btn-primary fw-bold"><i class="fa-solid fa-eye me-1"></i> معاينة</a>';
+          h += '    <a href="' + url + '" download="' + name + '" target="_blank" class="btn btn-sm btn-success fw-bold"><i class="fa-solid fa-download me-1"></i> تنزيل</a>';
+          h += '  </div>';
+          h += '</div>';
+        });
+        h += '</div>';
+        mb.innerHTML = h;
+      }
+      
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('attachmentsModal')).show();
+    }
+
     // Pagination (20 records / page)
     const PG = 20;
     let curPage = 1;
@@ -771,7 +896,7 @@
       document.getElementById('histModalTitle').innerHTML = '<i class="fa-solid fa-clock-rotate-left me-2"></i> سجل حركات الطالب: ' + name;
       const mb = document.getElementById('histModalBody');
       mb.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
-      new bootstrap.Modal(document.getElementById('studentHistoryModal')).show();
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('studentHistoryModal')).show();
       try {
         const r = await fetch('/api/student_history/' + id); const d = await r.json();
         if (!d.entries || !d.entries.length) { mb.innerHTML = '<div class="text-center py-4 text-muted">لا توجد سجلات تعديل لهذا الطالب.</div>'; return; }
@@ -799,7 +924,7 @@
   <% if(editingStudent){ %>
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      new bootstrap.Modal(document.getElementById('studentModal')).show();
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('studentModal')).show();
     });
   </script>
   <% } %>
