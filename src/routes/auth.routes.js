@@ -33,7 +33,7 @@ router.post("/login", async (req, res) => {
     sameSite: "lax",
     maxAge: 8 * 60 * 60 * 1000, // 8 hours
   });
-  res.cookie("active_branch", branchVal, {
+  res.cookie("active_branch", encodeURIComponent(branchVal), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
