@@ -52,7 +52,7 @@ router.get("/", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
 
-  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
   const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
   const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
@@ -96,7 +96,7 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
 
-  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
   const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
   const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
@@ -196,7 +196,7 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
 router.get("/reports", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
-  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   let students = await getStudents();
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
@@ -352,7 +352,7 @@ router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) 
 router.post("/students", requireAuth, withUser, upload.array("attachments", 10), async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
-  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
   const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
   const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
