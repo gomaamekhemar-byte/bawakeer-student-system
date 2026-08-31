@@ -187,7 +187,7 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
     gradeFilter, statusFilter, branchFilter,
     stats, currentUser, activeBranch,
     canManageStudents, canManageUsers, canManageYears, canViewAnalytics,
-    canDeleteStudents, canUpdateStatusOnly, statusUpdateMode,
+    canDeleteStudents, canUpdateStatusOnly, statusUpdateMode, canManageInterviews, canManageRegistration,
     roles: ROLES, branches, activeYear, allPhonesMap,
   });
 });
@@ -236,6 +236,8 @@ router.post("/api/delete_attachment", requireAuth, withUser, async (req, res) =>
   if (!currentUser) return res.status(401).json({ success: false, message: "غير مصرح" });
   
   const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
+  const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
+  const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
   if (!canManageStudents) return res.status(403).json({ success: false, message: "ليس لديك صلاحية لحذف المرفقات" });
 
   const { student_id, file_index, file_url, filename } = req.body;
@@ -290,23 +292,58 @@ router.post("/api/delete_attachment", requireAuth, withUser, async (req, res) =>
 router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.status(401).json({ success: false, message: "غير مصرح" });
-  const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
-  if (!canManageStudents) return res.status(403).json({ success: false, message: "ليس لديك صلاحية" });
+
   const { student_id, field, value } = req.body;
-  if (!student_id || !field) return res.status(400).json({ success: false, message: "بيانات ناقصة" });
-  const allowedFields = ["followup_status", "interview_result"];
-  if (!allowedFields.includes(field)) return res.status(400).json({ success: false, message: "حقل غير مسموح" });
+  if (!student_id || !field) return res.status(400).json({ success: false, message: "بيانات غير مكتملة" });
+
+  const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
+  const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
+
+  // Field-level permission security checks
+  if (field === "interview_result" && !canManageInterviews) {
+    return res.status(403).json({ success: false, message: "عفواً، ليس لديك صلاحية مسؤول المقابلات لتعديل نتيجة المقابلة" });
+  }
+
+  if (field === "followup_status" && !canManageRegistration) {
+    return res.status(403).json({ success: false, message: "عفواً، ليس لديك صلاحية مسؤول التسجيل لتعديل حالة التسجيل" });
+  }
+
   const existing = await getStudentById(parseInt(student_id));
   if (!existing) return res.status(404).json({ success: false, message: "الطالب غير موجود" });
-  const updateData = { [field]: value };
+
+  const updateData = {};
+  updateData[field] = value;
+
+  // AUTOMATED WORKFLOW TRANSITION:
+  // When interview result changes:
+  // مقبول -> auto transition to 'في انتظار التسجيل'
+  // غير مقبول -> auto transition to 'لم يجتز المقابلة'
+  let autoFollowupStatus = null;
+  if (field === "interview_result") {
+    if (value === "مقبول") {
+      autoFollowupStatus = "في انتظار التسجيل";
+      updateData.followup_status = autoFollowupStatus;
+    } else if (value === "غير مقبول") {
+      autoFollowupStatus = "لم يجتز المقابلة";
+      updateData.followup_status = autoFollowupStatus;
+    }
+  }
+
   const fieldChanges = computeFieldChanges(existing, updateData);
   const updated = await updateStudent(parseInt(student_id), updateData);
   if (updated) {
     const fieldLabel = field === "followup_status" ? "حالة المتابعة" : "نتيجة المقابلة";
-    const details = "تم تحديث " + fieldLabel + " للطالب " + existing.name + " إلى: " + (value || "غير محدد");
+    let details = "تم تحديث " + fieldLabel + " للطالب " + existing.name + " إلى: " + (value || "غير محدد");
+    if (autoFollowupStatus) {
+      details += " (وتحديث حالة التسجيل تلقائياً إلى " + autoFollowupStatus + ")";
+    }
     await addStudentHistory(parseInt(student_id), "student_status_updated", details, currentUser.username, fieldChanges);
     await addHistory("student_status_updated", details, currentUser.username);
-    return res.json({ success: true, message: "تم التحديث بنجاح" });
+    return res.json({
+      success: true,
+      message: "تم التحديث بنجاح" + (autoFollowupStatus ? (" وتم تحديث حالة التسجيل إلى: " + autoFollowupStatus) : ""),
+      autoFollowupStatus: autoFollowupStatus
+    });
   }
   return res.status(500).json({ success: false, message: "حدث خطأ أثناء التحديث" });
 });
@@ -317,7 +354,10 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
   if (!currentUser) return res.redirect("/login");
   const activeBranch = (req.cookies && req.cookies.active_branch) || "";
   const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
+  const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
+  const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
   const statusUpdateMode = req.body.status_update === "1";
+
   if (!canManageStudents) return res.redirect("/students?msg=" + encodeURIComponent("ليس لديك صلاحية لإضافة أو تعديل الطلاب"));
 
   const studentId = (req.body.student_id || "").trim();
@@ -344,11 +384,8 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
   const uploadedFiles = await uploadFiles(req.files || [], attachment_title);
 
   const allStudents = await getStudents();
-
-  // Exclude current student from duplicate checks during Edit/Update
   const otherStudents = currentId ? allStudents.filter(s => s.id !== currentId) : allStudents;
 
-  // Duplicate Check: Same name AND same phone on ANOTHER student record
   if (name) {
     const nameLower = name.toLowerCase();
     const exactDuplicate = otherStudents.find(s => {
@@ -362,7 +399,6 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     }
   }
 
-  // Sibling check: phone belongs to another student record with different name
   const siblingStudent = otherStudents.find(s => phone && s.phone === phone);
 
   if (currentId) {
@@ -376,6 +412,27 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     if (mother_phone && !finalNotes.includes("جوال الأم:")) {
       finalNotes = (finalNotes ? finalNotes + " | " : "") + "جوال الأم: " + mother_phone;
     }
+
+    // Field-level permission enforcement on Edit
+    let finalInterviewResult = existing.interview_result || "في انتظار المقابلة";
+    let finalFollowupStatus = existing.followup_status || "في انتظار المقابلة";
+
+    if (canManageInterviews && interview_result) {
+      finalInterviewResult = interview_result;
+      // Automated status workflow:
+      if (interview_result === "مقبول" && existing.interview_result !== "مقبول") {
+        finalFollowupStatus = "في انتظار التسجيل";
+      } else if (interview_result === "غير مقبول" && existing.interview_result !== "غير مقبول") {
+        finalFollowupStatus = "لم يجتز المقابلة";
+      }
+    }
+
+    if (canManageRegistration && followup_status) {
+      // If interview automated transition didn't override, apply registration manager input
+      if (!canManageInterviews || (interview_result === existing.interview_result)) {
+        finalFollowupStatus = followup_status;
+      }
+    }
     
     const newData = {
       name: name || existing.name,
@@ -384,9 +441,9 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       nationality: nationality || existing.nationality,
       neighborhood: neighborhood || existing.neighborhood,
       interview_date: interview_date || existing.interview_date,
-      interview_result,
+      interview_result: finalInterviewResult,
       interview_reason: interview_reason || existing.interview_reason,
-      followup_status,
+      followup_status: finalFollowupStatus,
       registration_reason: registration_reason || existing.registration_reason,
       student_type: student_type || existing.student_type,
       track: track || existing.track,
@@ -401,12 +458,11 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     const updatedResult = await updateStudent(currentId, newData);
 
     if (!updatedResult) {
-      console.error("Failed to update student ID:", currentId);
       return res.redirect("/students?msg=" + encodeURIComponent("❌ تعذر حفظ التعديلات في قاعدة البيانات"));
     }
 
     const actionLabel = statusUpdateMode ? "student_status_updated" : "student_updated";
-    const details = statusUpdateMode ? "تم تحديث حالة الطالب " + newData.name : "تم تعديل بيانات الطالب " + newData.name;
+    const details = statusUpdateMode ? ("تم تحديث حالة الطالب " + newData.name) : ("تم تعديل بيانات الطالب " + newData.name);
     await addStudentHistory(currentId, actionLabel, details, currentUser.username, fieldChanges);
     await addHistory(actionLabel, details, currentUser.username);
 
@@ -416,7 +472,9 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     }
     return res.redirect("/students?msg=" + encodeURIComponent(msg));
   } else {
-    // CREATE LOGIC
+    // CREATE LOGIC: Automatically set Default Initial States:
+    // interview_result = 'في انتظار المقابلة'
+    // followup_status = 'في انتظار المقابلة'
     if (!name) return res.redirect("/students?msg=" + encodeURIComponent("يرجى إدخال اسم الطالب"));
     
     let finalNotes = notes || "";
@@ -426,20 +484,28 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
 
     const newStudent = {
       name, phone, date_of_birth, nationality, neighborhood,
-      interview_date, interview_result, interview_reason, followup_status,
-      registration_reason, student_type, track, phase, grade, notes: finalNotes,
-      branch: student_branch || activeBranch,
+      interview_date,
+      interview_result: "في انتظار المقابلة",
+      interview_reason: "",
+      followup_status: "في انتظار المقابلة",
+      registration_reason: "",
+      student_type: student_type || "بنين",
+      track: track || "عام",
+      phase: phase || "ابتدائي",
+      grade: grade || "1",
+      notes: finalNotes,
+      branch: student_branch || activeBranch || "الندى",
       attachments: uploadedFiles,
+      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     
     const created = await createStudent(newStudent);
     if (!created) {
-      console.error("CRITICAL: Failed to create student in DB!");
       return res.redirect("/students?msg=" + encodeURIComponent("❌ تعذر حفظ الطالب في قاعدة البيانات. يرجى مراجعة البيانات والمحاولة مجدداً"));
     }
 
-    let msg = "تم إضافة الطالب " + name + " بنجاح";
+    let msg = "تم إضافة الطالب " + name + " بنجاح (الحالة الافتراضية: في انتظار المقابلة)";
     if (siblingStudent) {
       msg = "تم التسجيل بنجاح، ورقم الجوال مرتبط بطلاب آخرين (إخوة: " + siblingStudent.name + ")";
     }
