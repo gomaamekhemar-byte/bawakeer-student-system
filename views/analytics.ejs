@@ -137,7 +137,8 @@
         <span>الداش بورد والمؤشرات التحليلية | مدارس بواكير الأهلية</span>
       </div>
       
-      <!-- GLOBAL BRANCH FILTER SELECTOR (FEATURE 1) -->
+      <!-- DYNAMIC BRANCH FILTER BASED ON PERMISSIONS -->
+      <% if(typeof isFullBranchAccess !== 'undefined' && isFullBranchAccess){ %>
       <form method="get" action="/analytics" class="d-flex align-items-center gap-2">
         <label class="text-white small fw-bold text-nowrap"><i class="fa-solid fa-filter me-1"></i> تصفية الداش بورد حسب الفرع:</label>
         <select name="branch" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 180px;" onchange="this.form.submit()">
@@ -147,6 +148,13 @@
           <% }) %>
         </select>
       </form>
+      <% } else { %>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-white text-primary fs-6 px-3 py-2 fw-bold shadow-sm">
+          <i class="fa-solid fa-building me-1"></i> إحصائيات فرع <%= selectedBranch %>
+        </span>
+      </div>
+      <% } %>
     </div>
   </div>
 
