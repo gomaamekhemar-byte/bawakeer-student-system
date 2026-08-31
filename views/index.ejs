@@ -327,7 +327,13 @@
         </div>
 
         <form method="post" action="/students" enctype="multipart/form-data" id="studentForm" novalidate>
-          <div class="modal-body p-4">
+                    <div class="modal-body p-4">
+            <!-- DYNAMIC STRICT VALIDATION ALERT BANNER -->
+            <div class="alert alert-danger d-none d-flex align-items-center gap-2 py-2 px-3 mb-3 shadow-sm rounded-3 fw-bold" id="formValidationAlert">
+              <i class="fa-solid fa-triangle-exclamation fs-4"></i>
+              <span id="formValidationAlertText">عفواً، يرجى إكمال جميع البيانات الإجبارية المحددة بالنجمة الحمراء قبل الحفظ</span>
+            </div>
+
             <input type="hidden" name="student_id" id="studentIdHidden" value="<%= editingStudent ? editingStudent.id : '' %>">
 
             <div class="row g-3">
@@ -514,14 +520,17 @@
                 <textarea name="notes" class="form-control" rows="2" placeholder="اكتب ملاحظات أو تفاصيل..."><%= editingStudent ? editingStudent.notes : '' %></textarea>
               </div>
 
-              <!-- مرفقات مع اسم المرفق -->
+              <!-- مرفقات مع اسم المرفق الإجباري عند اختيار ملف -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-tag text-primary me-1"></i> اسم / وصف المرفق</label>
-                <input type="text" name="attachment_title" class="form-control" placeholder="مثال: شهادة الميلاد، كشف الدرجات، الهوية...">
+                <label class="form-label fw-bold text-dark small" id="attTitleLabel">
+                  <i class="fa-solid fa-tag text-primary me-1"></i> اسم / وصف المرفق <span class="text-danger d-none" id="attTitleStar">*</span>
+                </label>
+                <input type="text" name="attachment_title" id="attachmentTitleInput" class="form-control" placeholder="مثال: شهادة الميلاد، كشف الدرجات، الهوية..." oninput="this.classList.remove('is-invalid')">
+                <div class="invalid-feedback fw-bold small">⚠️ يرجى كتابة اسم أو وصف للمرفق قبل الرفع</div>
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-paperclip text-primary me-1"></i> اختيار الملفات (صور، PDF، Word، Excel)</label>
-                <input type="file" name="attachments" class="form-control" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt">
+                <input type="file" name="attachments" id="attachmentsInput" class="form-control" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" onchange="handleAttachmentChange(this)">
               </div>
               <div class="col-12 mt-0">
                 <small class="text-muted">يمكنك اختيار أكثر من ملف دفعة واحدة، وكتابة اسم واضح للمرفق للرجوع إليه لاحقاً.</small>
@@ -848,25 +857,141 @@
       return ok;
     }
 
-    // Form submit spinner + validation
+    // Dynamic attachment title requirement on file select
+    function handleAttachmentChange(input) {
+      const titleInput = document.getElementById('attachmentTitleInput');
+      const starEl = document.getElementById('attTitleStar');
+      if (input.files && input.files.length > 0) {
+        titleInput.setAttribute('required', 'required');
+        if (starEl) starEl.classList.remove('d-none');
+        if (!titleInput.value.trim()) {
+          titleInput.classList.add('border-warning');
+        }
+      } else {
+        titleInput.removeAttribute('required');
+        titleInput.classList.remove('is-invalid', 'border-warning');
+        if (starEl) starEl.classList.add('d-none');
+      }
+    }
+
+    function showValidationAlert(msg) {
+      const alertBox = document.getElementById('formValidationAlert');
+      const alertText = document.getElementById('formValidationAlertText');
+      if (alertBox && alertText) {
+        alertText.textContent = msg || 'عفواً، يرجى إكمال جميع البيانات الإجبارية المحددة بالنجمة الحمراء قبل الحفظ';
+        alertBox.classList.remove('d-none');
+        alertBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      showToast('⚠️ ' + msg, 'danger');
+    }
+
+    function hideValidationAlert() {
+      const alertBox = document.getElementById('formValidationAlert');
+      if (alertBox) alertBox.classList.add('d-none');
+    }
+
+    // STRICT FORM VALIDATION: Intercept Submit, Prevent Fake Saves, Check All Required Fields
     document.getElementById('studentForm').addEventListener('submit', function(e) {
-      const p1 = validatePhone(document.getElementById('phoneInput'), 'phoneError');
-      const p2 = validatePhone(document.getElementById('motherPhoneInput'), 'motherPhoneError');
+      hideValidationAlert();
+      let hasErrors = false;
+      let firstInvalidField = null;
+      let customErrorMessage = 'عفواً، يرجى إكمال جميع البيانات الإجبارية المحددة بالنجمة الحمراء قبل الحفظ';
+
+      // 1. Check all [required] fields
+      const requiredFields = this.querySelectorAll('input[required], select[required], textarea[required]');
+      requiredFields.forEach(field => {
+        // Skip elements inside hidden containers (e.g. interview_reason when not rejected)
+        if (field.offsetParent === null && field.id !== 'dobHijri') {
+          field.classList.remove('is-invalid');
+          return;
+        }
+
+        const val = field.value ? field.value.trim() : '';
+        if (!val) {
+          hasErrors = true;
+          field.classList.add('is-invalid');
+          if (!firstInvalidField) firstInvalidField = field;
+        } else {
+          field.classList.remove('is-invalid');
+        }
+      });
+
+      // 2. Check attachments title if files selected
+      const fileInput = document.getElementById('attachmentsInput');
+      const titleInput = document.getElementById('attachmentTitleInput');
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        if (!titleInput.value.trim()) {
+          hasErrors = true;
+          titleInput.classList.add('is-invalid');
+          customErrorMessage = 'عفواً، يرجى كتابة اسم المرفق قبل حفظ الملف';
+          if (!firstInvalidField) firstInvalidField = titleInput;
+        } else {
+          titleInput.classList.remove('is-invalid');
+        }
+      }
+
+      // 3. Strict Phone validation
+      const phoneInput = document.getElementById('phoneInput');
+      if (phoneInput && !validatePhone(phoneInput, 'phoneError')) {
+        hasErrors = true;
+        phoneInput.classList.add('is-invalid');
+        if (!firstInvalidField) firstInvalidField = phoneInput;
+      }
+
+      const motherPhoneInput = document.getElementById('motherPhoneInput');
+      if (motherPhoneInput && motherPhoneInput.value.trim()) {
+        if (!validatePhone(motherPhoneInput, 'motherPhoneError')) {
+          hasErrors = true;
+          motherPhoneInput.classList.add('is-invalid');
+          if (!firstInvalidField) firstInvalidField = motherPhoneInput;
+        }
+      }
+
+      // 4. Interview Reason check if rejected
       const resultSel = document.getElementById('interviewResultSelect');
       const reasonInp = document.getElementById('interviewReasonInput');
-      
       if (resultSel && resultSel.value === 'غير مقبول' && reasonInp && !reasonInp.value.trim()) {
-        e.preventDefault();
-        alert('⚠️ يرجى تدوين سبب عدم القبول الإجباري');
-        reasonInp.focus();
-        return;
+        hasErrors = true;
+        reasonInp.classList.add('is-invalid');
+        customErrorMessage = 'عفواً، يرجى كتابة سبب عدم القبول الإجباري';
+        if (!firstInvalidField) firstInvalidField = reasonInp;
       }
-      
-      if (!p1 || !p2) { e.preventDefault(); return; }
+
+      // IF ANY ERROR: PREVENT SUBMISSION COMPLETELY
+      if (hasErrors) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        showValidationAlert(customErrorMessage);
+
+        if (firstInvalidField) {
+          firstInvalidField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstInvalidField.focus();
+        }
+        return false;
+      }
+
+      // If completely valid, show spinner and allow submission
       const btn = document.getElementById('saveStudentBtn');
       btn.querySelector('.save-text').classList.add('d-none');
       btn.querySelector('.spinner-border').classList.remove('d-none');
       btn.style.pointerEvents = 'none';
+    });
+
+    // Remove is-invalid on live user input/change
+    document.querySelectorAll('#studentForm input, #studentForm select, #studentForm textarea').forEach(el => {
+      el.addEventListener('input', function() {
+        if (this.value.trim()) {
+          this.classList.remove('is-invalid');
+          hideValidationAlert();
+        }
+      });
+      el.addEventListener('change', function() {
+        if (this.value.trim()) {
+          this.classList.remove('is-invalid');
+          hideValidationAlert();
+        }
+      });
     });
 
     // Search spinner
