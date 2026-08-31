@@ -7,16 +7,20 @@ const { getBranchNames } = require("../services/branches.service");
 const { getAcademicYears, getActiveYear } = require("../services/academic_years.service");
 const { addHistory } = require("../services/history.service");
 
-// GET /login
+// GET /login - Always render login screen directly on link click
 router.get("/login", async (req, res) => {
-  const token = req.cookies && req.cookies.auth_token;
-  if (token) return res.redirect("/");
+  // Clear any existing session cookie so user always logs in fresh
+  res.clearCookie("auth_token");
+  res.clearCookie("active_branch");
+  res.clearCookie("active_year_id");
+  res.clearCookie("active_year_name");
+
   const branches = await getBranchNames();
   const academic_years = await getAcademicYears();
   res.render("login", { branches, academic_years, error: null });
 });
 
-// POST /login
+// POST /login - Authenticate and create session
 router.post("/login", async (req, res) => {
   const { username, password, branch, academic_year_id } = req.body;
   const branches = await getBranchNames();
@@ -44,32 +48,29 @@ router.post("/login", async (req, res) => {
     is_year_active: isYearActive
   });
 
+  // Session Cookies (Expires when browser session ends)
   res.cookie("auth_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 8 * 60 * 60 * 1000,
+    sameSite: "lax"
   });
 
   res.cookie("active_branch", encodeURIComponent(branchVal), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 8 * 60 * 60 * 1000,
+    sameSite: "lax"
   });
 
   res.cookie("active_year_id", String(selectedYear.id || ""), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 8 * 60 * 60 * 1000,
+    sameSite: "lax"
   });
 
   res.cookie("active_year_name", encodeURIComponent(selectedYear.year_name || ""), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 8 * 60 * 60 * 1000,
+    sameSite: "lax"
   });
 
   await addHistory("login_success", `تم تسجيل دخول المستخدم ${user.username} للفرع ${branchVal} والعام ${selectedYear.year_name}`, user.username);
