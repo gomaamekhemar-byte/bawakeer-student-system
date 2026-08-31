@@ -54,6 +54,8 @@ router.get("/", requireAuth, withUser, async (req, res) => {
 
   const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
+  const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
+  const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
   const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
   const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
   const canViewAnalytics = userHasPermission(currentUser, "view_analytics");
@@ -98,6 +100,8 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
 
   const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
+  const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
+  const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
   const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
   const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
   const canViewAnalytics = userHasPermission(currentUser, "view_analytics");
@@ -235,7 +239,7 @@ router.post("/api/delete_attachment", requireAuth, withUser, async (req, res) =>
   const currentUser = req.currentUser;
   if (!currentUser) return res.status(401).json({ success: false, message: "غير مصرح" });
   
-  const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
+  const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
   const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
   const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
   if (!canManageStudents) return res.status(403).json({ success: false, message: "ليس لديك صلاحية لحذف المرفقات" });
@@ -353,7 +357,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
   const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
-  const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
+  const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
   const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
   const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
   const statusUpdateMode = req.body.status_update === "1";
