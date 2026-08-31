@@ -129,19 +129,21 @@
     </div>
   </nav>
 
-  <!-- BLUE SUB-HEADER -->
+    <!-- BLUE SUB-HEADER -->
   <div class="erp-sub-header">
     <div class="container-fluid px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div class="fw-bold fs-5 d-flex align-items-center gap-2">
         <i class="fa-solid fa-chart-pie"></i>
         <span>الداش بورد والمؤشرات التحليلية | مدارس بواكير الأهلية</span>
       </div>
-      
-      <!-- DYNAMIC BRANCH FILTER BASED ON PERMISSIONS -->
+
+      <!-- DYNAMIC BRANCH FILTER DROPDOWN OR STATIC BADGE -->
       <% if(typeof isFullBranchAccess !== 'undefined' && isFullBranchAccess){ %>
-      <form method="get" action="/analytics" class="d-flex align-items-center gap-2">
-        <label class="text-white small fw-bold text-nowrap"><i class="fa-solid fa-filter me-1"></i> تصفية الداش بورد حسب الفرع:</label>
-        <select name="branch" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 180px;" onchange="this.form.submit()">
+      <form method="get" action="/analytics" class="d-flex align-items-center gap-2" id="branchFilterForm">
+        <label class="text-white small fw-bold text-nowrap" for="branchFilterSelect">
+          <i class="fa-solid fa-filter me-1"></i> تصفية الداش بورد حسب الفرع:
+        </label>
+        <select name="branch" id="branchFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 190px;" onchange="this.form.submit()">
           <option value="الكل" <%= (!selectedBranch || selectedBranch === 'الكل') ? 'selected' : '' %>>🌐 جميع الفروع</option>
           <% branches.forEach(function(b){ %>
             <option value="<%= b %>" <%= (selectedBranch === b) ? 'selected' : '' %>>🏢 فرع <%= b %></option>
