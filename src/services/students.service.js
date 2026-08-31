@@ -1,3 +1,4 @@
+const { computeStudentTimeline, cleanNotesForDisplay } = require('../utils/timeline');
 const supabase = require('../config/supabase');
 const { calculateAge } = require('../utils/age');
 const { STUDENT_TYPES, INTERVIEW_RESULTS, FOLLOWUP_STATUSES } = require('../utils/constants');
@@ -33,6 +34,8 @@ function normalizeStudent(student) {
   student.followup_status = student.followup_status || 'في انتظار التسجيل';
   student.attachments = Array.isArray(student.attachments) ? student.attachments : [];
   student.age = calculateAge(student.date_of_birth || '');
+  student.timeline = computeStudentTimeline(student);
+  student.display_notes = cleanNotesForDisplay(student.notes);
   return student;
 }
 
