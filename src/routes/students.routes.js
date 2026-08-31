@@ -434,15 +434,18 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     };
     
     const created = await createStudent(newStudent);
+    if (!created) {
+      console.error("CRITICAL: Failed to create student in DB!");
+      return res.redirect("/students?msg=" + encodeURIComponent("❌ تعذر حفظ الطالب في قاعدة البيانات. يرجى مراجعة البيانات والمحاولة مجدداً"));
+    }
+
     let msg = "تم إضافة الطالب " + name + " بنجاح";
     if (siblingStudent) {
       msg = "تم التسجيل بنجاح، ورقم الجوال مرتبط بطلاب آخرين (إخوة: " + siblingStudent.name + ")";
     }
 
-    if (created) {
-      await addStudentHistory(created.id, "student_created", "تم إضافة الطالب " + name, currentUser.username);
-      await addHistory("student_created", "تم إضافة الطالب " + name, currentUser.username);
-    }
+    await addStudentHistory(created.id, "student_created", "تم إضافة الطالب " + name, currentUser.username);
+    await addHistory("student_created", "تم إضافة الطالب " + name, currentUser.username);
     return res.redirect("/students?msg=" + encodeURIComponent(msg));
   }
 });
