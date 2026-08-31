@@ -362,17 +362,48 @@
                 <div id="motherPhoneError" class="invalid-feedback-phone">⚠️ يجب أن يبدأ الرقم بـ 05 ويتكون من 10 أرقام</div>
               </div>
 
-              <!-- تاريخ الميلاد ميلادي + هجري (مترابطين مع تقويم هجري تفاعلي وحساب العمر) -->
+              <!-- تاريخ الميلاد ميلادي + هجري (قوائم تفاعلية نشطة مع تحويل لحظي مزدوج) -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-calendar-days text-primary me-1"></i> تاريخ الميلاد (ميلادي)</label>
                 <input type="date" name="date_of_birth" id="dobGregorian" class="form-control" value="<%= editingStudent ? (editingStudent.date_of_birth || '') : '' %>" oninput="onGregorianChange(this.value)">
               </div>
 
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-moon text-warning me-1"></i> تاريخ الميلاد (هجري - تقويم تفاعلي)</label>
-                <div class="input-group">
-                  <input type="text" id="dobHijri" class="form-control" placeholder="YYYY/MM/DD هـ" oninput="onHijriChange(this.value)" autocomplete="off">
-                  <span class="input-group-text bg-light"><i class="fa-solid fa-calendar-alt text-warning"></i></span>
+                <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-moon text-warning me-1"></i> تاريخ الميلاد (هجري)</label>
+                <div class="row g-1">
+                  <div class="col-4">
+                    <select id="hijriDay" class="form-select text-center" onchange="onHijriDropdownChange()">
+                      <option value="">اليوم</option>
+                      <% for(let d = 1; d <= 30; d++){ %>
+                        <option value="<%= d %>"><%= d %></option>
+                      <% } %>
+                    </select>
+                  </div>
+                  <div class="col-4">
+                    <select id="hijriMonth" class="form-select" onchange="onHijriDropdownChange()">
+                      <option value="">الشهر</option>
+                      <option value="1">1 - محرم</option>
+                      <option value="2">2 - صفر</option>
+                      <option value="3">3 - ربيع الأول</option>
+                      <option value="4">4 - ربيع الآخر</option>
+                      <option value="5">5 - جمادى الأولى</option>
+                      <option value="6">6 - جمادى الآخرة</option>
+                      <option value="7">7 - رجب</option>
+                      <option value="8">8 - شعبان</option>
+                      <option value="9">9 - رمضان</option>
+                      <option value="10">10 - شوال</option>
+                      <option value="11">11 - ذو القعدة</option>
+                      <option value="12">12 - ذو الحجة</option>
+                    </select>
+                  </div>
+                  <div class="col-4">
+                    <select id="hijriYear" class="form-select text-center" onchange="onHijriDropdownChange()">
+                      <option value="">السنة</option>
+                      <% for(let y = 1448; y >= 1425; y--){ %>
+                        <option value="<%= y %>"><%= y %>هـ</option>
+                      <% } %>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -601,8 +632,55 @@
 
   <script>
     // =============================================
-    // Hijri <-> Gregorian Bidirectional & Datepicker
+    // Hijri <-> Gregorian Interactive Dual-Pick & Exact Age
     // =============================================
+    function gregorianToHijriObj(gStr) {
+      if (!gStr) return null;
+      try {
+        if (typeof moment !== 'undefined') {
+          const m = moment(gStr, 'YYYY-MM-DD');
+          if (m.isValid()) {
+            return { year: m.iYear(), month: m.iMonth() + 1, day: m.iDate() };
+          }
+        }
+        const d = new Date(gStr);
+        const formatter = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day: 'numeric', month: 'numeric', year: 'numeric' });
+        const parts = formatter.formatToParts(d);
+        let day = '', month = '', year = '';
+        parts.forEach(p => {
+          if (p.type === 'day') day = parseInt(p.value, 10);
+          if (p.type === 'month') month = parseInt(p.value, 10);
+          if (p.type === 'year') year = parseInt(p.value.replace(/[^0-9]/g, ''), 10);
+        });
+        return { year, month, day };
+      } catch (e) { return null; }
+    }
+
+    function hijriToGregorianStr(hYear, hMonth, hDay) {
+      if (!hYear || !hMonth || !hDay) return '';
+      try {
+        if (typeof moment !== 'undefined') {
+          const m = moment(`${hYear}/${hMonth}/${hDay}`, 'iYYYY/iM/iD');
+          if (m.isValid()) {
+            return m.format('YYYY-MM-DD');
+          }
+        }
+        const yNum = parseInt(hYear, 10), mNum = parseInt(hMonth, 10), dNum = parseInt(hDay, 10);
+        const jd = Math.floor((11 * yNum + 3) / 30) + 354 * yNum + 30 * mNum - Math.floor((mNum - 1) / 2) + dNum + 1948440 - 385;
+        const l = jd + 68569;
+        const n = Math.floor((4 * l) / 146097);
+        const l2 = l - Math.floor((146097 * n + 3) / 4);
+        const i = Math.floor((4000 * (l2 + 1)) / 1461001);
+        const l3 = l2 - Math.floor((1461 * i) / 4) + 31;
+        const j = Math.floor((80 * l3) / 2447);
+        const d = l3 - Math.floor((2447 * j) / 80);
+        const l4 = Math.floor(j / 11);
+        const m = j + 2 - 12 * l4;
+        const y = 100 * (n - 49) + i + l4;
+        return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      } catch (e) { return ''; }
+    }
+
     function calculateAgeExact(gDateStr) {
       const display = document.getElementById('studentAgeDisplay');
       if (!display) return;
@@ -613,40 +691,34 @@
       }
       
       try {
-        if (typeof moment === 'undefined') {
-          display.textContent = 'تم تحديد التاريخ: ' + gDateStr;
-          display.className = 'badge bg-primary fs-6 px-3 py-1';
-          return;
+        const birth = typeof moment !== 'undefined' ? moment(gDateStr, 'YYYY-MM-DD') : new Date(gDateStr);
+        const today = typeof moment !== 'undefined' ? moment() : new Date();
+        
+        let years = 0, months = 0, days = 0;
+        if (typeof moment !== 'undefined') {
+          if (!birth.isValid() || birth.isAfter(today)) {
+            display.textContent = 'تاريخ غير صالح (في المستقبل)';
+            display.className = 'badge bg-danger fs-6 px-3 py-1';
+            return;
+          }
+          const bClone = birth.clone();
+          years = today.diff(bClone, 'years');
+          bClone.add(years, 'years');
+          months = today.diff(bClone, 'months');
+          bClone.add(months, 'months');
+          days = today.diff(bClone, 'days');
+        } else {
+          years = today.getFullYear() - birth.getFullYear();
+          months = today.getMonth() - birth.getMonth();
+          days = today.getDate() - birth.getDate();
+          if (days < 0) { const pm = new Date(today.getFullYear(), today.getMonth(), 0); days += pm.getDate(); months -= 1; }
+          if (months < 0) { months += 12; years -= 1; }
         }
-
-        const birth = moment(gDateStr, 'YYYY-MM-DD');
-        const today = moment();
-        
-        if (!birth.isValid() || birth.isAfter(today)) {
-          display.textContent = 'تاريخ غير صالح (في المستقبل)';
-          display.className = 'badge bg-danger fs-6 px-3 py-1';
-          return;
-        }
-
-        const bClone = birth.clone();
-        let years = today.diff(bClone, 'years');
-        bClone.add(years, 'years');
-        
-        let months = today.diff(bClone, 'months');
-        bClone.add(months, 'months');
-        
-        let days = today.diff(bClone, 'days');
 
         const parts = [];
-        if (years > 0) {
-          parts.push(years === 1 ? 'سنة واحدة' : years === 2 ? 'سنتان' : years <= 10 ? (years + ' سنوات') : (years + ' سنة'));
-        }
-        if (months > 0) {
-          parts.push(months === 1 ? 'شهر واحد' : months === 2 ? 'شهران' : months <= 10 ? (months + ' أشهر') : (months + ' شهر'));
-        }
-        if (days > 0) {
-          parts.push(days === 1 ? 'يوم واحد' : days === 2 ? 'يومان' : days <= 10 ? (days + ' أيام') : (days + ' يوم'));
-        }
+        if (years > 0) parts.push(years === 1 ? 'سنة واحدة' : years === 2 ? 'سنتان' : years <= 10 ? (years + ' سنوات') : (years + ' سنة'));
+        if (months > 0) parts.push(months === 1 ? 'شهر واحد' : months === 2 ? 'شهران' : months <= 10 ? (months + ' أشهر') : (months + ' شهر'));
+        if (days > 0) parts.push(days === 1 ? 'يوم واحد' : days === 2 ? 'يومان' : days <= 10 ? (days + ' أيام') : (days + ' يوم'));
 
         const resultText = parts.length > 0 ? parts.join('، ') : 'مولود حديثاً (أقل من يوم)';
         display.textContent = resultText;
@@ -657,71 +729,43 @@
       }
     }
 
-    // Bidirectional Converter: Gregorian -> Hijri
+    // When user changes Gregorian date -> update Hijri dropdowns & age
     function onGregorianChange(val) {
-      if (val && typeof moment !== 'undefined') {
-        try {
-          const m = moment(val, 'YYYY-MM-DD');
-          if (m.isValid()) {
-            const hStr = m.format('iYYYY/iMM/iDD');
-            const hInput = document.getElementById('dobHijri');
-            if (hInput) {
-              hInput.value = hStr;
-              if (typeof $ !== 'undefined' && $('#dobHijri').data('DateTimePicker')) {
-                $('#dobHijri').data('DateTimePicker').date(m);
-              }
-            }
-          }
-        } catch(e) {}
+      if (val) {
+        const hObj = gregorianToHijriObj(val);
+        if (hObj) {
+          const dSel = document.getElementById('hijriDay');
+          const mSel = document.getElementById('hijriMonth');
+          const ySel = document.getElementById('hijriYear');
+          if (dSel) dSel.value = hObj.day;
+          if (mSel) mSel.value = hObj.month;
+          if (ySel) ySel.value = hObj.year;
+        }
+      } else {
+        const dSel = document.getElementById('hijriDay');
+        const mSel = document.getElementById('hijriMonth');
+        const ySel = document.getElementById('hijriYear');
+        if (dSel) dSel.value = '';
+        if (mSel) mSel.value = '';
+        if (ySel) ySel.value = '';
       }
       calculateAgeExact(val);
     }
 
-    // Bidirectional Converter: Hijri -> Gregorian
-    function onHijriChange(val) {
-      if (!val) {
-        calculateAgeExact('');
-        return;
-      }
-      const clean = val.trim().replace(/[-.]/g, '/');
-      if (clean.length >= 8 && typeof moment !== 'undefined') {
-        try {
-          const m = moment(clean, ['iYYYY/iM/iD', 'iYYYY/iMM/iDD', 'iYYYY/MM/DD']);
-          if (m.isValid() && m.iYear() >= 1300 && m.iYear() <= 1500) {
-            const gStr = m.format('YYYY-MM-DD');
-            const gInput = document.getElementById('dobGregorian');
-            if (gInput) gInput.value = gStr;
-            calculateAgeExact(gStr);
-          }
-        } catch(e) {}
+    // When user changes any of the Hijri dropdowns -> update Gregorian date & age
+    function onHijriDropdownChange() {
+      const d = document.getElementById('hijriDay').value;
+      const m = document.getElementById('hijriMonth').value;
+      const y = document.getElementById('hijriYear').value;
+
+      if (d && m && y) {
+        const gStr = hijriToGregorianStr(y, m, d);
+        if (gStr) {
+          document.getElementById('dobGregorian').value = gStr;
+          calculateAgeExact(gStr);
+        }
       }
     }
-
-    // Initialize Hijri Datepicker when DOM is ready
-    $(document).ready(function () {
-      try {
-        if ($.fn.hijriDatePicker) {
-          $("#dobHijri").hijriDatePicker({
-            hijri: true,
-            format: "YYYY/MM/DD",
-            hijriFormat: "iYYYY/iMM/iDD",
-            showSwitcher: false,
-            showTodayButton: true,
-            useCurrent: false
-          }).on('dp.change', function(e) {
-            if (e.date) {
-              const gStr = e.date.format('YYYY-MM-DD');
-              const hStr = e.date.format('iYYYY/iMM/iDD');
-              document.getElementById('dobGregorian').value = gStr;
-              document.getElementById('dobHijri').value = hStr;
-              calculateAgeExact(gStr);
-            }
-          });
-        }
-      } catch (err) {
-        console.warn('Hijri datepicker init:', err);
-      }
-    });
 
     // =============================================
     // Modal Helpers & Logic
@@ -747,8 +791,9 @@
         if (mPhoneInp) mPhoneInp.value = '';
         const dobG = document.getElementById('dobGregorian');
         if (dobG) dobG.value = '';
-        const dobH = document.getElementById('dobHijri');
-        if (dobH) dobH.value = '';
+        document.getElementById('hijriDay').value = '';
+        document.getElementById('hijriMonth').value = '';
+        document.getElementById('hijriYear').value = '';
       }
       
       const title = document.getElementById('studentModalLabel');
