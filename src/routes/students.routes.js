@@ -15,12 +15,31 @@ const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 async function uploadFiles(files) {
   const uploaded = [];
+  if (!files || !files.length) return uploaded;
   for (const file of files) {
-    const fileName = Date.now() + "_" + file.originalname;
-    const { error } = await supabase.storage.from("attachments").upload(fileName, file.buffer, { contentType: file.mimetype });
-    if (!error) {
-      const { data: pub } = supabase.storage.from("attachments").getPublicUrl(fileName);
-      uploaded.push({ name: file.originalname, url: pub.publicUrl });
+    try {
+      const timestamp = Date.now();
+      const safeName = (file.originalname || "file").replace(/[/\\]/g, "_");
+      const fileName = `${timestamp}_${safeName}`;
+      const { data, error } = await supabase.storage
+        .from("uploads")
+        .upload(fileName, file.buffer, { contentType: file.mimetype || "application/octet-stream", upsert: true });
+      if (!error) {
+        const { data: pub } = supabase.storage.from("uploads").getPublicUrl(fileName);
+        uploaded.push({
+          name: file.originalname,
+          original_name: file.originalname,
+          filename: fileName,
+          url: pub ? pub.publicUrl : "",
+          type: file.mimetype || "",
+          size: file.size || 0,
+          uploaded_at: new Date().toISOString()
+        });
+      } else {
+        console.error("Storage upload error for", file.originalname, error);
+      }
+    } catch (e) {
+      console.error("Upload exception for", file.originalname, e);
     }
   }
   return uploaded;
