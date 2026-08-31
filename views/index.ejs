@@ -247,33 +247,37 @@
               </td>
               <td><span class="badge bg-light text-dark border"><%= s.phase || '' %><%= s.grade ? ' - صف ' + s.grade : '' %></span></td>
               <td><span class="badge bg-secondary-subtle text-secondary border"><%= s.branch || 'الندى' %></span></td>
-              <% if(canManageStudents){ %>
+              <!-- 1. نتيجة المقابلة (Field-Level Permission) -->
               <td>
-                <select class="status-dropdown" onchange="quickUpdateStatus(<%= s.id %>, 'interview_result', this.value, this)">
-                  <option value="" <%= !s.interview_result ? 'selected' : '' %>>لم يقابل</option>
-                  <% interview_results.forEach(function(r){ %><option value="<%= r %>" <%= s.interview_result===r ? 'selected' : '' %>><%= r %></option><% }) %>
-                </select>
+                <% if(typeof canManageInterviews !== 'undefined' && canManageInterviews){ %>
+                  <select class="status-dropdown" id="dd_int_<%= s.id %>" onchange="quickUpdateStatus(<%= s.id %>, 'interview_result', this.value, this)">
+                    <% interview_results.forEach(function(r){ %>
+                      <option value="<%= r %>" <%= (s.interview_result===r || (!s.interview_result && r==='في انتظار المقابلة')) ? 'selected' : '' %>><%= r %></option>
+                    <% }) %>
+                  </select>
+                <% } else { %>
+                  <% if(s.interview_result==='مقبول'){ %><span class="badge-status bg-success-subtle text-success border border-success"><i class="fa-solid fa-check"></i> مقبول</span>
+                  <% } else if(s.interview_result==='غير مقبول'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-xmark"></i> غير مقبول</span>
+                  <% } else { %><span class="badge-status bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-clock"></i> انتظار المقابلة</span><% } %>
+                <% } %>
               </td>
+
+              <!-- 2. حالة التسجيل / المتابعة (Field-Level Permission) -->
               <td>
-                <select class="status-dropdown status-dd-followup" onchange="quickUpdateStatus(<%= s.id %>, 'followup_status', this.value, this)">
-                  <option value="" <%= !s.followup_status ? 'selected' : '' %>>غير محدد</option>
-                  <% followup_statuses.forEach(function(st){ %><option value="<%= st %>" <%= s.followup_status===st ? 'selected' : '' %>><%= st %></option><% }) %>
-                </select>
+                <% if(typeof canManageRegistration !== 'undefined' && canManageRegistration){ %>
+                  <select class="status-dropdown status-dd-followup" id="dd_fol_<%= s.id %>" onchange="quickUpdateStatus(<%= s.id %>, 'followup_status', this.value, this)">
+                    <% followup_statuses.forEach(function(st){ %>
+                      <option value="<%= st %>" <%= (s.followup_status===st || (!s.followup_status && st==='في انتظار المقابلة')) ? 'selected' : '' %>><%= st %></option>
+                    <% }) %>
+                  </select>
+                <% } else { %>
+                  <% if(s.followup_status==='تم التسجيل'){ %><span class="badge-status bg-info-subtle text-info border border-info"><i class="fa-solid fa-user-check"></i> تم التسجيل</span>
+                  <% } else if(s.followup_status==='في انتظار التسجيل'){ %><span class="badge-status bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-hourglass-start"></i> انتظار التسجيل</span>
+                  <% } else if(s.followup_status==='لم يجتز المقابلة'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-xmark"></i> لم يجتز</span>
+                  <% } else if(s.followup_status==='لا يرغب في التسجيل'){ %><span class="badge-status bg-secondary-subtle text-secondary border border-secondary"><i class="fa-solid fa-ban"></i> لا يرغب</span>
+                  <% } else { %><span class="badge-status bg-light text-muted border">انتظار المقابلة</span><% } %>
+                <% } %>
               </td>
-              <% } else { %>
-              <td>
-                <% if(s.interview_result==='مقبول'){ %><span class="badge-status bg-success-subtle text-success border border-success"><i class="fa-solid fa-check"></i> مقبول</span>
-                <% } else if(s.interview_result==='غير مقبول'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-xmark"></i> غير مقبول</span>
-                <% } else if(s.interview_result==='في انتظار المقابلة'){ %><span class="badge-status bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-clock"></i> انتظار المقابلة</span>
-                <% } else { %><span class="badge-status bg-light text-muted border">لم يقابل</span><% } %>
-              </td>
-              <td>
-                <% if(s.followup_status==='تم التسجيل'){ %><span class="badge-status bg-info-subtle text-info border border-info"><i class="fa-solid fa-user-check"></i> تم التسجيل</span>
-                <% } else if(s.followup_status==='في انتظار التسجيل'){ %><span class="badge-status bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-hourglass-start"></i> انتظار التسجيل</span>
-                <% } else if(s.followup_status==='لا يرغب في التسجيل'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-ban"></i> لا يرغب</span>
-                <% } else { %><span class="badge-status bg-light text-muted border">لم يسجل</span><% } %>
-              </td>
-              <% } %>
               <td class="text-truncate" style="max-width:160px;" title="<%= s.notes || '' %>"><small class="text-muted"><%= s.notes || '—' %></small></td>
               <td class="text-center">
                 <div class="btn-group btn-group-sm">
@@ -480,26 +484,48 @@
                 </select>
               </div>
 
-              <!-- نتيجة المقابلة -->
+              <!-- نتيجة المقابلة (Field-Level Permission + Automated Transition) -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">نتيجة المقابلة <span class="text-danger">*</span></label>
-                <select name="interview_result" id="interviewResultSelect" class="form-select" required onchange="toggleInterviewReason()">
-                  <option value="">لم تحدد بعد</option>
-                  <% interview_results.forEach(function(r){ %>
-                    <option value="<%= r %>" <%= editingStudent && editingStudent.interview_result===r ? 'selected' : '' %>><%= r %></option>
-                  <% }) %>
-                </select>
+                <label class="form-label fw-bold text-dark small">
+                  <i class="fa-solid fa-clipboard-check text-primary me-1"></i> نتيجة المقابلة
+                  <% if(!editingStudent){ %><span class="badge bg-secondary-subtle text-secondary ms-1">تلقائي: انتظار المقابلة</span><% } %>
+                </label>
+                <% if(editingStudent){ %>
+                  <select name="interview_result" id="interviewResultSelect" class="form-select <%= (typeof canManageInterviews !== 'undefined' && !canManageInterviews) ? 'bg-light text-muted' : '' %>" <%= (typeof canManageInterviews !== 'undefined' && !canManageInterviews) ? 'disabled' : '' %> onchange="onModalInterviewChange(this.value)">
+                    <% interview_results.forEach(function(r){ %>
+                      <option value="<%= r %>" <%= (editingStudent.interview_result===r || (!editingStudent.interview_result && r==='في انتظار المقابلة')) ? 'selected' : '' %>><%= r %></option>
+                    <% }) %>
+                  </select>
+                  <% if(typeof canManageInterviews !== 'undefined' && !canManageInterviews){ %>
+                    <input type="hidden" name="interview_result" value="<%= editingStudent.interview_result || 'في انتظار المقابلة' %>">
+                    <small class="text-muted"><i class="fa-solid fa-lock me-1"></i> تعديل النتيجة متاح لمسؤول المقابلات فقط</small>
+                  <% } %>
+                <% } else { %>
+                  <input type="text" class="form-control bg-light fw-bold text-primary" value="في انتظار المقابلة" readonly>
+                  <input type="hidden" name="interview_result" value="في انتظار المقابلة">
+                <% } %>
               </div>
 
-              <!-- حالة المتابعة والتسجيل -->
+              <!-- حالة المتابعة والتسجيل (Field-Level Permission) -->
               <div class="col-md-6">
-                <label class="form-label fw-bold text-dark small">حالة المتابعة والتسجيل <span class="text-danger">*</span></label>
-                <select name="followup_status" id="followupStatusSelect" class="form-select" required onchange="toggleInterviewReason()">
-                  <option value="">لم تحدد بعد</option>
-                  <% followup_statuses.forEach(function(s){ %>
-                    <option value="<%= s %>" <%= editingStudent && editingStudent.followup_status===s ? 'selected' : '' %>><%= s %></option>
-                  <% }) %>
-                </select>
+                <label class="form-label fw-bold text-dark small">
+                  <i class="fa-solid fa-user-clock text-info me-1"></i> حالة المتابعة والتسجيل
+                  <% if(!editingStudent){ %><span class="badge bg-secondary-subtle text-secondary ms-1">تلقائي: انتظار المقابلة</span><% } %>
+                </label>
+                <% if(editingStudent){ %>
+                  <select name="followup_status" id="followupStatusSelect" class="form-select <%= (typeof canManageRegistration !== 'undefined' && !canManageRegistration) ? 'bg-light text-muted' : '' %>" <%= (typeof canManageRegistration !== 'undefined' && !canManageRegistration) ? 'disabled' : '' %>>
+                    <% followup_statuses.forEach(function(s){ %>
+                      <option value="<%= s %>" <%= (editingStudent.followup_status===s || (!editingStudent.followup_status && s==='في انتظار المقابلة')) ? 'selected' : '' %>><%= s %></option>
+                    <% }) %>
+                  </select>
+                  <% if(typeof canManageRegistration !== 'undefined' && !canManageRegistration){ %>
+                    <input type="hidden" name="followup_status" value="<%= editingStudent.followup_status || 'في انتظار المقابلة' %>">
+                    <small class="text-muted"><i class="fa-solid fa-lock me-1"></i> تعديل الحالة متاح لمسؤول التسجيل فقط</small>
+                  <% } %>
+                <% } else { %>
+                  <input type="text" class="form-control bg-light fw-bold text-info" value="في انتظار المقابلة" readonly>
+                  <input type="hidden" name="followup_status" value="في انتظار المقابلة">
+                <% } %>
               </div>
 
               <!-- سبب عدم القبول (Textarea إجباري وديناميكي عند اختيار غير مقبول) -->
@@ -1011,15 +1037,48 @@
       });
     }
 
-    // Quick Status Update (AJAX)
+    // Automated status transition in Edit Modal
+    function onModalInterviewChange(val) {
+      toggleInterviewReason();
+      const folSelect = document.getElementById('followupStatusSelect');
+      if (folSelect) {
+        if (val === 'مقبول') {
+          folSelect.value = 'في انتظار التسجيل';
+        } else if (val === 'غير مقبول') {
+          folSelect.value = 'لم يجتز المقابلة';
+        }
+      }
+    }
+
+    // Quick Status Update (AJAX with Field Permissions & Workflow Automation)
     async function quickUpdateStatus(id, field, value, sel) {
       sel.disabled = true;
       try {
-        const r = await fetch('/api/quick_update_status', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({student_id:id,field,value}) });
+        const r = await fetch('/api/quick_update_status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: id, field, value })
+        });
         const d = await r.json();
-        showToast(d.message || 'تم', d.success ? 'success' : 'danger');
-      } catch(e) { showToast('خطأ في الاتصال', 'danger'); }
-      finally { sel.disabled = false; }
+        
+        if (d.success) {
+          showToast('✅ ' + d.message, 'success');
+          
+          // Automated workflow: update followup dropdown if interview changed
+          if (field === 'interview_result' && d.autoFollowupStatus) {
+            const folDropdown = document.getElementById('dd_fol_' + id);
+            if (folDropdown) {
+              folDropdown.value = d.autoFollowupStatus;
+            }
+          }
+        } else {
+          showToast('❌ ' + (d.message || 'فشل التحديث'), 'danger');
+        }
+      } catch(e) {
+        showToast('❌ خطأ في الاتصال بالسيرفر', 'danger');
+      } finally {
+        sel.disabled = false;
+      }
     }
 
     function showToast(msg, type) {
