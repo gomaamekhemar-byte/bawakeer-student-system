@@ -3,7 +3,7 @@ const { calculateAge } = require('../utils/age');
 const { STUDENT_TYPES, INTERVIEW_RESULTS, FOLLOWUP_STATUSES } = require('../utils/constants');
 
 const VALID_STUDENT_COLUMNS = [
-  'name', 'phone', 'date_of_birth', 'nationality', 'neighborhood',
+  'id', 'name', 'phone', 'date_of_birth', 'nationality', 'neighborhood',
   'interview_date', 'interview_result', 'interview_reason', 'followup_status',
   'registration_reason', 'student_type', 'track', 'phase', 'grade', 'branch',
   'notes', 'attachments', 'academic_year_id', 'updated_at', 'created_at'
@@ -56,7 +56,6 @@ async function getStudentById(id) {
 
 async function createStudent(studentData) {
   const cleanData = sanitizeStudentData(studentData);
-  // Default values to guarantee complete records
   cleanData.nationality = cleanData.nationality || 'سعودي';
   cleanData.student_type = cleanData.student_type || 'بنين';
   cleanData.phase = cleanData.phase || 'ابتدائي';
@@ -69,16 +68,33 @@ async function createStudent(studentData) {
   cleanData.created_at = cleanData.created_at || new Date().toISOString();
   cleanData.updated_at = new Date().toISOString();
 
+  // Safely calculate next ID to avoid PostgreSQL sequence collision
+  try {
+    const { data: maxRows } = await supabase.from('students').select('id').order('id', { ascending: false }).limit(1);
+    const nextId = (maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id : 0) + 1;
+    cleanData.id = nextId;
+  } catch (e) {
+    console.warn('Could not fetch max ID:', e);
+  }
+
   const { data, error } = await supabase.from('students').insert([cleanData]).select().single();
   if (error) {
-    console.error('CRITICAL: createStudent DB Insert error:', error);
-    return null;
+    console.error('CRITICAL: createStudent error with ID:', cleanData.id, error);
+    // If conflict, try without ID
+    delete cleanData.id;
+    const { data: retryData, error: retryError } = await supabase.from('students').insert([cleanData]).select().single();
+    if (retryError) {
+      console.error('CRITICAL: createStudent fallback insert error:', retryError);
+      return null;
+    }
+    return retryData;
   }
   return data;
 }
 
 async function updateStudent(id, studentData) {
   const cleanData = sanitizeStudentData(studentData);
+  delete cleanData.id; // Never overwrite PK id during update
   cleanData.updated_at = new Date().toISOString();
   const { data, error } = await supabase.from('students').update(cleanData).eq('id', id).select().single();
   if (error) {
