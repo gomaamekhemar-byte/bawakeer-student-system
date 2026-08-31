@@ -4,9 +4,9 @@ const { PERMISSIONS, ROLES } = require('../utils/constants');
 
 function getDefaultPermissions(role) {
   if (role === 'admin') return Object.fromEntries(Object.keys(PERMISSIONS).map(k => [k, true]));
-  if (role === 'manager') return { view_students: true, manage_students: true, export_reports: true, manage_users: false, manage_years: false, view_analytics: true, manage_settings: false };
-  if (role === 'employee') return { view_students: true, manage_students: true, export_reports: false, manage_users: false, manage_years: false, view_analytics: false, manage_settings: false };
-  return { view_students: true, manage_students: false, export_reports: false, manage_users: false, manage_years: false, view_analytics: false, manage_settings: false };
+  if (role === 'manager') return { view_students: true, manage_students: true, manage_interviews: true, manage_registration: true, export_reports: true, manage_users: false, manage_years: false, view_analytics: true, manage_settings: false };
+  if (role === 'employee') return { view_students: true, manage_students: true, manage_interviews: true, manage_registration: true, export_reports: false, manage_users: false, manage_years: false, view_analytics: false, manage_settings: false };
+  return { view_students: true, manage_students: false, manage_interviews: false, manage_registration: false, export_reports: false, manage_users: false, manage_years: false, view_analytics: false, manage_settings: false };
 }
 
 function normalizeUser(user) {
