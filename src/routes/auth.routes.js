@@ -1,9 +1,10 @@
-﻿const express = require("express");
+const express = require("express");
 const router = express.Router();
 const { signToken, requireAuth, getCurrentUser } = require("../middleware/auth");
 const { withUser } = require("../middleware/permissions");
 const { verifyPassword, updateUser } = require("../services/users.service");
 const { getBranchNames } = require("../services/branches.service");
+const { getAcademicYears, getActiveYear } = require("../services/academic_years.service");
 const { addHistory } = require("../services/history.service");
 
 // GET /login
@@ -11,53 +12,82 @@ router.get("/login", async (req, res) => {
   const token = req.cookies && req.cookies.auth_token;
   if (token) return res.redirect("/");
   const branches = await getBranchNames();
-  res.render("login", { branches, error: null });
+  const academic_years = await getAcademicYears();
+  res.render("login", { branches, academic_years, error: null });
 });
 
 // POST /login
 router.post("/login", async (req, res) => {
-  const { username, password, branch } = req.body;
+  const { username, password, branch, academic_year_id } = req.body;
   const branches = await getBranchNames();
+  const academic_years = await getAcademicYears();
+  const activeYear = await getActiveYear();
+
   const user = await verifyPassword((username || "").trim(), (password || "").trim());
   if (!user) {
-    return res.render("login", { branches, error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
+    return res.render("login", { branches, academic_years, error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
   }
+
   const branchVal = (branch || "").trim();
   if (branchVal && branchVal !== "الكل" && !branches.includes(branchVal)) {
-    return res.render("login", { branches, error: "يرجى اختيار فرع صحيح" });
+    return res.render("login", { branches, academic_years, error: "يرجى اختيار فرع صحيح" });
   }
-  const token = signToken({ username: user.username, branch: branchVal });
+
+  const selectedYear = academic_years.find(y => String(y.id) === String(academic_year_id)) || activeYear || { id: null, year_name: "", is_active: true };
+  const isYearActive = Boolean(selectedYear && selectedYear.is_active);
+
+  const token = signToken({
+    username: user.username,
+    branch: branchVal,
+    academic_year_id: selectedYear.id,
+    academic_year_name: selectedYear.year_name,
+    is_year_active: isYearActive
+  });
+
   res.cookie("auth_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 8 * 60 * 60 * 1000, // 8 hours
+    maxAge: 8 * 60 * 60 * 1000,
   });
+
   res.cookie("active_branch", encodeURIComponent(branchVal), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 8 * 60 * 60 * 1000,
   });
-  await addHistory("login_success", `تم تسجيل دخول المستخدم ${user.username} للفرع ${branchVal}`, user.username);
+
+  res.cookie("active_year_id", String(selectedYear.id || ""), {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 8 * 60 * 60 * 1000,
+  });
+
+  res.cookie("active_year_name", encodeURIComponent(selectedYear.year_name || ""), {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 8 * 60 * 60 * 1000,
+  });
+
+  await addHistory("login_success", `تم تسجيل دخول المستخدم ${user.username} للفرع ${branchVal} والعام ${selectedYear.year_name}`, user.username);
   res.redirect("/");
 });
 
-// POST /change_password (Available for ANY logged in user)
+// POST /change_password
 router.post("/change_password", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
 
   const { current_password, new_password, confirm_password } = req.body;
-
   if (!current_password || !new_password || !confirm_password) {
     return res.redirect("/?msg=" + encodeURIComponent("يرجى ملء جميع حقول تغيير كلمة المرور"));
   }
-
   if (new_password !== confirm_password) {
     return res.redirect("/?msg=" + encodeURIComponent("كلمة المرور الجديدة غير متطابقة مع التأكيد"));
   }
-
   if (new_password.length < 4) {
     return res.redirect("/?msg=" + encodeURIComponent("يجب أن تكون كلمة المرور 4 أحرف على الأقل"));
   }
@@ -80,6 +110,8 @@ router.post("/change_password", requireAuth, withUser, async (req, res) => {
 router.get("/logout", (req, res) => {
   res.clearCookie("auth_token");
   res.clearCookie("active_branch");
+  res.clearCookie("active_year_id");
+  res.clearCookie("active_year_name");
   res.redirect("/login");
 });
 
