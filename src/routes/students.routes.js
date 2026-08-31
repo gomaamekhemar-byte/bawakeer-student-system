@@ -26,18 +26,57 @@ async function uploadFiles(files) {
   return uploaded;
 }
 
-// GET / - Root route redirects cleanly to /students
-router.get("/", requireAuth, withUser, (req, res) => {
-  res.redirect("/students");
+// GET / - Clean Home Dashboard Hub
+router.get("/", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser) return res.redirect("/login");
+
+  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
+  const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
+  const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
+  const canViewAnalytics = userHasPermission(currentUser, "view_analytics");
+
+  let students = await getStudents();
+  if (activeBranch && activeBranch !== "الكل") {
+    students = students.filter(s => s.branch === activeBranch);
+  }
+  if (currentUser && ["manager", "employee"].includes(currentUser.role)) {
+    students = students.filter(s => userMatchesScope(currentUser, s));
+  }
+
+  const branches = await getBranchNames();
+  const activeYear = await getActiveYear();
+
+  const stats = {
+    total: students.length,
+    accepted: students.filter(s => s.interview_result === "مقبول").length,
+    registered: students.filter(s => s.followup_status === "تم التسجيل").length,
+    waiting: students.filter(s => s.followup_status === "في انتظار التسجيل").length,
+  };
+
+  res.render("home", {
+    pageTitle: "الرئيسية",
+    currentUser,
+    activeBranch,
+    activeYear,
+    branches,
+    stats,
+    canManageStudents,
+    canManageUsers,
+    canManageYears,
+    canViewAnalytics,
+    message: req.query.msg || null
+  });
 });
 
-// GET /students - Main Dashboard View
+// GET /students - Main Students Management Table & Filters
 router.get("/students", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
 
   const activeBranch = (req.cookies && req.cookies.active_branch) || "";
-  const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
+  const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
   const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
   const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
   const canViewAnalytics = userHasPermission(currentUser, "view_analytics");
@@ -65,7 +104,6 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
   const openNewModal = req.query.open_modal === "1";
 
   const query = (req.query.q || "").toLowerCase();
-  const neighborhoodQuery = (req.query.neighborhood || "").toLowerCase();
   const phoneQuery = (req.query.phone_search || "").trim();
   const interviewFilter = req.query.interview_filter || "";
   const followupFilter = req.query.followup_filter || "";
@@ -77,10 +115,9 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
 
   let filtered = students.filter(s => {
     if (query && !(s.name || "").toLowerCase().includes(query)) return false;
-    if (neighborhoodQuery && !(s.neighborhood || "").toLowerCase().includes(neighborhoodQuery)) return false;
     if (phoneQuery) {
       const mp = (s.phone || "").includes(phoneQuery);
-      const mm = (s.mother_phone || "").includes(phoneQuery);
+      const mm = (s.notes || "").includes(phoneQuery);
       if (!mp && !mm) return false;
     }
     if (interviewFilter && s.interview_result !== interviewFilter) return false;
@@ -112,6 +149,7 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
   students.forEach(s => { if (s.phone) allPhonesMap[s.phone] = { name: s.name, branch: s.branch, id: s.id }; });
 
   res.render("index", {
+    pageTitle: "متابعة وتسجيل الطلاب",
     students: filtered,
     editingStudent,
     openNewModal,
@@ -123,7 +161,7 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
     grades: GRADES,
     tracks: TRACKS,
     nationalities: NATIONALITIES,
-    query, neighborhoodQuery, phoneQuery,
+    query, phoneQuery,
     interviewFilter, followupFilter, studentTypeFilter, phaseFilter,
     gradeFilter, statusFilter, branchFilter,
     stats, currentUser, activeBranch,
@@ -154,7 +192,21 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     if (branchFilter && s.branch !== branchFilter) return false;
     return true;
   });
-  res.render("reports", { students: filtered, interview_results: INTERVIEW_RESULTS, followup_statuses: FOLLOWUP_STATUSES, phases: PHASES, branches, activeYear, currentUser, interviewFilter, followupFilter, phaseFilter, branchFilter });
+  res.render("reports", {
+    pageTitle: "مركز التقارير والتصدير",
+    students: filtered,
+    interview_results: INTERVIEW_RESULTS,
+    followup_statuses: FOLLOWUP_STATUSES,
+    phases: PHASES,
+    branches,
+    activeYear,
+    activeBranch,
+    currentUser,
+    interviewFilter,
+    followupFilter,
+    phaseFilter,
+    branchFilter
+  });
 });
 
 // POST /api/quick_update_status
@@ -215,7 +267,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
 
   const allStudents = await getStudents();
 
-  // FIX 3: Exclude current student from duplicate checks during Edit/Update
+  // Exclude current student from duplicate checks during Edit/Update
   const otherStudents = currentId ? allStudents.filter(s => s.id !== currentId) : allStudents;
 
   // Duplicate Check: Same name AND same phone on ANOTHER student record
@@ -223,24 +275,20 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     const nameLower = name.toLowerCase();
     const exactDuplicate = otherStudents.find(s => {
       const matchName = (s.name || "").trim().toLowerCase() === nameLower;
-      const matchPhone = (phone && (s.phone === phone || s.mother_phone === phone)) ||
-                         (mother_phone && (s.phone === mother_phone || s.mother_phone === mother_phone));
+      const matchPhone = phone && s.phone === phone;
       return matchName && matchPhone;
     });
 
     if (exactDuplicate) {
-      return res.redirect("/students?msg=" + encodeURIComponent('⚠️ يوجد طالب آخر بنفس الاسم ونفس رقم الجوال مسجل مسبقاً'));
+      return res.redirect("/students?msg=" + encodeURIComponent("⚠️ يوجد طالب آخر بنفس الاسم ونفس رقم الجوال مسجل مسبقاً"));
     }
   }
 
   // Sibling check: phone belongs to another student record with different name
-  const siblingStudent = otherStudents.find(s =>
-    (phone && (s.phone === phone || s.mother_phone === phone)) ||
-    (mother_phone && (s.phone === mother_phone || s.mother_phone === mother_phone))
-  );
+  const siblingStudent = otherStudents.find(s => phone && s.phone === phone);
 
-    if (currentId) {
-    // FIX UPDATE logic: Handles student_id cleanly and updates database
+  if (currentId) {
+    // UPDATE logic
     const existing = await getStudentById(currentId);
     if (!existing) return res.redirect("/students");
     const existingAttachments = Array.isArray(existing.attachments) ? existing.attachments : [];
@@ -292,10 +340,16 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
   } else {
     // CREATE LOGIC
     if (!name) return res.redirect("/students?msg=" + encodeURIComponent("يرجى إدخال اسم الطالب"));
+    
+    let finalNotes = notes || "";
+    if (mother_phone) {
+      finalNotes = (finalNotes ? finalNotes + " | " : "") + "جوال الأم: " + mother_phone;
+    }
+
     const newStudent = {
-      name, phone, mother_phone, date_of_birth, nationality, neighborhood,
+      name, phone, date_of_birth, nationality, neighborhood,
       interview_date, interview_result, interview_reason, followup_status,
-      registration_reason, student_type, track, phase, grade, notes,
+      registration_reason, student_type, track, phase, grade, notes: finalNotes,
       branch: student_branch || activeBranch,
       attachments: uploadedFiles,
       updated_at: new Date().toISOString()
