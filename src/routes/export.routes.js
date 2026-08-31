@@ -11,7 +11,7 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userHasPermission(currentUser, "export_reports")) return res.redirect("/");
   
-  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   let students = await getStudents();
 
   if (activeBranch && activeBranch !== "الكل") {
@@ -79,7 +79,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userHasPermission(currentUser, "export_reports")) return res.redirect("/");
   
-  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   let students = await getStudents();
 
   if (activeBranch && activeBranch !== "الكل") {
