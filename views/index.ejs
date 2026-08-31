@@ -249,7 +249,18 @@
             <tr data-student-id="<%= s.id %>">
               <td class="text-muted fw-bold small"><%= idx+1 %></td>
               <td>
-                <div class="fw-bold text-dark"><%= s.name %></div>
+                <div class="fw-bold text-dark fs-6"><%= s.name %></div>
+                <div class="text-muted d-flex align-items-center flex-wrap gap-1 mt-1" style="font-size: 11px;">
+                  <span class="d-inline-flex align-items-center gap-1">
+                    <i class="fa-regular fa-calendar-plus text-primary"></i>
+                    <span>تاريخ التسجيل: <%= s.timeline ? s.timeline.initial_registration_display : (s.created_at ? s.created_at.substring(0,10) : '—') %></span>
+                  </span>
+                  <% if(s.timeline){ %>
+                    <span class="badge <%= s.timeline.urgency_class %> py-1 px-2 ms-1 shadow-sm" title="إجمالي فترة الانتظار: <%= s.timeline.urgency_badge %>">
+                      <i class="fa-solid fa-hourglass-half me-1"></i> <%= s.timeline.total_waiting_days %> <%= s.timeline.total_waiting_days === 1 ? 'يوم' : 'أيام' %>
+                    </span>
+                  <% } %>
+                </div>
                 <small class="text-muted"><%= s.nationality || 'سعودي' %><%= s.student_type ? ' • ' + s.student_type : '' %></small>
               </td>
               <td>
@@ -259,9 +270,9 @@
               </td>
               <td><span class="badge bg-light text-dark border"><%= s.phase || '' %><%= s.grade ? ' - صف ' + s.grade : '' %></span></td>
               <td><span class="badge bg-secondary-subtle text-secondary border"><%= s.branch || 'الندى' %></span></td>
-              <!-- 1. نتيجة المقابلة (Field-Level Permission) -->
+              <!-- 1. نتيجة المقابلة (Field-Level Permission + Time Tracking) -->
               <td>
-                <% if(typeof canManageInterviews !== 'undefined' && canManageInterviews){ %>
+                <% if(typeof canManageInterviews !== 'undefined' && canManageInterviews && (!locals.isReadOnlyYear)){ %>
                   <select class="status-dropdown" id="dd_int_<%= s.id %>" onchange="quickUpdateStatus(<%= s.id %>, 'interview_result', this.value, this)">
                     <% interview_results.forEach(function(r){ %>
                       <option value="<%= r %>" <%= (s.interview_result===r || (!s.interview_result && r==='في انتظار المقابلة')) ? 'selected' : '' %>><%= r %></option>
@@ -272,11 +283,26 @@
                   <% } else if(s.interview_result==='غير مقبول'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-xmark"></i> غير مقبول</span>
                   <% } else { %><span class="badge-status bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-clock"></i> انتظار المقابلة</span><% } %>
                 <% } %>
+                
+                <!-- TIMELINE: INTERVIEW DURATION -->
+                <% if(s.timeline && s.timeline.has_interviewed){ %>
+                  <div class="mt-1 small" style="font-size: 11px;">
+                    <span class="badge bg-light text-dark border py-1 px-2 d-inline-flex align-items-center gap-1 shadow-sm">
+                      <i class="fa-solid fa-calendar-check text-success"></i>
+                      <span>تمت في: <%= s.timeline.interview_date_display %></span>
+                      <span class="text-muted">(انتظر <%= s.timeline.interview_days_waited %> <%= s.timeline.interview_days_waited === 1 ? 'يوم' : 'أيام' %>)</span>
+                    </span>
+                  </div>
+                <% } else if(s.timeline){ %>
+                  <div class="mt-1 text-muted small" style="font-size: 11px;">
+                    <i class="fa-regular fa-clock me-1 text-warning"></i> في الانتظار منذ <%= s.timeline.current_waiting_days %> يوم
+                  </div>
+                <% } %>
               </td>
 
-              <!-- 2. حالة التسجيل / المتابعة (Field-Level Permission) -->
+              <!-- 2. حالة التسجيل / المتابعة (Field-Level Permission + Time Tracking) -->
               <td>
-                <% if(typeof canManageRegistration !== 'undefined' && canManageRegistration){ %>
+                <% if(typeof canManageRegistration !== 'undefined' && canManageRegistration && (!locals.isReadOnlyYear)){ %>
                   <select class="status-dropdown status-dd-followup" id="dd_fol_<%= s.id %>" onchange="quickUpdateStatus(<%= s.id %>, 'followup_status', this.value, this)">
                     <% followup_statuses.forEach(function(st){ %>
                       <option value="<%= st %>" <%= (s.followup_status===st || (!s.followup_status && st==='في انتظار المقابلة')) ? 'selected' : '' %>><%= st %></option>
@@ -288,6 +314,21 @@
                   <% } else if(s.followup_status==='لم يجتز المقابلة'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-xmark"></i> لم يجتز</span>
                   <% } else if(s.followup_status==='لا يرغب في التسجيل'){ %><span class="badge-status bg-secondary-subtle text-secondary border border-secondary"><i class="fa-solid fa-ban"></i> لا يرغب</span>
                   <% } else { %><span class="badge-status bg-light text-muted border">انتظار المقابلة</span><% } %>
+                <% } %>
+
+                <!-- TIMELINE: REGISTRATION DURATION -->
+                <% if(s.timeline && s.timeline.has_registered){ %>
+                  <div class="mt-1 small" style="font-size: 11px;">
+                    <span class="badge bg-light text-dark border py-1 px-2 d-inline-flex align-items-center gap-1 shadow-sm">
+                      <i class="fa-solid fa-user-clock text-info"></i>
+                      <span>تم التحديث: <%= s.timeline.registration_date_display %></span>
+                      <span class="text-muted">(استغرق <%= s.timeline.registration_days_taken %> <%= s.timeline.registration_days_taken === 1 ? 'يوم' : 'أيام' %> بعد المقابلة)</span>
+                    </span>
+                  </div>
+                <% } else if(s.interview_result === 'مقبول') { %>
+                  <div class="mt-1 small text-muted" style="font-size: 11px;">
+                    <i class="fa-regular fa-hourglass me-1 text-info"></i> بانتظار استكمال التسجيل
+                  </div>
                 <% } %>
               </td>
               <td class="text-truncate" style="max-width:160px;" title="<%= s.notes || '' %>"><small class="text-muted"><%= s.notes || '—' %></small></td>
