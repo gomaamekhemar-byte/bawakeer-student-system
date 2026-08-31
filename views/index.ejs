@@ -588,7 +588,7 @@
       const btn = document.getElementById('saveStudentBtn');
       btn.querySelector('.save-text').classList.add('d-none');
       btn.querySelector('.spinner-border').classList.remove('d-none');
-      btn.disabled = true;
+      btn.style.pointerEvents = 'none';
     });
 
     // Search spinner
@@ -596,7 +596,7 @@
       const btn = document.getElementById('searchBtn');
       btn.querySelector('.search-text').classList.add('d-none');
       btn.querySelector('.spinner-border').classList.remove('d-none');
-      btn.disabled = true;
+      btn.style.pointerEvents = 'none';
     });
 
     const exBtn = document.getElementById('excelBtn');
