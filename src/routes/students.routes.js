@@ -5,7 +5,7 @@ const { requireAuth } = require("../middleware/auth");
 const { withUser, userCan, userHasPermission, userMatchesScope } = require("../middleware/permissions");
 const { getStudents, getStudentById, createStudent, updateStudent, deleteStudent } = require("../services/students.service");
 const { getBranchNames } = require("../services/branches.service");
-const { getActiveYear } = require("../services/academic_years.service");
+const { getActiveYear, getAcademicYears } = require("../services/academic_years.service");
 const { addHistory, addStudentHistory, computeFieldChanges } = require("../services/history.service");
 const supabase = require("../config/supabase");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES } = require("../utils/constants");
@@ -112,6 +112,13 @@ router.get("/students", requireAuth, withUser, async (req, res) => {
   let students = await getStudents();
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
+
+  // Academic Year Scoping
+  const sessionYear = req.sessionYear;
+  if (sessionYear && sessionYear.id) {
+    // If student has an academic_year_id, filter by it; if null, show in active year
+    students = students.filter(s => String(s.academic_year_id || (activeYear ? activeYear.id : '')) === String(sessionYear.id));
+  }
 
   if (activeBranch && activeBranch !== "الكل") {
     students = students.filter(s => s.branch === activeBranch);
@@ -242,6 +249,7 @@ router.post("/api/delete_attachment", requireAuth, withUser, async (req, res) =>
   const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
   const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
   const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
+  if (req.isReadOnlyYear) return res.status(403).json({ success: false, message: "عفواً، لا يمكن حذف المرفقات في عام دراسي مؤرشف" });
   if (!canManageStudents) return res.status(403).json({ success: false, message: "ليس لديك صلاحية لحذف المرفقات" });
 
   const { student_id, file_index, file_url, filename } = req.body;
@@ -297,6 +305,7 @@ router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) 
   const currentUser = req.currentUser;
   if (!currentUser) return res.status(401).json({ success: false, message: "غير مصرح" });
 
+  if (req.isReadOnlyYear) return res.status(403).json({ success: false, message: "عفواً، لا يمكن تعديل الحالة في عام دراسي مؤرشف (وضع القراءة فقط)" });
   const { student_id, field, value } = req.body;
   if (!student_id || !field) return res.status(400).json({ success: false, message: "بيانات غير مكتملة" });
 
@@ -356,6 +365,10 @@ router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) 
 router.post("/students", requireAuth, withUser, upload.array("attachments", 10), async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
+
+  if (req.isReadOnlyYear) {
+    return res.redirect("/students?msg=" + encodeURIComponent("عفواً، لا يمكن إضافة أو تعديل البيانات في عام دراسي مؤرشف (وضع القراءة فقط)"));
+  }
   const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
   const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
@@ -499,6 +512,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       grade: grade || "1",
       notes: finalNotes,
       branch: student_branch || activeBranch || "الندى",
+      academic_year_id: (req.sessionYear && req.sessionYear.id) ? req.sessionYear.id : (activeYear ? activeYear.id : null),
       attachments: uploadedFiles,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -522,6 +536,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
 
 // POST /delete/:id
 router.post("/delete/:id", requireAuth, withUser, async (req, res) => {
+  if (req.isReadOnlyYear) return res.redirect("/students?msg=" + encodeURIComponent("عفواً، لا يمكن حذف الطلاب في عام دراسي مؤرشف"));
   const currentUser = req.currentUser;
   if (!currentUser || !userCan(currentUser, "admin")) return res.redirect("/students");
   const studentId = parseInt(req.params.id);
@@ -530,6 +545,59 @@ router.post("/delete/:id", requireAuth, withUser, async (req, res) => {
   if (student) { await addStudentHistory(studentId, "student_deleted", "تم حذف الطالب " + student.name, currentUser.username); }
   await addHistory("student_deleted", "تم حذف الطالب رقم " + studentId, currentUser.username);
   res.redirect("/students");
+});
+
+// GET /api/lookup_parent?phone=05xxxxxxxx
+router.get("/api/lookup_parent", requireAuth, withUser, async (req, res) => {
+  const queryPhone = (req.query.phone || "").trim();
+  if (!queryPhone || queryPhone.length < 8) {
+    return res.json({ found: false });
+  }
+
+  const allStudents = await getStudents();
+  const academicYears = await getAcademicYears();
+  const yearMap = {};
+  academicYears.forEach(y => { yearMap[y.id] = y.year_name; });
+
+  // Find matches across ALL academic years
+  const matches = allStudents.filter(s => {
+    const p1 = (s.phone || "").trim();
+    const p2 = (s.notes || "");
+    return p1 === queryPhone || p2.includes(queryPhone);
+  });
+
+  if (!matches.length) {
+    return res.json({ found: false });
+  }
+
+  const first = matches[0];
+  const siblings = matches.map(m => {
+    const yr = yearMap[m.academic_year_id] || (m.academic_year_id ? ("عام " + m.academic_year_id) : "عام دراسي سابق");
+    return {
+      id: m.id,
+      name: m.name,
+      branch: m.branch,
+      phase: m.phase,
+      grade: m.grade,
+      year_name: yr
+    };
+  });
+
+  const yearsMentioned = [...new Set(siblings.map(s => s.year_name))].join(" و ");
+  const siblingsNames = siblings.map(s => (s.name + " (" + s.branch + " - " + s.phase + " " + s.grade + ")")).join("، ");
+
+  return res.json({
+    found: true,
+    student: {
+      name: first.name,
+      neighborhood: first.neighborhood || "",
+      nationality: first.nationality || "سعودي",
+      branch: first.branch || "",
+    },
+    siblings,
+    years_mentioned: yearsMentioned,
+    message: "تنبيه: ولي الأمر هذا مسجل في النظام مسبقاً خلال العام الدراسي [" + yearsMentioned + "] ولديه أبناء مسجلين: (" + siblingsNames + ")"
+  });
 });
 
 module.exports = router;
