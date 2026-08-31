@@ -20,17 +20,31 @@ function sanitizeStudentData(data) {
 }
 
 function normalizeStudent(student) {
-  if (!STUDENT_TYPES.includes(student.student_type)) student.student_type = 'بنين';
-  if (!INTERVIEW_RESULTS.includes(student.interview_result)) student.interview_result = '';
-  if (!FOLLOWUP_STATUSES.includes(student.followup_status)) student.followup_status = '';
-  student.attachments = student.attachments || [];
+  if (!student) return null;
+  student.name = student.name || '';
+  student.phone = student.phone || '';
+  student.student_type = student.student_type || 'بنين';
+  student.nationality = student.nationality || 'سعودي';
+  student.branch = student.branch || 'الندى';
+  student.phase = student.phase || 'ابتدائي';
+  student.grade = student.grade || '1';
+  student.track = student.track || 'عام';
+  student.interview_result = student.interview_result || 'لم يقابل';
+  student.followup_status = student.followup_status || 'في انتظار التسجيل';
+  student.attachments = Array.isArray(student.attachments) ? student.attachments : [];
   student.age = calculateAge(student.date_of_birth || '');
   return student;
 }
 
 async function getStudents() {
-  const { data, error } = await supabase.from('students').select('*').order('id', { ascending: false });
-  if (error) { console.error('getStudents error:', error); return []; }
+  const { data, error } = await supabase
+    .from('students')
+    .select('*')
+    .order('id', { ascending: false });
+  if (error) {
+    console.error('CRITICAL getStudents error:', error);
+    return [];
+  }
   return (data || []).map(normalizeStudent);
 }
 
@@ -42,8 +56,24 @@ async function getStudentById(id) {
 
 async function createStudent(studentData) {
   const cleanData = sanitizeStudentData(studentData);
+  // Default values to guarantee complete records
+  cleanData.nationality = cleanData.nationality || 'سعودي';
+  cleanData.student_type = cleanData.student_type || 'بنين';
+  cleanData.phase = cleanData.phase || 'ابتدائي';
+  cleanData.grade = cleanData.grade || '1';
+  cleanData.track = cleanData.track || 'عام';
+  cleanData.branch = cleanData.branch || 'الندى';
+  cleanData.interview_result = cleanData.interview_result || 'لم يقابل';
+  cleanData.followup_status = cleanData.followup_status || 'في انتظار التسجيل';
+  cleanData.attachments = cleanData.attachments || [];
+  cleanData.created_at = cleanData.created_at || new Date().toISOString();
+  cleanData.updated_at = new Date().toISOString();
+
   const { data, error } = await supabase.from('students').insert([cleanData]).select().single();
-  if (error) { console.error('createStudent error:', error); return null; }
+  if (error) {
+    console.error('CRITICAL: createStudent DB Insert error:', error);
+    return null;
+  }
   return data;
 }
 
@@ -51,7 +81,10 @@ async function updateStudent(id, studentData) {
   const cleanData = sanitizeStudentData(studentData);
   cleanData.updated_at = new Date().toISOString();
   const { data, error } = await supabase.from('students').update(cleanData).eq('id', id).select().single();
-  if (error) { console.error('updateStudent error:', error); return null; }
+  if (error) {
+    console.error('CRITICAL: updateStudent DB Update error:', error);
+    return null;
+  }
   return data;
 }
 
