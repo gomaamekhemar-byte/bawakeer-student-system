@@ -13,10 +13,11 @@ const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRA
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-async function uploadFiles(files) {
+async function uploadFiles(files, customTitle) {
   const uploaded = [];
   if (!files || !files.length) return uploaded;
-  for (const file of files) {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     try {
       const timestamp = Date.now();
       const safeName = (file.originalname || "file").replace(/[/\\]/g, "_");
@@ -26,8 +27,9 @@ async function uploadFiles(files) {
         .upload(fileName, file.buffer, { contentType: file.mimetype || "application/octet-stream", upsert: true });
       if (!error) {
         const { data: pub } = supabase.storage.from("uploads").getPublicUrl(fileName);
+        const displayName = customTitle ? (files.length === 1 ? customTitle : `${customTitle} (${i + 1})`) : file.originalname;
         uploaded.push({
-          name: file.originalname,
+          name: displayName,
           original_name: file.originalname,
           filename: fileName,
           url: pub ? pub.publicUrl : "",
@@ -338,7 +340,8 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
   const grade = (req.body.grade || "").trim();
   const notes = (req.body.notes || "").trim();
   const student_branch = (req.body.student_branch || "").trim();
-  const uploadedFiles = await uploadFiles(req.files || []);
+  const attachment_title = (req.body.attachment_title || "").trim();
+  const uploadedFiles = await uploadFiles(req.files || [], attachment_title);
 
   const allStudents = await getStudents();
 
