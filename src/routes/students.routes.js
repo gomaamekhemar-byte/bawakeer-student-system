@@ -228,6 +228,62 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   });
 });
 
+// POST /api/delete_attachment
+router.post("/api/delete_attachment", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser) return res.status(401).json({ success: false, message: "غير مصرح" });
+  
+  const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
+  if (!canManageStudents) return res.status(403).json({ success: false, message: "ليس لديك صلاحية لحذف المرفقات" });
+
+  const { student_id, file_index, file_url, filename } = req.body;
+  if (!student_id) return res.status(400).json({ success: false, message: "معرف الطالب مفقود" });
+
+  const student = await getStudentById(parseInt(student_id));
+  if (!student) return res.status(404).json({ success: false, message: "الطالب غير موجود" });
+
+  let attachments = Array.isArray(student.attachments) ? [...student.attachments] : [];
+  
+  let removedFile = null;
+  if (typeof file_index === "number" && file_index >= 0 && file_index < attachments.length) {
+    removedFile = attachments.splice(file_index, 1)[0];
+  } else if (file_url) {
+    const idx = attachments.findIndex(a => a.url === file_url || (a.filename && file_url.includes(a.filename)));
+    if (idx !== -1) {
+      removedFile = attachments.splice(idx, 1)[0];
+    }
+  } else if (filename) {
+    const idx = attachments.findIndex(a => a.filename === filename || a.name === filename);
+    if (idx !== -1) {
+      removedFile = attachments.splice(idx, 1)[0];
+    }
+  }
+
+  if (!removedFile) {
+    return res.status(404).json({ success: false, message: "المرفق غير موجود" });
+  }
+
+  try {
+    const storageFilename = removedFile.filename || (removedFile.url ? removedFile.url.split("/").pop() : null);
+    if (storageFilename) {
+      await supabase.storage.from("uploads").remove([storageFilename]);
+    }
+  } catch (err) {
+    console.error("Storage remove error:", err);
+  }
+
+  const updated = await updateStudent(parseInt(student_id), { attachments });
+  
+  if (updated) {
+    const details = "تم حذف المرفق \"" + (removedFile.name || removedFile.original_name || "ملف") + "\" من ملف الطالب " + student.name;
+    await addStudentHistory(parseInt(student_id), "attachment_deleted", details, currentUser.username);
+    await addHistory("attachment_deleted", details, currentUser.username);
+    return res.json({ success: true, message: "تم حذف المرفق بنجاح", remainingCount: attachments.length, attachments });
+  }
+
+  return res.status(500).json({ success: false, message: "فشل تحديث بيانات الطالب بعد الحذف" });
+});
+
 // POST /api/quick_update_status
 router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
