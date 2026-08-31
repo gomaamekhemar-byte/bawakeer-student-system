@@ -22,7 +22,7 @@
       border-radius: 16px;
       border: 1px solid #e2e8f0;
       box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-      padding: 28px 24px;
+      padding: 32px 26px;
       text-decoration: none;
       color: inherit;
       display: flex;
@@ -31,7 +31,7 @@
       transition: all 0.25s ease-in-out;
       position: relative;
       overflow: hidden;
-      min-height: 220px;
+      min-height: 230px;
     }
     .hub-card:hover {
       transform: translateY(-6px);
@@ -40,14 +40,14 @@
       color: inherit;
     }
     .hub-card .icon-box {
-      width: 64px;
-      height: 64px;
-      border-radius: 14px;
+      width: 68px;
+      height: 68px;
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
-      margin-bottom: 18px;
+      font-size: 30px;
+      margin-bottom: 20px;
       transition: transform 0.2s;
     }
     .hub-card:hover .icon-box {
@@ -60,11 +60,9 @@
     .hub-card-cyan .icon-box { background: #ecfeff; color: #0891b2; }
     .hub-card-rose .icon-box { background: #fff1f2; color: #e11d48; }
 
-    .hub-card .title { font-size: 19px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
-    .hub-card .desc { font-size: 13.5px; color: #64748b; line-height: 1.5; font-weight: 500; }
-    .hub-card .action-link { font-size: 13px; font-weight: 700; color: #2563eb; margin-top: 16px; display: flex; align-items: center; gap: 6px; }
-    
-    .quick-stat-bar { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 18px 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+    .hub-card .title { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 10px; }
+    .hub-card .desc { font-size: 14px; color: #64748b; line-height: 1.6; font-weight: 500; }
+    .hub-card .action-link { font-size: 13.5px; font-weight: 700; color: #2563eb; margin-top: 20px; display: flex; align-items: center; gap: 8px; }
   </style>
 </head>
 <body>
@@ -122,13 +120,13 @@
     </div>
     <% } %>
 
-    <!-- WELCOME HERO BANNER -->
-    <div class="p-4 mb-4 rounded-4 shadow-sm text-center text-md-start" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff;">
+    <!-- WELCOME HERO BANNER (CLEAN & MINIMALIST) -->
+    <div class="p-4 mb-4 rounded-4 shadow-sm" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff;">
       <h3 class="fw-bold mb-2">مرحباً بك، <%= currentUser ? (currentUser.full_name || currentUser.username) : 'المستخدم' %> 👋</h3>
       <p class="mb-0 text-white-50 fs-6">نظام متابعة تسجيل وقبول الطلاب بمدارس بواكير الأهلية — يرجى اختيار القسم المطلوب للمتابعة أو إدارة العمليات أدناه.</p>
     </div>
 
-    <!-- MAIN SYSTEM MODULES GRID (LARGE CARDS) -->
+    <!-- MAIN SYSTEM MODULES GRID (LARGE NAVIGATION CARDS ONLY) -->
     <div class="row g-4 mb-4">
       
       <!-- 1. متابعة الطلاب -->
@@ -137,7 +135,7 @@
           <div>
             <div class="icon-box"><i class="fa-solid fa-users-line"></i></div>
             <div class="title">متابعة وتسجيل الطلاب</div>
-            <div class="desc">عرض سجلات الطلاب، المقابلات الشخصية، حالة التسجيل، الفلاتر المتقدمة، وتعديل البيانات.</div>
+            <div class="desc">عرض سجلات الطلاب، المقابلات الشخصية، حالة التسجيل، الفلاتر المتقدمة، وتعديل البيانات والمرفقات.</div>
           </div>
           <div class="action-link">
             <span>الدخول إلى شاشة متابعة الطلاب</span>
@@ -227,29 +225,6 @@
       </div>
       <% } %>
 
-    </div>
-
-    <!-- QUICK STATS BAR -->
-    <div class="quick-stat-bar d-flex justify-content-around align-items-center flex-wrap gap-3 mt-2">
-      <div class="text-center">
-        <span class="text-muted small fw-bold d-block">إجمالي المسجلين</span>
-        <span class="fs-4 fw-bold text-primary"><%= stats ? stats.total : 0 %> طالب</span>
-      </div>
-      <div class="vr d-none d-md-block"></div>
-      <div class="text-center">
-        <span class="text-muted small fw-bold d-block">المقبولين</span>
-        <span class="fs-4 fw-bold text-success"><%= stats ? stats.accepted : 0 %> طالب</span>
-      </div>
-      <div class="vr d-none d-md-block"></div>
-      <div class="text-center">
-        <span class="text-muted small fw-bold d-block">تم التسجيل</span>
-        <span class="fs-4 fw-bold text-info"><%= stats ? stats.registered : 0 %> طالب</span>
-      </div>
-      <div class="vr d-none d-md-block"></div>
-      <div class="text-center">
-        <span class="text-muted small fw-bold d-block">في انتظار التسجيل</span>
-        <span class="fs-4 fw-bold text-warning"><%= stats ? stats.waiting : 0 %> طالب</span>
-      </div>
     </div>
 
   </div>
