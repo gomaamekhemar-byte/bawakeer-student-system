@@ -20,7 +20,7 @@ router.get("/student_history/:id", requireAuth, withUser, async (req, res) => {
   const studentId = parseInt(req.params.id);
   const entries = await getStudentHistory(studentId);
   const student = await getStudentById(studentId);
-  const activeBranch = (req.cookies && req.cookies.active_branch) || "";
+  const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
   res.render("student_history", { student, entries, currentUser, activeBranch });
 });
 
