@@ -1,5 +1,5 @@
-const INTERVIEW_RESULTS = ['مقبول', 'غير مقبول', 'في انتظار المقابلة'];
-const FOLLOWUP_STATUSES = ['تم التسجيل', 'في انتظار التسجيل', 'لا يرغب في التسجيل', 'لم يتم التسجيل'];
+const INTERVIEW_RESULTS = ['في انتظار المقابلة', 'مقبول', 'غير مقبول'];
+const FOLLOWUP_STATUSES = ['في انتظار المقابلة', 'في انتظار التسجيل', 'تم التسجيل', 'لا يرغب في التسجيل', 'لم يجتز المقابلة', 'لم يتم التسجيل'];
 const STUDENT_TYPES = ['بنين', 'بنات'];
 const PHASES = ['روضة', 'ابتدائي', 'متوسط', 'ثانوي'];
 const GRADES = ['1', '2', '3', '4', '5', '6'];
@@ -13,7 +13,9 @@ const ROLES = {
 };
 const PERMISSIONS = {
   view_students: 'عرض الطلاب',
-  manage_students: 'إدارة الطلاب',
+  manage_students: 'إدارة الطلاب الأساسية',
+  manage_interviews: 'مسؤول المقابلات (تعديل نتيجة المقابلة)',
+  manage_registration: 'مسؤول التسجيل (تعديل حالة التسجيل والمتابعة)',
   export_reports: 'تصدير التقارير',
   manage_users: 'إدارة المستخدمين',
   manage_years: 'إدارة الأعوام والفروع',
