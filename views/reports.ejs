@@ -156,7 +156,7 @@
 
           <!-- PROMINENT EXPORT ACTION BUTTONS -->
           <div class="d-flex gap-2">
-            <a href="/export/excel" class="btn btn-success px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <a href="/export/excel?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>" class="btn btn-success px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-excel fs-5"></i>
               <span>تصدير Excel</span>
             </a>
