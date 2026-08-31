@@ -11,6 +11,8 @@
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment-hijri@2.1.2/moment-hijri.min.js"></script>
 
   <style>
     body { font-family: 'Cairo', system-ui, sans-serif; background-color: #f4f6f9; color: #212529; min-height: 100vh; }
@@ -537,57 +539,9 @@
 
   <script>
     // =============================================
-    // Hijri <-> Gregorian Conversion & Exact Age
+    // Hijri <-> Gregorian Bidirectional Conversion & Exact Age (moment-hijri)
     // =============================================
-    function gregorianToHijri(gDateStr) {
-      if (!gDateStr) return '';
-      const d = new Date(gDateStr);
-      if (isNaN(d.getTime())) return '';
-      try {
-        const formatter = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
-          day: '2-digit', month: '2-digit', year: 'numeric'
-        });
-        const parts = formatter.formatToParts(d);
-        let day = '', month = '', year = '';
-        parts.forEach(p => {
-          if (p.type === 'day') day = p.value.padStart(2, '0');
-          if (p.type === 'month') month = p.value.padStart(2, '0');
-          if (p.type === 'year') year = p.value.replace(/[^0-9]/g, '');
-        });
-        if (year && month && day) return year + '-' + month + '-' + day;
-      } catch (e) {}
-      return '';
-    }
-
-    function hijriToGregorian(hDateStr) {
-      if (!hDateStr) return '';
-      const parts = hDateStr.trim().replace(/\//g, '-').split('-');
-      if (parts.length !== 3) return '';
-      const hYear = parseInt(parts[0], 10);
-      const hMonth = parseInt(parts[1], 10);
-      const hDay = parseInt(parts[2], 10);
-      if (isNaN(hYear) || isNaN(hMonth) || isNaN(hDay)) return '';
-      if (hYear < 1300 || hYear > 1500 || hMonth < 1 || hMonth > 12 || hDay < 1 || hDay > 30) return '';
-
-      // Umm al-Qura math conversion
-      const jd = Math.floor((11 * hYear + 3) / 30) + 354 * hYear + 30 * hMonth - Math.floor((hMonth - 1) / 2) + hDay + 1948440 - 385;
-      const l = jd + 68569;
-      const n = Math.floor((4 * l) / 146097);
-      const l2 = l - Math.floor((146097 * n + 3) / 4);
-      const i = Math.floor((4000 * (l2 + 1)) / 1461001);
-      const l3 = l2 - Math.floor((1461 * i) / 4) + 31;
-      const j = Math.floor((80 * l3) / 2447);
-      const d = l3 - Math.floor((2447 * j) / 80);
-      const l4 = Math.floor(j / 11);
-      const m = j + 2 - 12 * l4;
-      const y = 100 * (n - 49) + i + l4;
-      
-      const mm = String(m).padStart(2, '0');
-      const dd = String(d).padStart(2, '0');
-      return y + '-' + mm + '-' + dd;
-    }
-
-    function calculateAgeLive(gDateStr) {
+    function calculateAgeExact(gDateStr) {
       const display = document.getElementById('studentAgeDisplay');
       if (!display) return;
       if (!gDateStr) {
@@ -595,53 +549,78 @@
         display.className = 'badge bg-secondary fs-6 px-3 py-1';
         return;
       }
-      const birth = new Date(gDateStr);
-      const today = new Date();
-      if (isNaN(birth.getTime()) || birth > today) {
-        display.textContent = 'تاريخ غير صالح (في المستقبل)';
-        display.className = 'badge bg-danger fs-6 px-3 py-1';
-        return;
-      }
-
-      let years = today.getFullYear() - birth.getFullYear();
-      let months = today.getMonth() - birth.getMonth();
-      let days = today.getDate() - birth.getDate();
-
-      if (days < 0) {
-        const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-        days += prevMonth.getDate();
-        months -= 1;
-      }
-      if (months < 0) {
-        months += 12;
-        years -= 1;
-      }
-
-      const parts = [];
-      if (years > 0) parts.push(years + ' سنة');
-      if (months > 0) parts.push(months + ' شهر');
-      if (days > 0) parts.push(days + ' يوم');
       
-      const resultText = parts.length > 0 ? parts.join(' و ') : 'مولود حديثاً';
-      display.textContent = resultText;
-      display.className = 'badge bg-success fs-6 px-3 py-1';
+      try {
+        const birth = moment(gDateStr, 'YYYY-MM-DD');
+        const today = moment();
+        
+        if (!birth.isValid() || birth.isAfter(today)) {
+          display.textContent = 'تاريخ غير صالح (في المستقبل)';
+          display.className = 'badge bg-danger fs-6 px-3 py-1';
+          return;
+        }
+
+        const bClone = birth.clone();
+        let years = today.diff(bClone, 'years');
+        bClone.add(years, 'years');
+        
+        let months = today.diff(bClone, 'months');
+        bClone.add(months, 'months');
+        
+        let days = today.diff(bClone, 'days');
+
+        const parts = [];
+        if (years > 0) {
+          parts.push(years === 1 ? 'سنة واحدة' : years === 2 ? 'سنتان' : years <= 10 ? (years + ' سنوات') : (years + ' سنة'));
+        }
+        if (months > 0) {
+          parts.push(months === 1 ? 'شهر واحد' : months === 2 ? 'شهران' : months <= 10 ? (months + ' أشهر') : (months + ' شهر'));
+        }
+        if (days > 0) {
+          parts.push(days === 1 ? 'يوم واحد' : days === 2 ? 'يومان' : days <= 10 ? (days + ' أيام') : (days + ' يوم'));
+        }
+
+        const resultText = parts.length > 0 ? parts.join('، ') : 'مولود حديثاً (أقل من يوم)';
+        display.textContent = resultText;
+        display.className = 'badge bg-success fs-6 px-3 py-1';
+      } catch (e) {
+        display.textContent = 'خطأ في حساب العمر';
+        display.className = 'badge bg-danger fs-6 px-3 py-1';
+      }
     }
 
+    // Bidirectional Converter: Gregorian -> Hijri
     function onGregorianChange(val) {
       if (val) {
-        const hVal = gregorianToHijri(val);
-        if (hVal) document.getElementById('dobHijri').value = hVal;
+        try {
+          const m = moment(val, 'YYYY-MM-DD');
+          if (m.isValid()) {
+            const hStr = m.format('iYYYY/iMM/iDD');
+            const hInput = document.getElementById('dobHijri');
+            if (hInput) hInput.value = hStr;
+          }
+        } catch(e) {}
       }
-      calculateAgeLive(val);
+      calculateAgeExact(val);
     }
 
+    // Bidirectional Converter: Hijri -> Gregorian
     function onHijriChange(val) {
-      if (val && val.length >= 8) {
-        const gVal = hijriToGregorian(val);
-        if (gVal) {
-          document.getElementById('dobGregorian').value = gVal;
-          calculateAgeLive(gVal);
-        }
+      if (!val) {
+        calculateAgeExact('');
+        return;
+      }
+      const clean = val.trim().replace(/[-.]/g, '/');
+      if (clean.length >= 8) {
+        try {
+          const m = moment(clean, ['iYYYY/iM/iD', 'iYYYY/iMM/iDD', 'iYYYY/MM/DD']);
+          if (m.isValid() && m.iYear() >= 1300 && m.iYear() <= 1500) {
+            const gStr = m.format('YYYY-MM-DD');
+            const gInput = document.getElementById('dobGregorian');
+            if (gInput) gInput.value = gStr;
+            calculateAgeExact(gStr);
+          }
+        } catch(e) {}
       }
     }
 
