@@ -149,30 +149,51 @@
         <span>الداش بورد والمؤشرات التحليلية | مدارس بواكير الأهلية</span>
       </div>
 
-      <!-- DYNAMIC BRANCH FILTER DROPDOWN OR STATIC BADGE -->
-      <% if(typeof isFullBranchAccess !== 'undefined' && isFullBranchAccess){ %>
-      <form method="get" action="/analytics" class="d-flex align-items-center gap-2" id="branchFilterForm">
-        <label class="text-white small fw-bold text-nowrap" for="branchFilterSelect">
-          <i class="fa-solid fa-filter me-1"></i> تصفية الداش بورد حسب الفرع:
-        </label>
-        <select name="branch" id="branchFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 190px;" onchange="this.form.submit()">
-          <option value="الكل" <%= (!selectedBranch || selectedBranch === 'الكل') ? 'selected' : '' %>>🌐 جميع الفروع</option>
-          <% branches.forEach(function(b){ %>
-            <option value="<%= b %>" <%= (selectedBranch === b) ? 'selected' : '' %>>🏢 فرع <%= b %></option>
-          <% }) %>
-        </select>
+      <!-- DYNAMIC COMBINED FILTERS: BRANCH & REGISTRATION SOURCE -->
+      <form method="get" action="/analytics" class="d-flex align-items-center flex-wrap gap-2" id="analyticsFilterForm" onsubmit="event.preventDefault(); refreshAnalytics();">
+        
+        <!-- 1. Branch Filter -->
+        <% if(typeof isFullBranchAccess !== 'undefined' && isFullBranchAccess){ %>
+          <div class="d-flex align-items-center gap-1">
+            <label class="text-white small fw-bold text-nowrap" for="branchFilterSelect">
+              <i class="fa-solid fa-building me-1"></i> الفرع:
+            </label>
+            <select name="branch" id="branchFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 150px;" onchange="refreshAnalytics()">
+              <option value="الكل" <%= (!selectedBranch || selectedBranch === 'الكل') ? 'selected' : '' %>>🌐 جميع الفروع</option>
+              <% branches.forEach(function(b){ %>
+                <option value="<%= b %>" <%= (selectedBranch === b) ? 'selected' : '' %>>🏢 فرع <%= b %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } else { %>
+          <input type="hidden" name="branch" id="branchFilterSelect" value="<%= selectedBranch %>">
+          <span class="badge bg-white text-primary fs-7 px-3 py-2 fw-bold shadow-sm">
+            <i class="fa-solid fa-building me-1"></i> فرع <%= selectedBranch %>
+          </span>
+        <% } %>
+
+        <!-- 2. Registration Source Filter (FEATURE 1) -->
+        <div class="d-flex align-items-center gap-1">
+          <label class="text-white small fw-bold text-nowrap" for="sourceFilterSelect">
+            <i class="fa-solid fa-filter me-1"></i> تصفية حسب مصدر التسجيل:
+          </label>
+          <select name="source" id="sourceFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 190px;" onchange="refreshAnalytics()">
+            <option value="الكل" <%= (!selectedSource || selectedSource === 'الكل' || selectedSource === 'جميع المصادر') ? 'selected' : '' %>>📋 جميع المصادر</option>
+            <option value="الرابط الخارجي" <%= (typeof selectedSource !== 'undefined' && (selectedSource === 'الرابط الخارجي' || selectedSource === 'رابط خارجي')) ? 'selected' : '' %>>🌐 الرابط الخارجي</option>
+            <option value="التسجيل الداخلي (المدرسة)" <%= (typeof selectedSource !== 'undefined' && (selectedSource === 'التسجيل الداخلي (المدرسة)' || selectedSource === 'تسجيل داخلي')) ? 'selected' : '' %>>🏫 التسجيل الداخلي (المدرسة)</option>
+          </select>
+        </div>
+
+        <!-- Refresh Spinner Indicator (hidden by default) -->
+        <div id="filterLoadingSpinner" class="spinner-border spinner-border-sm text-white d-none ms-1" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+
       </form>
-      <% } else { %>
-      <div class="d-flex align-items-center gap-2">
-        <span class="badge bg-white text-primary fs-6 px-3 py-2 fw-bold shadow-sm">
-          <i class="fa-solid fa-building me-1"></i> إحصائيات فرع <%= selectedBranch %>
-        </span>
-      </div>
-      <% } %>
     </div>
   </div>
 
-  <div class="container-fluid px-4 py-4">
+  <div class="container-fluid px-4 py-4" id="analyticsMainContent" style="transition: opacity 0.2s ease-in-out;">
 
     <!-- 1. TOP STATS CARDS (HORIZONTAL ROW) -->
     <div class="row g-3 mb-4">
@@ -690,5 +711,56 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function refreshAnalytics() {
+      const branchSel = document.getElementById('branchFilterSelect');
+      const sourceSel = document.getElementById('sourceFilterSelect');
+      const branch = branchSel ? branchSel.value : 'الكل';
+      const source = sourceSel ? sourceSel.value : 'الكل';
+      const spinner = document.getElementById('filterLoadingSpinner');
+
+      if (spinner) spinner.classList.remove('d-none');
+
+      const url = '/analytics?branch=' + encodeURIComponent(branch) + '&source=' + encodeURIComponent(source);
+      window.history.pushState({ branch, source }, '', url);
+
+      const container = document.getElementById('analyticsMainContent');
+      if (container) {
+        container.style.opacity = '0.5';
+      }
+
+      fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const newContent = doc.getElementById('analyticsMainContent');
+          if (newContent && container) {
+            container.innerHTML = newContent.innerHTML;
+            container.style.opacity = '1';
+          } else {
+            window.location.reload();
+          }
+        })
+        .catch(err => {
+          console.error('Failed to refresh analytics:', err);
+          window.location.href = url;
+        })
+        .finally(() => {
+          if (spinner) spinner.classList.add('d-none');
+        });
+    }
+
+    // Handle browser Back/Forward navigation
+    window.addEventListener('popstate', function(e) {
+      if (e.state) {
+        const branchSel = document.getElementById('branchFilterSelect');
+        const sourceSel = document.getElementById('sourceFilterSelect');
+        if (branchSel && e.state.branch) branchSel.value = e.state.branch;
+        if (sourceSel && e.state.source) sourceSel.value = e.state.source;
+      }
+      refreshAnalytics();
+    });
+  </script>
 </body>
 </html>
