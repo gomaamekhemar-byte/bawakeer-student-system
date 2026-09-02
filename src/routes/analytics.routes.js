@@ -103,9 +103,16 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   let allowedBranches = allBranches;
   let students = allStudents;
 
-  if (isSingleBranchUser) {
+    if (isSingleBranchUser) {
     // 1. Single-branch employee: LOCKED strictly to their assigned branch
-    selectedBranch = userBranches[0];
+    const assignedBranch = userBranches[0];
+    
+    // URL PROTECTION: If employee attempts to access a different branch in query
+    if (req.query.branch && req.query.branch.trim() && req.query.branch.trim() !== assignedBranch) {
+      return res.redirect("/analytics?msg=" + encodeURIComponent("عفواً، غير مصرح لك بالوصول لبيانات فرع آخر"));
+    }
+
+    selectedBranch = assignedBranch;
     allowedBranches = [selectedBranch];
     students = allStudents.filter(s => s.branch === selectedBranch);
 
