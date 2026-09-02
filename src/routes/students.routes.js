@@ -7,6 +7,7 @@ const { getStudents, getStudentById, createStudent, updateStudent, deleteStudent
 const { getBranchNames } = require("../services/branches.service");
 const { getActiveYear, getAcademicYears } = require("../services/academic_years.service");
 const { addHistory, addStudentHistory, computeFieldChanges } = require("../services/history.service");
+const { sendWhatsAppNotification, getWhatsAppDirectUrl } = require("../services/whatsapp.service");
 const supabase = require("../config/supabase");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES } = require("../utils/constants");
 const { cleanNotesForDisplay } = require("../utils/timeline");
@@ -21,7 +22,7 @@ async function uploadFiles(files, customTitle) {
     const file = files[i];
     try {
       const timestamp = Date.now();
-      const safeName = (file.originalname || "file").replace(/[\/\\]/g, "_");
+      const safeName = (file.originalname || "file").replace(/[/\\]/g, "_");
       const fileName = `${timestamp}_${safeName}`;
       const { data, error } = await supabase.storage
         .from("student-attachments")
@@ -58,153 +59,100 @@ async function uploadFiles(files, customTitle) {
   return uploaded;
 }
 
-// GET / and GET /students
-async function handleGetStudents(req, res) {
-  const currentUser = req.currentUser;
-  if (!currentUser) return res.redirect("/login");
+// =============================================
+// PUBLIC REGISTRATION PORTAL (No Auth Required)
+// =============================================
+router.get("/apply", async (req, res) => {
+  const branches = await getBranchNames();
+  const activeYear = await getActiveYear();
+  res.render("apply", { branches, activeYear, submitted: false, error: null });
+});
 
-  const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
-  const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
-  const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
-  const canViewAnalytics = userHasPermission(currentUser, "view_analytics");
-  const canDeleteStudents = userCan(currentUser, "admin");
-  const canUpdateStatusOnly = userCan(currentUser, "employee") && userHasPermission(currentUser, "manage_students") && !userCan(currentUser, "admin", "manager");
-  
-  // Field-level permissions
-  const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
-  const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
+router.get("/register", (req, res) => res.redirect("/apply"));
 
-  const statusUpdateMode = req.query.status_update === "1";
-  const openNewModal = req.query.new === "1";
-
-  let students = await getStudents();
+router.post("/apply", async (req, res) => {
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
 
-  // Academic Year Scoping
-  const sessionYear = req.sessionYear;
-  if (sessionYear && sessionYear.id) {
-    students = students.filter(s => String(s.academic_year_id || (activeYear ? activeYear.id : '')) === String(sessionYear.id));
+  // 1. Anti-Spam Honeypot check
+  if (req.body.website_trap) {
+    return res.redirect("/apply");
   }
 
-  // Active Branch Cookie / Query
-  const rawCookieBranch = req.cookies && req.cookies.active_branch ? req.cookies.active_branch : "";
-  let activeBranch = rawCookieBranch ? decodeURIComponent(rawCookieBranch) : "";
+  const name = (req.body.name || "").trim();
+  const phone = (req.body.phone || "").trim();
+  const mother_phone = (req.body.mother_phone || "").trim();
+  const student_type = (req.body.student_type || "بنين").trim();
+  const date_of_birth = (req.body.date_of_birth || "").trim();
+  const nationality = (req.body.nationality || "سعودي").trim();
+  const student_branch = (req.body.student_branch || (branches[0] || "الروابي")).trim();
+  const phase = (req.body.phase || "ابتدائي").trim();
+  const grade = (req.body.grade || "1").trim();
+  const track = (req.body.track || "عام").trim();
+  const neighborhood = (req.body.neighborhood || "").trim();
+  const notes = (req.body.notes || "").trim();
 
-  // Scope Filtering by User Branch / Phase
-  if (currentUser && ["manager", "employee"].includes(currentUser.role)) {
-    const userBranches = Array.isArray(currentUser.branches) ? currentUser.branches : (currentUser.branch ? [currentUser.branch] : []);
-    if (userBranches.length && !userBranches.includes("الكل")) {
-      activeBranch = userBranches[0];
-    }
-    students = students.filter(s => userMatchesScope(currentUser, s));
-  } else if (activeBranch && activeBranch !== "الكل") {
-    students = students.filter(s => s.branch === activeBranch);
+  if (!name || !phone) {
+    return res.render("apply", {
+      branches,
+      activeYear,
+      submitted: false,
+      error: "يرجى تعبئة كافة الحقول الإلزامية المطلوبة (اسم الطالب ورقم الجوال)"
+    });
   }
 
-  const editId = req.query.edit_id || "";
-  let editingStudent = null;
-  if (editId && canManageStudents) {
-    editingStudent = students.find(s => String(s.id) === String(editId)) || null;
-  }
-
-  // Filters
-  const query = (req.query.q || "").toLowerCase().trim();
-  const interviewFilter = req.query.interview_filter || "";
-  const followupFilter = req.query.followup_filter || "";
-  const studentTypeFilter = req.query.student_type_filter || "";
-  const phaseFilter = req.query.phase_filter || "";
-  const gradeFilter = req.query.grade_filter || "";
-  const statusFilter = req.query.status_filter || "";
-  const branchFilter = req.query.branch_filter || "";
-
-  let filtered = students.filter(s => {
-    if (query) {
-      const q = query;
-      const n = (s.name || "").toLowerCase();
-      const p = (s.phone || "");
-      const g = (s.grade || "");
-      const ph = (s.phase || "");
-      const b = (s.branch || "");
-      const nat = (s.nationality || "");
-      const tr = (s.track || "");
-      const mm = (s.notes || "").includes(q);
-      if (!n.includes(q) && !p.includes(q) && !g.includes(q) && !ph.includes(q) && !b.includes(q) && !nat.includes(q) && !tr.includes(q) && !mm) {
-        return false;
-      }
-    }
-    if (interviewFilter && s.interview_result !== interviewFilter) return false;
-    if (followupFilter && s.followup_status !== followupFilter) return false;
-    if (studentTypeFilter && s.student_type !== studentTypeFilter) return false;
-    if (phaseFilter && s.phase !== phaseFilter) return false;
-    if (gradeFilter && s.grade !== gradeFilter) return false;
-    if (branchFilter && s.branch !== branchFilter) return false;
-    
-    // Status filters
-    if (statusFilter === "لم يقابل" && (s.interview_result || s.interview_result === "مقبول" || s.interview_result === "غير مقبول")) return false;
-    if (statusFilter === "لم يسجل" && s.followup_status === "تم التسجيل") return false;
-    if (statusFilter === "غير مقبول" && s.interview_result !== "غير مقبول") return false;
-    if (statusFilter === "في انتظار التسجيل" && s.followup_status !== "في انتظار التسجيل") return false;
-    if (statusFilter === "في انتظار المقابلة" && s.interview_result !== "في انتظار المقابلة") return false;
-    return true;
-  });
-
-  const stats = {
-    total: students.length,
-    accepted: students.filter(s => s.interview_result === "مقبول").length,
-    rejected: students.filter(s => s.interview_result === "غير مقبول").length,
-    registered: students.filter(s => s.followup_status === "تم التسجيل").length,
-    waiting: students.filter(s => s.followup_status === "في انتظار التسجيل").length,
-    not_interested: students.filter(s => s.followup_status === "لا يرغب في التسجيل").length,
-    not_registered: students.filter(s => s.followup_status !== "تم التسجيل").length,
-    pending_interview: students.filter(s => s.interview_result === "في انتظار المقابلة").length,
+  const newStudent = {
+    name,
+    phone,
+    mother_phone,
+    student_type,
+    date_of_birth,
+    nationality,
+    branch: student_branch,
+    phase,
+    grade,
+    track,
+    neighborhood,
+    notes: cleanNotesForDisplay(notes),
+    interview_result: "في انتظار المقابلة",
+    interview_reason: "",
+    followup_status: "في انتظار المقابلة",
+    registration_reason: "",
+    registration_source: "رابط خارجي",
+    academic_year_id: activeYear ? activeYear.id : 1,
+    attachments: [],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
 
-  const allPhonesMap = {};
-  students.forEach(s => {
-    if (s.phone) {
-      allPhonesMap[s.phone] = { name: s.name, branch: s.branch, id: s.id };
-    }
-  });
+  const created = await createStudent(newStudent);
+  if (!created) {
+    return res.render("apply", {
+      branches,
+      activeYear,
+      submitted: false,
+      error: "تعذر إرسال الطلب حالياً، يرجى المحاولة مرة أخرى أو التواصل مع إدارة المدارس"
+    });
+  }
 
-  res.render("index", {
-    students: filtered,
-    editingStudent,
-    message: req.query.msg || null,
-    interview_results: INTERVIEW_RESULTS,
-    followup_statuses: FOLLOWUP_STATUSES,
-    student_types: STUDENT_TYPES,
-    phases: PHASES,
-    grades: GRADES,
-    tracks: TRACKS,
-    nationalities: NATIONALITIES,
-    query,
-    interviewFilter,
-    followupFilter,
-    studentTypeFilter,
-    phaseFilter,
-    gradeFilter,
-    statusFilter,
-    branchFilter,
-    stats,
-    currentUser,
-    activeBranch,
-    canManageStudents,
-    canManageUsers,
-    canManageYears,
-    canViewAnalytics,
-    canDeleteStudents,
-    canUpdateStatusOnly,
-    canManageInterviews,
-    canManageRegistration,
-    statusUpdateMode,
-    openNewModal,
-    roles: ROLES,
+  await addHistory("online_application", `طلب تسجيل جديد عبر الإنترنت للطالب ${name} بفرع ${student_branch}`, "بوابة التسجيل العامة");
+
+  // Send WhatsApp confirmation
+  const waResult = await sendWhatsAppNotification(name, student_branch, phone);
+
+  return res.render("apply", {
     branches,
     activeYear,
-    allPhonesMap,
+    submitted: true,
+    student: created,
+    whatsappUrl: waResult.directUrl,
+    error: null
   });
-}
+});
+
+// =============================================
+// INTERNAL PORTAL ROUTES (Require Auth)
+// =============================================
 
 // GET / - Clean Home Dashboard Hub
 router.get("/", requireAuth, withUser, async (req, res) => {
@@ -240,8 +188,162 @@ router.get("/", requireAuth, withUser, async (req, res) => {
 });
 
 // GET /students - Students Management Table
-router.get("/students", requireAuth, withUser, handleGetStudents);
+async function handleGetStudents(req, res) {
+  const currentUser = req.currentUser;
+  if (!currentUser) return res.redirect("/login");
 
+  const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
+  const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
+  const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
+  const canViewAnalytics = userHasPermission(currentUser, "view_analytics");
+  const canDeleteStudents = userCan(currentUser, "admin");
+  const canUpdateStatusOnly = userCan(currentUser, "employee") && userHasPermission(currentUser, "manage_students") && !userCan(currentUser, "admin", "manager");
+  
+  const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
+  const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
+
+  const statusUpdateMode = req.query.status_update === "1";
+  const openNewModal = req.query.new === "1";
+
+  let students = await getStudents();
+  const branches = await getBranchNames();
+  const activeYear = await getActiveYear();
+
+  // Academic Year Scoping
+  const sessionYear = req.sessionYear;
+  if (sessionYear && sessionYear.id) {
+    students = students.filter(s => String(s.academic_year_id || (activeYear ? activeYear.id : "")) === String(sessionYear.id));
+  }
+
+  // Active Branch Cookie / Query
+  const rawCookieBranch = req.cookies && req.cookies.active_branch ? req.cookies.active_branch : "";
+  let activeBranch = rawCookieBranch ? decodeURIComponent(rawCookieBranch) : "";
+
+  // Scope Filtering by User Branch / Phase
+  if (currentUser && ["manager", "employee"].includes(currentUser.role)) {
+    const userBranches = Array.isArray(currentUser.branches) ? currentUser.branches : (currentUser.branch ? [currentUser.branch] : []);
+    if (userBranches.length && !userBranches.includes("الكل")) {
+      activeBranch = userBranches[0];
+    }
+    students = students.filter(s => userMatchesScope(currentUser, s));
+  } else if (activeBranch && activeBranch !== "الكل") {
+    students = students.filter(s => s.branch === activeBranch);
+  }
+
+  const editId = req.query.edit_id || "";
+  let editingStudent = null;
+  if (editId && canManageStudents) {
+    editingStudent = students.find(s => String(s.id) === String(editId)) || null;
+  }
+
+  // Filters
+  const query = (req.query.q || "").toLowerCase().trim();
+  const interviewFilter = req.query.interview_filter || "";
+  const followupFilter = req.query.followup_filter || "";
+  const studentTypeFilter = req.query.student_type_filter || "";
+  const phaseFilter = req.query.phase_filter || "";
+  const gradeFilter = req.query.grade_filter || "";
+  const statusFilter = req.query.status_filter || "";
+  const branchFilter = req.query.branch_filter || "";
+  const sourceFilter = req.query.source_filter || "";
+
+  let filtered = students.filter(s => {
+    if (query) {
+      const q = query;
+      const n = (s.name || "").toLowerCase();
+      const p = (s.phone || "");
+      const g = (s.grade || "");
+      const ph = (s.phase || "");
+      const b = (s.branch || "");
+      const nat = (s.nationality || "");
+      const tr = (s.track || "");
+      const mm = (s.notes || "").includes(q);
+      if (!n.includes(q) && !p.includes(q) && !g.includes(q) && !ph.includes(q) && !b.includes(q) && !nat.includes(q) && !tr.includes(q) && !mm) {
+        return false;
+      }
+    }
+    if (interviewFilter && s.interview_result !== interviewFilter) return false;
+    if (followupFilter && s.followup_status !== followupFilter) return false;
+    if (studentTypeFilter && s.student_type !== studentTypeFilter) return false;
+    if (phaseFilter && s.phase !== phaseFilter) return false;
+    if (gradeFilter && s.grade !== gradeFilter) return false;
+    if (branchFilter && s.branch !== branchFilter) return false;
+    if (sourceFilter && s.registration_source !== sourceFilter) return false;
+    
+    // Status filters
+    if (statusFilter === "لم يقابل" && (s.interview_result || s.interview_result === "مقبول" || s.interview_result === "غير مقبول")) return false;
+    if (statusFilter === "لم يسجل" && s.followup_status === "تم التسجيل") return false;
+    if (statusFilter === "غير مقبول" && s.interview_result !== "غير مقبول") return false;
+    if (statusFilter === "في انتظار التسجيل" && s.followup_status !== "في انتظار التسجيل") return false;
+    if (statusFilter === "في انتظار المقابلة" && s.interview_result !== "في انتظار المقابلة") return false;
+    return true;
+  });
+
+  const onlineApplicantsCount = students.filter(s => s.registration_source === "رابط خارجي" && s.followup_status === "في انتظار المقابلة").length;
+
+  const stats = {
+    total: students.length,
+    accepted: students.filter(s => s.interview_result === "مقبول").length,
+    rejected: students.filter(s => s.interview_result === "غير مقبول").length,
+    registered: students.filter(s => s.followup_status === "تم التسجيل").length,
+    waiting: students.filter(s => s.followup_status === "في انتظار التسجيل").length,
+    not_interested: students.filter(s => s.followup_status === "لا يرغب في التسجيل").length,
+    not_registered: students.filter(s => s.followup_status !== "تم التسجيل").length,
+    pending_interview: students.filter(s => s.interview_result === "في انتظار المقابلة").length,
+    online_total: students.filter(s => s.registration_source === "رابط خارجي").length,
+    internal_total: students.filter(s => s.registration_source !== "رابط خارجي").length,
+  };
+
+  const allPhonesMap = {};
+  students.forEach(s => {
+    if (s.phone) {
+      allPhonesMap[s.phone] = { name: s.name, branch: s.branch, id: s.id };
+    }
+  });
+
+  res.render("index", {
+    students: filtered,
+    editingStudent,
+    message: req.query.msg || null,
+    interview_results: INTERVIEW_RESULTS,
+    followup_statuses: FOLLOWUP_STATUSES,
+    student_types: STUDENT_TYPES,
+    phases: PHASES,
+    grades: GRADES,
+    tracks: TRACKS,
+    nationalities: NATIONALITIES,
+    query,
+    interviewFilter,
+    followupFilter,
+    studentTypeFilter,
+    phaseFilter,
+    gradeFilter,
+    statusFilter,
+    branchFilter,
+    sourceFilter,
+    onlineApplicantsCount,
+    stats,
+    currentUser,
+    activeBranch,
+    canManageStudents,
+    canManageUsers,
+    canManageYears,
+    canViewAnalytics,
+    canDeleteStudents,
+    canUpdateStatusOnly,
+    canManageInterviews,
+    canManageRegistration,
+    statusUpdateMode,
+    openNewModal,
+    roles: ROLES,
+    branches,
+    activeYear,
+    allPhonesMap,
+    getWhatsAppDirectUrl
+  });
+}
+
+router.get("/students", requireAuth, withUser, handleGetStudents);
 
 // POST /api/delete_attachment
 router.post("/api/delete_attachment", requireAuth, withUser, async (req, res) => {
@@ -297,7 +399,6 @@ router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) 
   const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
   const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
 
-  // Field-level permission security checks
   if (field === "interview_result" && !canManageInterviews) {
     return res.status(403).json({ success: false, message: "عفواً، ليس لديك صلاحية مسؤول المقابلات لتعديل نتيجة المقابلة" });
   }
@@ -312,7 +413,6 @@ router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) 
   const updateData = {};
   updateData[field] = value;
 
-  // AUTOMATED WORKFLOW TRANSITION:
   let autoFollowupStatus = null;
   if (field === "interview_result") {
     if (value === "مقبول") {
@@ -342,7 +442,7 @@ router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) 
   return res.status(500).json({ success: false, message: "تعذر تحديث الحالة في قاعدة البيانات" });
 });
 
-// POST /students - Create or Update Student
+// POST /students - Create or Update Student (Internal)
 router.post("/students", requireAuth, withUser, upload.array("attachments", 10), async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser) return res.redirect("/login");
@@ -368,6 +468,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
 
   const name = (req.body.name || "").trim();
   const phone = (req.body.phone || "").trim();
+  const mother_phone = (req.body.mother_phone || "").trim();
   const date_of_birth = (req.body.date_of_birth || "").trim();
   const nationality = (req.body.nationality || "").trim();
   const neighborhood = (req.body.neighborhood || "").trim();
@@ -410,10 +511,8 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     const existingAttachments = Array.isArray(existing.attachments) ? existing.attachments : [];
     const newAttachments = [...existingAttachments, ...uploadedFiles];
 
-    // Keep notes strictly as manually entered
     const finalNotes = (typeof req.body.notes !== "undefined") ? notes : cleanNotesForDisplay(existing.notes || "");
 
-    // Field-level permission enforcement on Edit
     let finalInterviewResult = existing.interview_result || "في انتظار المقابلة";
     let finalFollowupStatus = existing.followup_status || "في انتظار المقابلة";
 
@@ -435,6 +534,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     const newData = {
       name: name || existing.name,
       phone: phone || existing.phone,
+      mother_phone: mother_phone || existing.mother_phone,
       date_of_birth: date_of_birth || existing.date_of_birth,
       nationality: nationality || existing.nationality,
       neighborhood: neighborhood || existing.neighborhood,
@@ -476,8 +576,15 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     const finalNotes = cleanNotesForDisplay(notes || "");
     const activeYear = await getActiveYear();
 
+    const targetBranch = student_branch || activeBranch || "الندى";
+
     const newStudent = {
-      name, phone, date_of_birth, nationality, neighborhood,
+      name,
+      phone,
+      mother_phone,
+      date_of_birth,
+      nationality: nationality || "سعودي",
+      neighborhood,
       interview_date,
       interview_result: "في انتظار المقابلة",
       interview_reason: "",
@@ -488,8 +595,9 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       phase: phase || "ابتدائي",
       grade: grade || "1",
       notes: finalNotes,
-      branch: student_branch || activeBranch || "الندى",
-      academic_year_id: (req.sessionYear && req.sessionYear.id) ? req.sessionYear.id : (activeYear ? activeYear.id : null),
+      branch: targetBranch,
+      registration_source: "تسجيل داخلي",
+      academic_year_id: (req.sessionYear && req.sessionYear.id) ? req.sessionYear.id : (activeYear ? activeYear.id : 1),
       attachments: uploadedFiles,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -500,6 +608,9 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       await addStudentHistory(created.id, "student_created", `تم إضافة الطالب ${name}`, currentUser.username);
       await addHistory("student_created", `تم إضافة الطالب ${name}`, currentUser.username);
       
+      // WhatsApp notification
+      await sendWhatsAppNotification(name, targetBranch, phone);
+
       let msg = "تم إضافة الطالب " + name + " بنجاح";
       if (siblingStudent) {
         msg = "تم إضافة الطالب بنجاح، ورقم الجوال مرتبط بطلاب آخرين (إخوة: " + siblingStudent.name + ")";
@@ -542,7 +653,8 @@ router.get("/api/lookup_parent", requireAuth, withUser, async (req, res) => {
   const matches = allStudents.filter(s => {
     const p1 = (s.phone || "").trim();
     const p2 = (s.notes || "");
-    return p1 === queryPhone || p2.includes(queryPhone);
+    const p3 = (s.mother_phone || "").trim();
+    return p1 === queryPhone || p2.includes(queryPhone) || p3 === queryPhone;
   });
 
   if (!matches.length) {
