@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const supabase = require('../config/supabase');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'bawakeer-secret-key-2026-minimum-32-chars-long';
+const JWT_SECRET = 'bawakeer-secret-key-2026-minimum-32-chars-long';
 const JWT_EXPIRES = '8h';
 
 function signToken(payload) {
