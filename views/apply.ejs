@@ -12,6 +12,10 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
+  <!-- MOMENT & MOMENT-HIJRI -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment-hijri@2.1.2/moment-hijri.min.js"></script>
+
   <style>
     body {
       font-family: 'Cairo', system-ui, sans-serif;
@@ -113,6 +117,13 @@
       align-items: center;
       gap: 6px;
     }
+    .age-badge {
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
@@ -173,6 +184,24 @@
             </div>
           </div>
 
+        <% } else if(typeof settings !== 'undefined' && settings.is_portal_open === false) { %>
+
+          <!-- CLOSED PORTAL SCREEN -->
+          <div class="apply-card p-5 text-center shadow-lg">
+            <div class="mb-4">
+              <div class="rounded-circle bg-warning-subtle text-warning d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px; font-size: 38px;">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+            </div>
+            <h3 class="fw-bold text-dark mb-2">التسجيل الإلكتروني مغلق حالياً</h3>
+            <p class="text-muted fs-6 mb-4"><%= settings.portal_closed_message || 'نعتذر منكم، باب التسجيل مغلق حالياً.' %></p>
+            <div class="text-center">
+              <a href="/login" class="btn btn-outline-primary px-4 py-2 rounded-3 fw-bold">
+                <i class="fa-solid fa-user-shield me-1"></i> تسجيل دخول الموظفين
+              </a>
+            </div>
+          </div>
+
         <% } else { %>
           
           <!-- REGISTRATION FORM -->
@@ -185,10 +214,17 @@
               </div>
               <h3 class="fw-bold mb-1">مدارس بواكير الأهلية</h3>
               <p class="mb-3 text-white-50 fs-6">بوابة تسجيل وقبول الطلاب الجدد — العام الدراسي <%= activeYear ? activeYear.year_name : '1448-1449هـ' %></p>
+              
+              <% if(typeof settings !== 'undefined' && settings.portal_announcement){ %>
+                <div class="alert alert-light py-2 px-3 mb-3 text-dark fw-bold small shadow-sm d-inline-block rounded-pill">
+                  <i class="fa-solid fa-bullhorn text-primary me-1"></i> <%= settings.portal_announcement %>
+                </div>
+              <% } %>
+
               <div class="d-flex justify-content-center flex-wrap gap-2">
                 <span class="feature-badge"><i class="fa-solid fa-bolt text-warning"></i> تسجيل فوري سريع</span>
                 <span class="feature-badge"><i class="fa-brands fa-whatsapp text-success"></i> تأكيد آلي عبر واتساب</span>
-                <span class="feature-badge"><i class="fa-solid fa-shield text-primary"></i> بيانات آمنة ومشفرة</span>
+                <span class="feature-badge"><i class="fa-solid fa-moon text-warning"></i> تقويم هجري وميلادي</span>
               </div>
             </div>
 
@@ -224,12 +260,62 @@
                       <option value="بنات">بنات</option>
                     </select>
                   </div>
+
+                  <!-- تاريـخ الميـلاد: ميلادي + هجري تفاعلي -->
                   <div class="col-md-6">
-                    <label class="form-label fw-bold small text-dark">تاريخ الميلاد <span class="text-danger">*</span></label>
-                    <input type="date" name="date_of_birth" id="dobInput" class="form-control" required>
-                    <small id="ageDisplay" class="text-primary fw-bold mt-1 d-block" style="font-size: 11.5px;"></small>
+                    <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-calendar-days text-primary me-1"></i> تاريخ الميلاد (ميلادي) <span class="text-danger">*</span></label>
+                    <input type="date" name="date_of_birth" id="dobGregorian" class="form-control" required oninput="onGregorianChange(this.value)">
                   </div>
+
                   <div class="col-md-6">
+                    <label class="form-label fw-bold text-dark small"><i class="fa-solid fa-moon text-warning me-1"></i> تاريخ الميلاد (هجري)</label>
+                    <div class="row g-1">
+                      <div class="col-4">
+                        <select id="hijriDay" class="form-select text-center" onchange="onHijriDropdownChange()">
+                          <option value="">اليوم</option>
+                          <% for(let d = 1; d <= 30; d++){ %>
+                            <option value="<%= d %>"><%= d %></option>
+                          <% } %>
+                        </select>
+                      </div>
+                      <div class="col-4">
+                        <select id="hijriMonth" class="form-select" onchange="onHijriDropdownChange()">
+                          <option value="">الشهر</option>
+                          <option value="1">1 - محرم</option>
+                          <option value="2">2 - صفر</option>
+                          <option value="3">3 - ربيع الأول</option>
+                          <option value="4">4 - ربيع الآخر</option>
+                          <option value="5">5 - جمادى الأولى</option>
+                          <option value="6">6 - جمادى الآخرة</option>
+                          <option value="7">7 - رجب</option>
+                          <option value="8">8 - شعبان</option>
+                          <option value="9">9 - رمضان</option>
+                          <option value="10">10 - شوال</option>
+                          <option value="11">11 - ذو القعدة</option>
+                          <option value="12">12 - ذو الحجة</option>
+                        </select>
+                      </div>
+                      <div class="col-4">
+                        <select id="hijriYear" class="form-select text-center" onchange="onHijriDropdownChange()">
+                          <option value="">السنة</option>
+                          <% for(let y = 1448; y >= 1425; y--){ %>
+                            <option value="<%= y %>"><%= y %>هـ</option>
+                          <% } %>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- شارة عرض العمر الدقيق -->
+                  <div class="col-12">
+                    <div class="d-flex align-items-center gap-2 p-2 bg-light rounded-3">
+                      <span class="small fw-bold text-muted"><i class="fa-solid fa-hourglass-half text-primary me-1"></i> العمر المحسوب:</span>
+                      <span id="studentAgeDisplay" class="badge bg-secondary fs-6 px-3 py-1">يرجى تحديد تاريخ الميلاد</span>
+                    </div>
+                  </div>
+
+                  <% if(typeof settings === 'undefined' || settings.show_nationality !== false){ %>
+                  <div class="col-md-12">
                     <label class="form-label fw-bold small text-dark">الجنسية <span class="text-danger">*</span></label>
                     <select name="nationality" class="form-select" required>
                       <option value="سعودي" selected>سعودي</option>
@@ -241,6 +327,7 @@
                       <option value="أخرى">أخرى</option>
                     </select>
                   </div>
+                  <% } %>
                 </div>
 
                 <!-- 2. بيانات الاتصال وولي الأمر -->
@@ -258,6 +345,8 @@
                     </div>
                     <small class="text-muted" style="font-size: 11px;">سيتم إرسال رسالة التأكيد وموعد المقابلة عبر هذا الرقم.</small>
                   </div>
+                  
+                  <% if(typeof settings === 'undefined' || settings.show_mother_phone !== false){ %>
                   <div class="col-md-6">
                     <label class="form-label fw-bold small text-dark">رقم جوال إضافي / جوال الأم (اختياري)</label>
                     <div class="input-group">
@@ -265,10 +354,14 @@
                       <input type="tel" name="mother_phone" class="form-control" placeholder="05xxxxxxxx">
                     </div>
                   </div>
+                  <% } %>
+
+                  <% if(typeof settings === 'undefined' || settings.show_neighborhood !== false){ %>
                   <div class="col-md-12">
                     <label class="form-label fw-bold small text-dark">الحي السكني</label>
                     <input type="text" name="neighborhood" class="form-control" placeholder="مثال: حي الروابي، حي الندى...">
                   </div>
+                  <% } %>
                 </div>
 
                 <!-- 3. الفرع والمرحلة الدراسية -->
@@ -306,6 +399,8 @@
                       <option value="6">الصف السادس</option>
                     </select>
                   </div>
+
+                  <% if(typeof settings === 'undefined' || settings.show_track !== false){ %>
                   <div class="col-md-6">
                     <label class="form-label fw-bold small text-dark">المسار التعليمي</label>
                     <select name="track" class="form-select">
@@ -313,10 +408,14 @@
                       <option value="تحفيظ">تحفيظ</option>
                     </select>
                   </div>
+                  <% } %>
+
+                  <% if(typeof settings === 'undefined' || settings.show_notes !== false){ %>
                   <div class="col-md-12">
                     <label class="form-label fw-bold small text-dark">ملاحظات أو استفسارات إضافية (اختياري)</label>
                     <textarea name="notes" class="form-control" rows="2" placeholder="اكتب أي معلومات ترغب في توضيحها لإدارة القبول..."></textarea>
                   </div>
+                  <% } %>
                 </div>
 
                 <!-- SUBMIT BUTTON -->
@@ -342,23 +441,144 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- INTERACTIVE HIJRI-GREGORIAN DUAL ENGINE -->
   <script>
-    // Live Age Calculation
-    const dobInput = document.getElementById('dobInput');
-    const ageDisplay = document.getElementById('ageDisplay');
-    if (dobInput && ageDisplay) {
-      dobInput.addEventListener('change', function() {
-        const val = this.value;
-        if (!val) { ageDisplay.textContent = ''; return; }
-        const dob = new Date(val);
-        const today = new Date();
-        let years = today.getFullYear() - dob.getFullYear();
-        let months = today.getMonth() - dob.getMonth();
-        if (months < 0) { years--; months += 12; }
-        if (years >= 0) {
-          ageDisplay.textContent = 'العمر التقريبي: ' + years + ' سنة و ' + months + ' شهر';
+    function gregorianToHijriObj(gDateStr) {
+      if (!gDateStr) return null;
+      try {
+        if (typeof moment !== 'undefined') {
+          const m = moment(gDateStr, 'YYYY-MM-DD');
+          if (m.isValid()) {
+            return {
+              year: parseInt(m.format('iYYYY'), 10),
+              month: parseInt(m.format('iM'), 10),
+              day: parseInt(m.format('iD'), 10)
+            };
+          }
         }
-      });
+        const parts = gDateStr.split('-');
+        let y = parseInt(parts[0], 10), m = parseInt(parts[1], 10), d = parseInt(parts[2], 10);
+        if (m < 3) { y -= 1; m += 12; }
+        const a = Math.floor(y / 100);
+        const b = 2 - a + Math.floor(a / 4);
+        const jd = Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + b - 1524.5;
+        const z = jd - 1948439.5;
+        const hy = Math.floor((30 * z + 10646) / 10631);
+        const z2 = z - Math.floor((10631 * hy + 5844) / 30);
+        const hm = Math.min(12, Math.floor((z2 + 28.5001) / 29.5) + 1);
+        const hd = Math.floor(z2 - Math.floor(29.5 * (hm - 1) + 0.5) + 1);
+        return { year: hy, month: hm, day: Math.max(1, Math.min(30, hd)) };
+      } catch (e) { return null; }
+    }
+
+    function hijriToGregorianStr(hYear, hMonth, hDay) {
+      if (!hYear || !hMonth || !hDay) return '';
+      try {
+        if (typeof moment !== 'undefined') {
+          const m = moment(`${hYear}/${hMonth}/${hDay}`, 'iYYYY/iM/iD');
+          if (m.isValid()) {
+            return m.format('YYYY-MM-DD');
+          }
+        }
+        const yNum = parseInt(hYear, 10), mNum = parseInt(hMonth, 10), dNum = parseInt(hDay, 10);
+        const jd = Math.floor((11 * yNum + 3) / 30) + 354 * yNum + 30 * mNum - Math.floor((mNum - 1) / 2) + dNum + 1948440 - 385;
+        const l = jd + 68569;
+        const n = Math.floor((4 * l) / 146097);
+        const l2 = l - Math.floor((146097 * n + 3) / 4);
+        const i = Math.floor((4000 * (l2 + 1)) / 1461001);
+        const l3 = l2 - Math.floor((1461 * i) / 4) + 31;
+        const j = Math.floor((80 * l3) / 2447);
+        const d = l3 - Math.floor((2447 * j) / 80);
+        const l4 = Math.floor(j / 11);
+        const m = j + 2 - 12 * l4;
+        const y = 100 * (n - 49) + i + l4;
+        return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      } catch (e) { return ''; }
+    }
+
+    function calculateAgeExact(gDateStr) {
+      const display = document.getElementById('studentAgeDisplay');
+      if (!display) return;
+      if (!gDateStr) {
+        display.textContent = 'يرجى تحديد تاريخ الميلاد';
+        display.className = 'badge bg-secondary fs-6 px-3 py-1';
+        return;
+      }
+      
+      try {
+        const birth = typeof moment !== 'undefined' ? moment(gDateStr, 'YYYY-MM-DD') : new Date(gDateStr);
+        const today = typeof moment !== 'undefined' ? moment() : new Date();
+        
+        let years = 0, months = 0, days = 0;
+        if (typeof moment !== 'undefined') {
+          if (!birth.isValid() || birth.isAfter(today)) {
+            display.textContent = 'تاريخ غير صالح (في المستقبل)';
+            display.className = 'badge bg-danger fs-6 px-3 py-1';
+            return;
+          }
+          const bClone = birth.clone();
+          years = today.diff(bClone, 'years');
+          bClone.add(years, 'years');
+          months = today.diff(bClone, 'months');
+          bClone.add(months, 'months');
+          days = today.diff(bClone, 'days');
+        } else {
+          years = today.getFullYear() - birth.getFullYear();
+          months = today.getMonth() - birth.getMonth();
+          days = today.getDate() - birth.getDate();
+          if (days < 0) { const pm = new Date(today.getFullYear(), today.getMonth(), 0); days += pm.getDate(); months -= 1; }
+          if (months < 0) { months += 12; years -= 1; }
+        }
+
+        const parts = [];
+        if (years > 0) parts.push(years === 1 ? 'سنة واحدة' : years === 2 ? 'سنتان' : years <= 10 ? (years + ' سنوات') : (years + ' سنة'));
+        if (months > 0) parts.push(months === 1 ? 'شهر واحد' : months === 2 ? 'شهران' : months <= 10 ? (months + ' أشهر') : (months + ' شهر'));
+        if (days > 0) parts.push(days === 1 ? 'يوم واحد' : days === 2 ? 'يومان' : days <= 10 ? (days + ' أيام') : (days + ' يوم'));
+
+        const resultText = parts.length > 0 ? parts.join('، ') : 'مولود حديثاً (أقل من يوم)';
+        display.textContent = resultText;
+        display.className = 'badge bg-success fs-6 px-3 py-1';
+      } catch (e) {
+        display.textContent = 'خطأ في حساب العمر';
+        display.className = 'badge bg-danger fs-6 px-3 py-1';
+      }
+    }
+
+    function onGregorianChange(val) {
+      if (val) {
+        const hObj = gregorianToHijriObj(val);
+        if (hObj) {
+          const dSel = document.getElementById('hijriDay');
+          const mSel = document.getElementById('hijriMonth');
+          const ySel = document.getElementById('hijriYear');
+          if (dSel) dSel.value = hObj.day;
+          if (mSel) mSel.value = hObj.month;
+          if (ySel) ySel.value = hObj.year;
+        }
+      } else {
+        const dSel = document.getElementById('hijriDay');
+        const mSel = document.getElementById('hijriMonth');
+        const ySel = document.getElementById('hijriYear');
+        if (dSel) dSel.value = '';
+        if (mSel) mSel.value = '';
+        if (ySel) ySel.value = '';
+      }
+      calculateAgeExact(val);
+    }
+
+    function onHijriDropdownChange() {
+      const d = document.getElementById('hijriDay').value;
+      const m = document.getElementById('hijriMonth').value;
+      const y = document.getElementById('hijriYear').value;
+
+      if (d && m && y) {
+        const gStr = hijriToGregorianStr(y, m, d);
+        if (gStr) {
+          document.getElementById('dobGregorian').value = gStr;
+          calculateAgeExact(gStr);
+        }
+      }
     }
   </script>
 </body>
