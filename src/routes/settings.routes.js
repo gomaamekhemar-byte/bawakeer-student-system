@@ -3,6 +3,7 @@ const router = express.Router();
 const { requireAuth } = require("../middleware/auth");
 const { withUser } = require("../middleware/permissions");
 const { getExternalSettings, saveExternalSettings } = require("../services/settings.service");
+const { getBranches } = require("../services/branches.service");
 const { addHistory } = require("../services/history.service");
 
 // GET /external_settings - Exclusive to Admin (General Manager)
@@ -13,19 +14,24 @@ router.get("/external_settings", requireAuth, withUser, async (req, res) => {
   }
 
   const settings = await getExternalSettings();
+  const branches = await getBranches(false);
+
   res.render("external_settings", {
     currentUser,
     settings,
+    branches,
     message: req.query.msg || null
   });
 });
 
-// POST /external_settings - Update portal configuration
+// POST /external_settings - Update portal configuration & branch WhatsApp numbers
 router.post("/external_settings", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || currentUser.role !== "admin") {
     return res.redirect("/");
   }
+
+  const branches = await getBranches(false);
 
   const is_portal_open = req.body.is_portal_open === "1";
   const portal_announcement = (req.body.portal_announcement || "").trim();
@@ -37,6 +43,16 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
   const show_track = req.body.show_track === "1";
   const show_notes = req.body.show_notes === "1";
 
+  // Build branch_phones map keyed by branch ID and branch Name
+  const branch_phones = {};
+  branches.forEach(b => {
+    const val = (req.body[`branch_phone_${b.id}`] || req.body[`branch_phone_${b.name}`] || "").trim();
+    if (val) {
+      branch_phones[String(b.id)] = val;
+      branch_phones[b.name] = val;
+    }
+  });
+
   const updatedConfig = {
     is_portal_open,
     portal_announcement,
@@ -46,17 +62,19 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
     show_nationality,
     show_neighborhood,
     show_track,
-    show_notes
+    show_notes,
+    branch_phones
   };
 
   await saveExternalSettings(updatedConfig, currentUser.username);
-  await addHistory("settings_updated", "تم تحديث إعدادات بوابة التسجيل الخارجي ورسائل الواتساب", currentUser.username);
+  await addHistory("settings_updated", "تم تحديث إعدادات بوابة التسجيل الخارجي وأرقام تواصل الفروع", currentUser.username);
 
   const settings = await getExternalSettings();
   res.render("external_settings", {
     currentUser,
     settings,
-    message: "تم حفظ وتطبيق إعدادات التسجيل الخارجي بنجاح ✅"
+    branches,
+    message: "تم حفظ وتطبيق إعدادات التسجيل الخارجي وأرقام الفروع بنجاح ✅"
   });
 });
 
