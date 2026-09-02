@@ -206,8 +206,42 @@ async function handleGetStudents(req, res) {
   });
 }
 
-router.get("/", requireAuth, withUser, handleGetStudents);
+// GET / - Clean Home Dashboard Hub
+router.get("/", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser) return res.redirect("/login");
+
+  const rawCookieBranch = req.cookies && req.cookies.active_branch ? req.cookies.active_branch : "";
+  let activeBranch = rawCookieBranch ? decodeURIComponent(rawCookieBranch) : "";
+
+  if (currentUser && ["manager", "employee"].includes(currentUser.role)) {
+    const userBranches = Array.isArray(currentUser.branches) ? currentUser.branches : (currentUser.branch ? [currentUser.branch] : []);
+    if (userBranches.length && !userBranches.includes("الكل")) {
+      activeBranch = userBranches[0];
+    }
+  }
+
+  const activeYear = await getActiveYear();
+  const canViewAnalytics = userHasPermission(currentUser, "view_analytics");
+  const canManageYears = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years");
+  const canManageUsers = userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users");
+
+  res.render("home", {
+    currentUser,
+    activeBranch,
+    activeYear,
+    message: req.query.msg || null,
+    canViewAnalytics,
+    canManageYears,
+    canManageUsers,
+    isReadOnlyYear: req.isReadOnlyYear,
+    sessionYear: req.sessionYear
+  });
+});
+
+// GET /students - Students Management Table
 router.get("/students", requireAuth, withUser, handleGetStudents);
+
 
 // POST /api/delete_attachment
 router.post("/api/delete_attachment", requireAuth, withUser, async (req, res) => {
