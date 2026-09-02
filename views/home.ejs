@@ -237,6 +237,26 @@
       </div>
       <% } %>
 
+      <!-- 7. إعدادات التسجيل الخارجي (حصرية للمدير العام فقط) -->
+      <% if(currentUser && currentUser.role === 'admin'){ %>
+      <div class="col-lg-4 col-md-6">
+        <a href="/external_settings" class="hub-card h-100" style="border-color: #fde047; background: #fffdf5;">
+          <div>
+            <div class="icon-box" style="background: #fef9c3; color: #ca8a04;"><i class="fa-solid fa-sliders"></i></div>
+            <div class="title d-flex align-items-center justify-content-between">
+              <span>إعدادات التسجيل الخارجي</span>
+              <span class="badge bg-warning text-dark" style="font-size:10.5px;">المدير العام فقط</span>
+            </div>
+            <div class="desc">التحكم في حقول الرابط العام، فتح أو إيقاف التسجيل، وتخصيص رسائل الواتساب الآلية مع تمييز الجنس.</div>
+          </div>
+          <div class="action-link" style="color: #ca8a04;">
+            <span>ضبط إعدادات الرابط والواتساب</span>
+            <i class="fa-solid fa-arrow-left"></i>
+          </div>
+        </a>
+      </div>
+      <% } %>
+
     </div>
 
   </div>
