@@ -32,7 +32,18 @@ function normalizeStudent(student) {
   student.track = student.track || 'عام';
   student.interview_result = student.interview_result || 'لم يقابل';
   student.followup_status = student.followup_status || 'في انتظار التسجيل';
-  student.attachments = Array.isArray(student.attachments) ? student.attachments : [];
+  
+  // Extract metadata safely from JSONB attachments
+  const rawAtts = Array.isArray(student.attachments) ? student.attachments : [];
+  const metaObj = rawAtts.find(a => a && a.__meta);
+  const meta = metaObj ? metaObj.__meta : {};
+
+  student.registration_source = meta.registration_source || 'تسجيل داخلي';
+  student.mother_phone = meta.mother_phone || '';
+  
+  // Display attachments excluding internal metadata object
+  student.attachments = rawAtts.filter(a => a && !a.__meta);
+  
   student.age = calculateAge(student.date_of_birth || '');
   student.timeline = computeStudentTimeline(student);
   student.display_notes = cleanNotesForDisplay(student.notes);
@@ -58,61 +69,89 @@ async function getStudentById(id) {
 }
 
 async function createStudent(studentData) {
-  const cleanData = sanitizeStudentData(studentData);
-  cleanData.nationality = cleanData.nationality || 'سعودي';
-  cleanData.student_type = cleanData.student_type || 'بنين';
-  cleanData.phase = cleanData.phase || 'ابتدائي';
-  cleanData.grade = cleanData.grade || '1';
-  cleanData.track = cleanData.track || 'عام';
-  cleanData.branch = cleanData.branch || 'الندى';
-  cleanData.interview_result = cleanData.interview_result || 'لم يقابل';
-  cleanData.followup_status = cleanData.followup_status || 'في انتظار التسجيل';
-  cleanData.attachments = cleanData.attachments || [];
-  cleanData.created_at = cleanData.created_at || new Date().toISOString();
-  cleanData.updated_at = new Date().toISOString();
-
-  // Safely calculate next ID to avoid PostgreSQL sequence collision
-  try {
-    const { data: maxRows } = await supabase.from('students').select('id').order('id', { ascending: false }).limit(1);
-    const nextId = (maxRows && maxRows.length > 0 && maxRows[0].id ? maxRows[0].id : 0) + 1;
-    cleanData.id = nextId;
-  } catch (e) {
-    console.warn('Could not fetch max ID:', e);
+  // Automatically calculate next ID to prevent sequence collision
+  if (!studentData.id) {
+    const { data: latest } = await supabase.from('students').select('id').order('id', { ascending: false }).limit(1);
+    const maxId = (latest && latest[0] && latest[0].id) ? parseInt(latest[0].id) : 0;
+    studentData.id = maxId + 1;
   }
 
-  const { data, error } = await supabase.from('students').insert([cleanData]).select().single();
-  if (error) {
-    console.error('CRITICAL: createStudent error with ID:', cleanData.id, error);
-    // If conflict, try without ID
-    delete cleanData.id;
-    const { data: retryData, error: retryError } = await supabase.from('students').insert([cleanData]).select().single();
-    if (retryError) {
-      console.error('CRITICAL: createStudent fallback insert error:', retryError);
-      return null;
+  // Preserve metadata in attachments
+  const rawAtts = Array.isArray(studentData.attachments) ? studentData.attachments.filter(a => !a.__meta) : [];
+  const metaItem = {
+    __meta: {
+      registration_source: studentData.registration_source || 'تسجيل داخلي',
+      mother_phone: studentData.mother_phone || ''
     }
-    return retryData;
+  };
+  studentData.attachments = [...rawAtts, metaItem];
+
+  const sanitized = sanitizeStudentData(studentData);
+  
+  const { data, error } = await supabase
+    .from('students')
+    .insert([sanitized])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Supabase createStudent Error details:', JSON.stringify(error, null, 2));
+    return null;
   }
-  return data;
+  return data ? normalizeStudent(data) : null;
 }
 
 async function updateStudent(id, studentData) {
-  const cleanData = sanitizeStudentData(studentData);
-  delete cleanData.id; // Never overwrite PK id during update
-  cleanData.updated_at = new Date().toISOString();
-  const { data, error } = await supabase.from('students').update(cleanData).eq('id', id).select().single();
+  const existing = await getStudentById(id);
+  const existingSource = existing ? existing.registration_source : 'تسجيل داخلي';
+  const existingMotherPhone = existing ? existing.mother_phone : '';
+
+  const rawAtts = Array.isArray(studentData.attachments) 
+    ? studentData.attachments.filter(a => !a.__meta) 
+    : (existing ? existing.attachments : []);
+
+  const metaItem = {
+    __meta: {
+      registration_source: studentData.registration_source || existingSource,
+      mother_phone: studentData.mother_phone || existingMotherPhone
+    }
+  };
+  studentData.attachments = [...rawAtts, metaItem];
+  studentData.updated_at = new Date().toISOString();
+
+  const sanitized = sanitizeStudentData(studentData);
+
+  const { data, error } = await supabase
+    .from('students')
+    .update(sanitized)
+    .eq('id', id)
+    .select()
+    .single();
+
   if (error) {
-    console.error('CRITICAL: updateStudent DB Update error:', error);
+    console.error('Supabase updateStudent Error details:', JSON.stringify(error, null, 2));
     return null;
   }
-  return data;
+  return data ? normalizeStudent(data) : null;
 }
 
 async function deleteStudent(id) {
-  const idNum = parseInt(id);
-  // Cascade clean student history records for this student ID to prevent orphaned records
-  await supabase.from('student_history').delete().eq('student_id', idNum);
-  const { error } = await supabase.from('students').delete().eq('id', idNum);
-  return !error;
+  const { deleteStudentHistory } = require('./history.service');
+  await deleteStudentHistory(id);
+
+  const { error } = await supabase.from('students').delete().eq('id', id);
+  if (error) {
+    console.error('deleteStudent error:', error);
+    return false;
+  }
+  return true;
 }
 
-module.exports = { getStudents, getStudentById, createStudent, updateStudent, deleteStudent, normalizeStudent, sanitizeStudentData };
+module.exports = {
+  getStudents,
+  getStudentById,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+  normalizeStudent
+};
