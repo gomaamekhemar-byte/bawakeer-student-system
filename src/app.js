@@ -2,12 +2,58 @@ require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const path = require("path");
+const querystring = require("querystring");
 
 const app = express();
 
 // =============================================
-// Middleware
+// CORS & Multi-Origin Credentials Support
 // =============================================
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cookie, Accept");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// =============================================
+// Universal Body Parsing (Vercel + Netlify + Local)
+// =============================================
+// 1. If Vercel or Serverless pre-populated req.body as String or Buffer, parse it
+app.use((req, res, next) => {
+  if (req.body) {
+    if (typeof req.body === "string") {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch (e) {
+        try {
+          req.body = querystring.parse(req.body);
+        } catch (e2) {}
+      }
+    } else if (Buffer.isBuffer(req.body)) {
+      const str = req.body.toString("utf8");
+      try {
+        req.body = JSON.parse(str);
+      } catch (e) {
+        try {
+          req.body = querystring.parse(str);
+        } catch (e2) {}
+      }
+    }
+  }
+  next();
+});
+
+// 2. Standard express parsers
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 app.use(express.json({ limit: "20mb" }));
 app.use(cookieParser());
@@ -15,9 +61,7 @@ app.use(cookieParser());
 // Static files
 app.use("/public", express.static(path.join(__dirname, "../public")));
 
-const fs = require("fs");
-
-// Find views directory across environments (Local / Netlify Serverless)
+// Find views directory across environments (Local / Netlify / Vercel Serverless)
 function getViewsDir() {
   const candidates = [
     path.join(__dirname, "../views"),
@@ -25,6 +69,7 @@ function getViewsDir() {
     path.join(process.cwd(), "views"),
     path.join(__dirname, "views"),
     path.join("/var/task", "views"),
+    path.join(process.cwd(), "bawakeer-webapp/views"),
   ];
   for (const dir of candidates) {
     try {
