@@ -30,47 +30,27 @@ function calculateDaysDifference(d1Str, d2Str) {
   }
 }
 
-function parseTimeTrackMeta(notesStr) {
-  if (!notesStr || typeof notesStr !== 'string') return {};
-  const match = notesStr.match(/\[TIMETRACK:(\{.*?\})\]/);
-  if (match && match[1]) {
-    try {
-      return JSON.parse(match[1]);
-    } catch (e) {
-      return {};
-    }
-  }
-  return {};
-}
-
-function encodeTimeTrackMeta(existingNotes, metaObj) {
-  const cleanNotes = (existingNotes || '').replace(/\s*\[TIMETRACK:\{.*?\}\]/g, '').trim();
-  const metaStr = `[TIMETRACK:${JSON.stringify(metaObj)}]`;
-  return cleanNotes ? `${cleanNotes} ${metaStr}` : metaStr;
-}
-
 function cleanNotesForDisplay(notesStr) {
   if (!notesStr || typeof notesStr !== 'string') return '';
   return notesStr.replace(/\s*\[TIMETRACK:\{.*?\}\]/g, '').trim();
 }
 
 function computeStudentTimeline(student) {
-  const meta = parseTimeTrackMeta(student.notes);
   const now = new Date();
 
   // 1. Initial Registration Date
-  const initDateStr = meta.init || student.created_at || student.updated_at || now.toISOString();
+  const initDateStr = student.created_at || student.updated_at || now.toISOString();
   const initDisplay = formatDateDisplay(initDateStr);
 
   // 2. Interview Date & Duration
   const hasInterviewed = Boolean(student.interview_result && student.interview_result !== 'في انتظار المقابلة' && student.interview_result !== 'لم يقابل');
-  const interviewDateStr = meta.interview || student.interview_date || (hasInterviewed ? (student.updated_at || now.toISOString()) : null);
+  const interviewDateStr = student.interview_date || (hasInterviewed ? (student.updated_at || now.toISOString()) : null);
   const interviewDisplay = interviewDateStr ? formatDateDisplay(interviewDateStr) : '';
   const interviewDaysWaited = interviewDateStr ? calculateDaysDifference(initDateStr, interviewDateStr) : calculateDaysDifference(initDateStr, now.toISOString());
 
   // 3. Registration Date & Duration
   const hasRegistered = Boolean(student.followup_status && student.followup_status !== 'في انتظار المقابلة' && student.followup_status !== 'في انتظار التسجيل');
-  const regDateStr = meta.registration || (hasRegistered ? (student.updated_at || now.toISOString()) : null);
+  const regDateStr = hasRegistered ? (student.updated_at || now.toISOString()) : null;
   const regDisplay = regDateStr ? formatDateDisplay(regDateStr) : '';
   
   // Registration days taken after interview
@@ -120,8 +100,6 @@ function computeStudentTimeline(student) {
 module.exports = {
   formatDateDisplay,
   calculateDaysDifference,
-  parseTimeTrackMeta,
-  encodeTimeTrackMeta,
   cleanNotesForDisplay,
   computeStudentTimeline
 };
