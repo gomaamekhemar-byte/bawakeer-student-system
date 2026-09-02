@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>بوابة التسجيل والقبول الإلكتروني | مدارس بواكير الأهلية</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    body {
+      font-family: 'Cairo', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+      min-height: 100vh;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .apply-card {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .apply-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: #ffffff;
+      padding: 32px 24px;
+      text-align: center;
+      position: relative;
+    }
+    .apply-header .brand-icon {
+      width: 70px;
+      height: 70px;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .form-section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #1e3a8a;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-control, .form-select {
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      border: 1.5px solid #cbd5e1;
+      font-weight: 500;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+    }
+    .btn-submit {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 800;
+      transition: all 0.2s;
+    }
+    .btn-submit:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+      color: white;
+    }
+    .btn-whatsapp {
+      background-color: #25D366;
+      color: white;
+      border-radius: 10px;
+      font-weight: 700;
+      padding: 12px 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .btn-whatsapp:hover {
+      background-color: #128C7E;
+      color: white;
+    }
+    .feature-badge {
+      background: #f1f5f9;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MAIN CONTAINER -->
+  <div class="container py-4 my-auto">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-md-10">
+
+        <% if(typeof submitted !== 'undefined' && submitted){ %>
+          <!-- SUCCESS CONFIRMATION SCREEN -->
+          <div class="apply-card p-5 text-center shadow-lg">
+            <div class="mb-4">
+              <div class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center" style="width: 90px; height: 90px; font-size: 44px;">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+            </div>
+            
+            <h3 class="fw-bold text-dark mb-2">تم استلام طلب التسجيل بنجاح! 🎉</h3>
+            <p class="text-muted fs-6 mb-4">شكراً لثقتكم بمدارس بواكير الأهلية. تم تسجيل بيانات الطالب/ـة بنجاح وسيتم التواصل معكم لتحديد موعد المقابلة.</p>
+            
+            <div class="card bg-light border-0 rounded-4 p-3 mb-4 text-start">
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <small class="text-muted d-block">اسم الطالب</small>
+                  <strong class="text-dark fs-6"><%= student.name %></strong>
+                </div>
+                <div class="col-sm-6">
+                  <small class="text-muted d-block">الفرع المطلوب</small>
+                  <strong class="text-primary fs-6">فرع <%= student.branch %></strong>
+                </div>
+                <div class="col-sm-6">
+                  <small class="text-muted d-block">المرحلة والصف</small>
+                  <strong class="text-dark"><%= student.phase %> - <%= student.grade ? 'صف ' + student.grade : '' %></strong>
+                </div>
+                <div class="col-sm-6">
+                  <small class="text-muted d-block">رقم جوال ولي الأمر</small>
+                  <strong class="text-dark" style="direction:ltr;"><%= student.phone %></strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-success d-flex align-items-center justify-content-center gap-2 py-3 rounded-3 mb-4" role="alert">
+              <i class="fa-brands fa-whatsapp fs-4 text-success"></i>
+              <span>تم إرسال رسالة تأكيد آلية إلى تطبيق واتساب على الرقم المسجل.</span>
+            </div>
+
+            <div class="d-flex flex-wrap gap-3 justify-content-center">
+              <% if(typeof whatsappUrl !== 'undefined' && whatsappUrl){ %>
+                <a href="<%= whatsappUrl %>" target="_blank" class="btn btn-whatsapp shadow-sm">
+                  <i class="fa-brands fa-whatsapp fs-5"></i>
+                  <span>متابعة الطلب عبر واتساب</span>
+                </a>
+              <% } %>
+              <a href="/apply" class="btn btn-outline-primary px-4 py-2 rounded-3 fw-bold">
+                <i class="fa-solid fa-plus me-1"></i> تسجيل طالب آخر
+              </a>
+            </div>
+          </div>
+
+        <% } else { %>
+          
+          <!-- REGISTRATION FORM -->
+          <div class="apply-card">
+            
+            <!-- HEADER -->
+            <div class="apply-header">
+              <div class="brand-icon">
+                <i class="fa-solid fa-graduation-cap"></i>
+              </div>
+              <h3 class="fw-bold mb-1">مدارس بواكير الأهلية</h3>
+              <p class="mb-3 text-white-50 fs-6">بوابة تسجيل وقبول الطلاب الجدد — العام الدراسي <%= activeYear ? activeYear.year_name : '1448-1449هـ' %></p>
+              <div class="d-flex justify-content-center flex-wrap gap-2">
+                <span class="feature-badge"><i class="fa-solid fa-bolt text-warning"></i> تسجيل فوري سريع</span>
+                <span class="feature-badge"><i class="fa-brands fa-whatsapp text-success"></i> تأكيد آلي عبر واتساب</span>
+                <span class="feature-badge"><i class="fa-solid fa-shield text-primary"></i> بيانات آمنة ومشفرة</span>
+              </div>
+            </div>
+
+            <!-- FORM BODY -->
+            <div class="p-4 p-md-5">
+              
+              <% if(typeof error !== 'undefined' && error){ %>
+                <div class="alert alert-danger py-2 px-3 fw-bold mb-4 shadow-sm" role="alert">
+                  <i class="fa-solid fa-circle-exclamation me-1"></i> <%= error %>
+                </div>
+              <% } %>
+
+              <form method="post" action="/apply" id="applyForm">
+                
+                <!-- ANTI-SPAM HONEYPOT (MUST REMAIN EMPTY) -->
+                <input type="text" name="website_trap" style="display:none !important;" tabindex="-1" autocomplete="off">
+
+                <!-- 1. بيانات الطالب الأساسية -->
+                <div class="form-section-title">
+                  <i class="fa-solid fa-user-graduate"></i>
+                  <span>بيانات الطالب / الطالبة</span>
+                </div>
+
+                <div class="row g-3 mb-4">
+                  <div class="col-md-8">
+                    <label class="form-label fw-bold small text-dark">اسم الطالب رباعي <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control" required placeholder="أدخل الاسم الرباعي كاملاً">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-bold small text-dark">نوع الطالب <span class="text-danger">*</span></label>
+                    <select name="student_type" class="form-select" required>
+                      <option value="بنين" selected>بنين</option>
+                      <option value="بنات">بنات</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark">تاريخ الميلاد <span class="text-danger">*</span></label>
+                    <input type="date" name="date_of_birth" id="dobInput" class="form-control" required>
+                    <small id="ageDisplay" class="text-primary fw-bold mt-1 d-block" style="font-size: 11.5px;"></small>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark">الجنسية <span class="text-danger">*</span></label>
+                    <select name="nationality" class="form-select" required>
+                      <option value="سعودي" selected>سعودي</option>
+                      <option value="مصري">مصري</option>
+                      <option value="سوري">سوري</option>
+                      <option value="أردني">أردني</option>
+                      <option value="يمني">يمني</option>
+                      <option value="فلسطيني">فلسطيني</option>
+                      <option value="أخرى">أخرى</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- 2. بيانات الاتصال وولي الأمر -->
+                <div class="form-section-title">
+                  <i class="fa-solid fa-phone"></i>
+                  <span>بيانات ولي الأمر والاتصال</span>
+                </div>
+
+                <div class="row g-3 mb-4">
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark">رقم جوال ولي الأمر (واتساب) <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-mobile-screen"></i></span>
+                      <input type="tel" name="phone" class="form-control" required placeholder="05xxxxxxxx" pattern="^0?5[0-9]{8}$">
+                    </div>
+                    <small class="text-muted" style="font-size: 11px;">سيتم إرسال رسالة التأكيد وموعد المقابلة عبر هذا الرقم.</small>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark">رقم جوال إضافي / جوال الأم (اختياري)</label>
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-phone"></i></span>
+                      <input type="tel" name="mother_phone" class="form-control" placeholder="05xxxxxxxx">
+                    </div>
+                  </div>
+                  <div class="col-md-12">
+                    <label class="form-label fw-bold small text-dark">الحي السكني</label>
+                    <input type="text" name="neighborhood" class="form-control" placeholder="مثال: حي الروابي، حي الندى...">
+                  </div>
+                </div>
+
+                <!-- 3. الفرع والمرحلة الدراسية -->
+                <div class="form-section-title">
+                  <i class="fa-solid fa-school"></i>
+                  <span>الفرع والمرحلة الأكاديمية المطلوبة</span>
+                </div>
+
+                <div class="row g-3 mb-4">
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark">الفرع المطلوب <span class="text-danger">*</span></label>
+                    <select name="student_branch" class="form-select fw-bold" required>
+                      <% branches.forEach(function(b){ %>
+                        <option value="<%= b %>">فرع <%= b %></option>
+                      <% }) %>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark">المرحلة الدراسية <span class="text-danger">*</span></label>
+                    <select name="phase" class="form-select" required>
+                      <option value="روضة">روضة</option>
+                      <option value="ابتدائي" selected>ابتدائي</option>
+                      <option value="متوسط">متوسط</option>
+                      <option value="ثانوي">ثانوي</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark">الصف الدراسي <span class="text-danger">*</span></label>
+                    <select name="grade" class="form-select" required>
+                      <option value="1" selected>الصف الأول</option>
+                      <option value="2">الصف الثاني</option>
+                      <option value="3">الصف الثالث</option>
+                      <option value="4">الصف الرابع</option>
+                      <option value="5">الصف الخامس</option>
+                      <option value="6">الصف السادس</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-bold small text-dark">المسار التعليمي</label>
+                    <select name="track" class="form-select">
+                      <option value="عام" selected>عام</option>
+                      <option value="تحفيظ">تحفيظ</option>
+                    </select>
+                  </div>
+                  <div class="col-md-12">
+                    <label class="form-label fw-bold small text-dark">ملاحظات أو استفسارات إضافية (اختياري)</label>
+                    <textarea name="notes" class="form-control" rows="2" placeholder="اكتب أي معلومات ترغب في توضيحها لإدارة القبول..."></textarea>
+                  </div>
+                </div>
+
+                <!-- SUBMIT BUTTON -->
+                <button type="submit" class="btn btn-submit w-100 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                  <i class="fa-solid fa-paper-plane fs-5"></i>
+                  <span>إرسال طلب التسجيل وتأكيد البيانات</span>
+                </button>
+
+              </form>
+
+            </div>
+          </div>
+
+        <% } %>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="text-center text-white-50 py-3" style="font-size: 12.5px;">
+    <div>جميع الحقوق محفوظة © مدارس بواكير الأهلية <%= new Date().getFullYear() %></div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Live Age Calculation
+    const dobInput = document.getElementById('dobInput');
+    const ageDisplay = document.getElementById('ageDisplay');
+    if (dobInput && ageDisplay) {
+      dobInput.addEventListener('change', function() {
+        const val = this.value;
+        if (!val) { ageDisplay.textContent = ''; return; }
+        const dob = new Date(val);
+        const today = new Date();
+        let years = today.getFullYear() - dob.getFullYear();
+        let months = today.getMonth() - dob.getMonth();
+        if (months < 0) { years--; months += 12; }
+        if (years >= 0) {
+          ageDisplay.textContent = 'العمر التقريبي: ' + years + ' سنة و ' + months + ' شهر';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
