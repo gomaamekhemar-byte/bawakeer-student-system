@@ -86,7 +86,7 @@
         <label class="form-label fw-bold text-dark small">العام الدراسي</label>
         <div class="input-group">
           <span class="input-group-text bg-light"><i class="fa-solid fa-calendar-days text-muted"></i></span>
-          <select name="academic_year_id" class="form-select fw-bold" required>
+          <select name="academic_year_id" class="form-select fw-bold">
             <% if(typeof academic_years !== 'undefined' && academic_years.length){ %>
               <% academic_years.forEach(function(y){ %>
                 <option value="<%= y.id %>" <%= y.is_active ? 'selected' : '' %>>
@@ -94,7 +94,7 @@
                 </option>
               <% }) %>
             <% } else { %>
-              <option value="">العام الحالي</option>
+              <option value="1" selected>1448-1449هـ (العام الحالي النشط ✅)</option>
             <% } %>
           </select>
         </div>
