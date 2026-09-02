@@ -7,20 +7,20 @@ const { getBranchNames } = require("../services/branches.service");
 const { getAcademicYears, getActiveYear } = require("../services/academic_years.service");
 const { addHistory } = require("../services/history.service");
 
-// GET /login - Always render login screen directly on link click
+// GET /login - Always render clean login screen with no autofill
 router.get("/login", async (req, res) => {
-  // Clear any existing session cookie so user always logs in fresh
-  res.clearCookie("auth_token");
-  res.clearCookie("active_branch");
-  res.clearCookie("active_year_id");
-  res.clearCookie("active_year_name");
+  // Clear any existing session cookie completely
+  res.clearCookie("auth_token", { path: "/" });
+  res.clearCookie("active_branch", { path: "/" });
+  res.clearCookie("active_year_id", { path: "/" });
+  res.clearCookie("active_year_name", { path: "/" });
 
   const branches = await getBranchNames();
   const academic_years = await getAcademicYears();
   res.render("login", { branches, academic_years, error: null });
 });
 
-// POST /login - Authenticate and create session
+// POST /login - Authenticate, Verify Branch Authorization & Smart Route
 router.post("/login", async (req, res) => {
   const { username, password, branch, academic_year_id } = req.body;
   const branches = await getBranchNames();
@@ -32,9 +32,27 @@ router.post("/login", async (req, res) => {
     return res.render("login", { branches, academic_years, error: "اسم المستخدم أو كلمة المرور غير صحيحة" });
   }
 
-  const branchVal = (branch || "").trim();
-  if (branchVal && branchVal !== "الكل" && !branches.includes(branchVal)) {
-    return res.render("login", { branches, academic_years, error: "يرجى اختيار فرع صحيح" });
+  // Branch Authorization Check
+  const userBranches = Array.isArray(user.branches) ? user.branches : (user.branch ? [user.branch] : []);
+  const isFullAccess = user.role === "admin" || userBranches.includes("الكل") || userBranches.length === 0;
+
+  let branchVal = (branch || "").trim();
+
+  if (!isFullAccess) {
+    const assignedBranch = userBranches[0] || user.branch || "";
+    // If user explicitly chose a different branch:
+    if (branchVal && branchVal !== assignedBranch && branchVal !== "") {
+      return res.render("login", {
+        branches,
+        academic_years,
+        error: "عفواً، غير مصرح لك بالدخول إلى بيانات هذا الفرع"
+      });
+    }
+    // Smart auto-routing: force branch to their assigned branch
+    branchVal = assignedBranch;
+  } else {
+    // Admin / Full Access user: default to 'الكل' if left empty
+    if (!branchVal) branchVal = "الكل";
   }
 
   const selectedYear = academic_years.find(y => String(y.id) === String(academic_year_id)) || activeYear || { id: null, year_name: "", is_active: true };
@@ -52,28 +70,34 @@ router.post("/login", async (req, res) => {
   res.cookie("auth_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax"
+    sameSite: "lax",
+    path: "/"
   });
 
   res.cookie("active_branch", encodeURIComponent(branchVal), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax"
+    sameSite: "lax",
+    path: "/"
   });
 
   res.cookie("active_year_id", String(selectedYear.id || ""), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax"
+    sameSite: "lax",
+    path: "/"
   });
 
   res.cookie("active_year_name", encodeURIComponent(selectedYear.year_name || ""), {
     httpOnly: false,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax"
+    sameSite: "lax",
+    path: "/"
   });
 
   await addHistory("login_success", `تم تسجيل دخول المستخدم ${user.username} للفرع ${branchVal} والعام ${selectedYear.year_name}`, user.username);
+  
+  // Smart Routing: Single-branch employees go directly to /analytics or /
   res.redirect("/");
 });
 
@@ -109,10 +133,10 @@ router.post("/change_password", requireAuth, withUser, async (req, res) => {
 
 // GET /logout
 router.get("/logout", (req, res) => {
-  res.clearCookie("auth_token");
-  res.clearCookie("active_branch");
-  res.clearCookie("active_year_id");
-  res.clearCookie("active_year_name");
+  res.clearCookie("auth_token", { path: "/" });
+  res.clearCookie("active_branch", { path: "/" });
+  res.clearCookie("active_year_id", { path: "/" });
+  res.clearCookie("active_year_name", { path: "/" });
   res.redirect("/login");
 });
 
