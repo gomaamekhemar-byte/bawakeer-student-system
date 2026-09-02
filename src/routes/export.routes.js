@@ -22,13 +22,11 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
 
-  // Academic Year Scoping
   const sessionYear = req.sessionYear;
   if (sessionYear && sessionYear.id) {
     students = students.filter(s => String(s.academic_year_id || (activeYear ? activeYear.id : "")) === String(sessionYear.id));
   }
 
-  // Scope Filtering by User Branch / Phase
   if (currentUser && ["manager", "employee"].includes(currentUser.role)) {
     const userBranches = Array.isArray(currentUser.branches) ? currentUser.branches : (currentUser.branch ? [currentUser.branch] : []);
     if (userBranches.length && !userBranches.includes("الكل")) {
@@ -46,6 +44,7 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   const phaseFilter = req.query.phase_filter || "";
   const gradeFilter = req.query.grade_filter || "";
   const branchFilter = req.query.branch_filter || "";
+  const sourceFilter = req.query.source_filter || "";
 
   let filtered = students.filter(s => {
     if (query) {
@@ -60,6 +59,7 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     if (phaseFilter && s.phase !== phaseFilter) return false;
     if (gradeFilter && s.grade !== gradeFilter) return false;
     if (branchFilter && s.branch !== branchFilter) return false;
+    if (sourceFilter && s.registration_source !== sourceFilter) return false;
     return true;
   });
 
@@ -72,6 +72,8 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     not_interested: students.filter(s => s.followup_status === "لا يرغب في التسجيل").length,
     not_registered: students.filter(s => s.followup_status !== "تم التسجيل").length,
     pending_interview: students.filter(s => s.interview_result === "في انتظار المقابلة").length,
+    online_count: students.filter(s => s.registration_source === "رابط خارجي").length,
+    internal_count: students.filter(s => s.registration_source !== "رابط خارجي").length,
   };
 
   res.render("reports", {
@@ -88,6 +90,7 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     phaseFilter,
     gradeFilter,
     branchFilter,
+    sourceFilter,
     interview_results: INTERVIEW_RESULTS,
     followup_statuses: FOLLOWUP_STATUSES,
     student_types: STUDENT_TYPES,
@@ -124,11 +127,13 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   const followupFilter = req.query.followup_filter || "";
   const phaseFilter = req.query.phase_filter || "";
   const branchFilter = req.query.branch_filter || "";
+  const sourceFilter = req.query.source_filter || "";
 
   if (interviewFilter) students = students.filter(s => s.interview_result === interviewFilter);
   if (followupFilter) students = students.filter(s => s.followup_status === followupFilter);
   if (phaseFilter) students = students.filter(s => s.phase === phaseFilter);
   if (branchFilter) students = students.filter(s => s.branch === branchFilter);
+  if (sourceFilter) students = students.filter(s => s.registration_source === sourceFilter);
 
   const rows = students.map((s, idx) => ({
     "م": idx + 1,
@@ -143,6 +148,7 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
     "المسار": s.track || "",
     "نوع الطالب": s.student_type || "بنين",
     "الفرع": s.branch || "",
+    "مصدر التسجيل": s.registration_source || "تسجيل داخلي",
     "نتيجة المقابلة": s.interview_result || "لم يقابل",
     "سبب عدم القبول": s.interview_reason || "",
     "حالة المتابعة": s.followup_status || "غير محدد",
@@ -157,7 +163,7 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   ws["!cols"] = [
     { wch: 5 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
     { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 8 }, { wch: 10 },
-    { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 22 }, { wch: 18 },
+    { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 16 }, { wch: 22 }, { wch: 18 },
     { wch: 20 }, { wch: 25 }, { wch: 12 }
   ];
 
@@ -194,11 +200,13 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   const followupFilter = req.query.followup_filter || "";
   const phaseFilter = req.query.phase_filter || "";
   const branchFilter = req.query.branch_filter || "";
+  const sourceFilter = req.query.source_filter || "";
 
   if (interviewFilter) students = students.filter(s => s.interview_result === interviewFilter);
   if (followupFilter) students = students.filter(s => s.followup_status === followupFilter);
   if (phaseFilter) students = students.filter(s => s.phase === phaseFilter);
   if (branchFilter) students = students.filter(s => s.branch === branchFilter);
+  if (sourceFilter) students = students.filter(s => s.registration_source === sourceFilter);
 
   await addHistory("export_pdf", "تم عرض تقرير كشف الطلاب للطباعة", currentUser.username);
 
@@ -219,6 +227,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
       <td>${s.nationality || "سعودي"}</td>
       <td>${s.phase || "—"} - ${s.grade ? "صف " + s.grade : ""}</td>
       <td>${s.branch || "—"}</td>
+      <td style="font-weight:600; color:${s.registration_source === 'رابط خارجي' ? '#0891b2' : '#64748b'};">${s.registration_source || "تسجيل داخلي"}</td>
       <td class="${intCls}">${s.interview_result || "لم يقابل"}</td>
       <td class="${folCls}">${s.followup_status || "غير محدد"}</td>
       <td>${cleanNotesForDisplay(s.notes || "") || "—"}</td>
@@ -237,7 +246,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
     .print-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 3px solid #1e3a8a; }
     .print-header h1 { font-size: 18pt; color: #1e3a8a; font-weight: 800; }
     .print-header .meta { font-size: 10pt; color: #64748b; text-align: left; }
-    .summary-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 14px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    .summary-cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; padding: 14px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
     .summary-card { background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; text-align: center; }
     .summary-card .num { font-size: 16pt; font-weight: 800; color: #1e3a8a; }
     .summary-card .lbl { font-size: 9pt; color: #64748b; font-weight: 600; }
@@ -280,7 +289,8 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
     <div class="summary-card"><div class="num">${students.filter(s => s.interview_result === "مقبول").length}</div><div class="lbl">مقبول</div></div>
     <div class="summary-card"><div class="num">${students.filter(s => s.interview_result === "غير مقبول").length}</div><div class="lbl">غير مقبول</div></div>
     <div class="summary-card"><div class="num">${students.filter(s => s.followup_status === "تم التسجيل").length}</div><div class="lbl">تم التسجيل</div></div>
-    <div class="summary-card"><div class="num">${students.filter(s => s.followup_status === "في انتظار التسجيل").length}</div><div class="lbl">انتظار التسجيل</div></div>
+    <div class="summary-card"><div class="num">${students.filter(s => s.registration_source === "رابط خارجي").length}</div><div class="lbl">أونلاين (إعلانات)</div></div>
+    <div class="summary-card"><div class="num">${students.filter(s => s.registration_source !== "رابط خارجي").length}</div><div class="lbl">تسجيل حضوري</div></div>
   </div>
   <div class="table-wrapper">
     <table>
@@ -292,6 +302,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
           <th>الجنسية</th>
           <th>المرحلة والصف</th>
           <th>الفرع</th>
+          <th>المصدر</th>
           <th>نتيجة المقابلة</th>
           <th>حالة المتابعة</th>
           <th>ملاحظات</th>
