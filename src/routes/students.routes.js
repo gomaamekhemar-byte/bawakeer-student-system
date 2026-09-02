@@ -144,8 +144,20 @@ router.post("/apply", async (req, res) => {
 
   await addHistory("online_application", `طلب تسجيل جديد عبر الإنترنت للطالب ${name} بفرع ${student_branch}`, "بوابة التسجيل العامة");
 
-  // Send WhatsApp confirmation
-  const waResult = await sendWhatsAppNotification(created, phone);
+  // 1. Send automated WhatsApp confirmation to parent
+  await sendWhatsAppNotification(created, phone);
+
+  // 2. Intelligent Dynamic Branch WhatsApp Routing for 'متابعة الطلب' button
+  const { getBranchWhatsAppPhone } = require("../services/settings.service");
+  const { formatPhoneNumber } = require("../services/whatsapp.service");
+
+  const branchPhoneRaw = getBranchWhatsAppPhone(student_branch, settings);
+  const formattedBranchPhone = formatPhoneNumber(branchPhoneRaw);
+
+  const isFemale = created.student_type === "بنات";
+  const studentTypeWord = isFemale ? "ابنتنا الطالبة" : "ابننا الطالب";
+  const followupMsg = `السلام عليكم ورحمة الله وبركاته، تم إرسال طلب تسجيل ${studentTypeWord} [${created.name}] عبر الرابط الخارجي بفرع [${created.branch}] - المرحلة [${created.phase}] ${created.grade ? ('الصف ' + created.grade) : ''}. ونرغب في متابعة موعد المقابلة واستكمال الإجراءات.`;
+  const branchWhatsAppUrl = `https://wa.me/${formattedBranchPhone}?text=${encodeURIComponent(followupMsg)}`;
 
   return res.render("apply", {
     branches,
@@ -153,7 +165,9 @@ router.post("/apply", async (req, res) => {
     settings,
     submitted: true,
     student: created,
-    whatsappUrl: waResult.directUrl,
+    branchPhone: branchPhoneRaw,
+    branchWhatsAppUrl,
+    whatsappUrl: branchWhatsAppUrl,
     error: null
   });
 });
