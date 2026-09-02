@@ -168,11 +168,11 @@
 
           <!-- PROMINENT EXPORT ACTION BUTTONS -->
           <div class="d-flex gap-2">
-            <a href="/export/excel?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>" class="btn btn-success px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <a href="/export/excel?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>" class="btn btn-success px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-excel fs-5"></i>
               <span>تصدير Excel</span>
             </a>
-            <a href="/export/pdf" class="btn btn-danger px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <a href="/export/pdf?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>" target="_blank" class="btn btn-danger px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-pdf fs-5"></i>
               <span>طباعة PDF</span>
             </a>
@@ -182,7 +182,7 @@
         <form method="get" action="/reports">
           <div class="row g-3 align-items-end">
             <!-- 1. Branch -->
-            <div class="col-md-3 col-6">
+            <div class="col-lg col-md-4 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">الفرع</label>
               <select name="branch_filter" class="form-select" onchange="this.form.submit()">
                 <option value="">جميع الفروع</option>
@@ -193,7 +193,7 @@
             </div>
 
             <!-- 2. Phase -->
-            <div class="col-md-3 col-6">
+            <div class="col-lg col-md-4 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">المرحلة الدراسية</label>
               <select name="phase_filter" class="form-select" onchange="this.form.submit()">
                 <option value="">جميع المراحل</option>
@@ -204,7 +204,7 @@
             </div>
 
             <!-- 3. Interview Result -->
-            <div class="col-md-3 col-6">
+            <div class="col-lg col-md-4 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">نتيجة المقابلة</label>
               <select name="interview_filter" class="form-select" onchange="this.form.submit()">
                 <option value="">جميع النتائج (الكل)</option>
@@ -215,13 +215,25 @@
             </div>
 
             <!-- 4. Followup Status -->
-            <div class="col-md-3 col-6">
+            <div class="col-lg col-md-4 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">حالة المتابعة</label>
               <select name="followup_filter" class="form-select" onchange="this.form.submit()">
                 <option value="">جميع الحالات (الكل)</option>
                 <% followup_statuses.forEach(function(s){ %>
                   <option value="<%= s %>" <%= typeof followupFilter !== 'undefined' && followupFilter===s ? 'selected' : '' %>><%= s %></option>
                 <% }) %>
+              </select>
+            </div>
+
+            <!-- 5. Registration Source Filter (FEATURE 1) -->
+            <div class="col-lg col-md-4 col-12">
+              <label class="form-label fw-bold text-secondary small mb-1">
+                <i class="fa-solid fa-bullseye text-primary me-1"></i> مصدر التسجيل
+              </label>
+              <select name="source_filter" class="form-select fw-bold border-primary-subtle shadow-sm" onchange="this.form.submit()">
+                <option value="">الكل</option>
+                <option value="التسجيل الخارجي (الرابط)" <%= (typeof sourceFilter !== 'undefined' && (sourceFilter === 'التسجيل الخارجي (الرابط)' || sourceFilter === 'رابط خارجي')) ? 'selected' : '' %>>🌐 التسجيل الخارجي (الرابط)</option>
+                <option value="التسجيل الداخلي (المدرسة)" <%= (typeof sourceFilter !== 'undefined' && (sourceFilter === 'التسجيل الداخلي (المدرسة)' || sourceFilter === 'تسجيل داخلي')) ? 'selected' : '' %>>🏫 التسجيل الداخلي (المدرسة)</option>
               </select>
             </div>
           </div>
@@ -233,6 +245,66 @@
           </div>
         </form>
 
+      </div>
+    </div>
+
+    <!-- 2.5 STATISTICAL SUMMARY BAR (FEATURE 3: REPORT SUMMARY) -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-right: 5px solid #2563eb !important;">
+      <div class="card-body py-3 px-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 18px;">
+              <i class="fa-solid fa-chart-pie"></i>
+            </div>
+            <div>
+              <h6 class="fw-bold mb-0 text-dark">التحليل الإحصائي السريع لنتائج التقرير</h6>
+              <small class="text-muted">ملخص أعداد ونسب مصادر التسجيل للطلاب المفلترين في هذا الكشف</small>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center flex-wrap gap-2">
+            <!-- Online / External Link Summary -->
+            <div class="bg-white border rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
+              <div class="rounded-circle bg-info-subtle text-info p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                <i class="fa-solid fa-globe fs-6"></i>
+              </div>
+              <div>
+                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي المسجلين من الرابط</small>
+                <div class="d-flex align-items-baseline gap-1">
+                  <span class="fs-5 fw-bold text-info"><%= stats.filtered_online_count %> طالب</span>
+                  <span class="badge bg-info-subtle text-info ms-1"><%= stats.filtered_online_percent %>%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Internal / School Summary -->
+            <div class="bg-white border rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
+              <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                <i class="fa-solid fa-school fs-6"></i>
+              </div>
+              <div>
+                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي المسجلين من المدرسة</small>
+                <div class="d-flex align-items-baseline gap-1">
+                  <span class="fs-5 fw-bold text-primary"><%= stats.filtered_internal_count %> طالب</span>
+                  <span class="badge bg-primary-subtle text-primary ms-1"><%= stats.filtered_internal_percent %>%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total Filtered -->
+            <div class="bg-white border rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
+              <div class="rounded-circle bg-dark-subtle text-dark p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                <i class="fa-solid fa-users fs-6"></i>
+              </div>
+              <div>
+                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي نتائج الكشف</small>
+                <span class="fs-5 fw-bold text-dark"><%= students.length %> طالب</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
 
@@ -255,6 +327,7 @@
               <th>رقم الجوال</th>
               <th>المرحلة والصف</th>
               <th>الفرع</th>
+              <th>مصدر التسجيل</th>
               <th>نتيجة المقابلة</th>
               <th>حالة المتابعة والتسجيل</th>
               <th>الملاحظات</th>
@@ -277,6 +350,17 @@
                   </td>
                   <td><span class="badge bg-light text-dark border"><%= s.phase || '' %> <%= s.grade ? ' - صف ' + s.grade : '' %></span></td>
                   <td><span class="badge bg-secondary-subtle text-secondary border"><%= s.branch || 'الندى' %></span></td>
+                  <td>
+                    <% if(s.registration_source === 'رابط خارجي'){ %>
+                      <span class="badge bg-info-subtle text-info border border-info px-2 py-1 fw-bold">
+                        <i class="fa-solid fa-globe me-1"></i> رابط خارجي
+                      </span>
+                    <% } else { %>
+                      <span class="badge bg-light text-secondary border px-2 py-1 fw-bold">
+                        <i class="fa-solid fa-school me-1"></i> تسجيل داخلي
+                      </span>
+                    <% } %>
+                  </td>
                   <td>
                     <% if(s.interview_result === 'مقبول'){ %>
                       <span class="badge-status bg-success-subtle text-success border border-success">
