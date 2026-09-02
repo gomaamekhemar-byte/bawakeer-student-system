@@ -188,6 +188,10 @@
                 <span class="search-text"><i class="fa-solid fa-magnifying-glass me-1"></i> بحث</span>
                 <span class="spinner-border spinner-border-sm d-none" role="status"></span>
               </button>
+              <a href="/apply" target="_blank" class="btn btn-outline-success fw-bold px-3 shadow-sm d-flex align-items-center gap-1" title="رابط التسجيل العام للحملات الإعلانية">
+                <i class="fa-solid fa-globe"></i>
+                <span>رابط التسجيل (أونلاين)</span>
+              </a>
               <% if(canManageStudents && (!locals.isReadOnlyYear)){ %>
               <button type="button" class="btn btn-warning text-white fw-bold px-3 shadow-sm" style="background:#f97316;border-color:#f97316;" data-bs-toggle="modal" data-bs-target="#studentModal" onclick="openNewStudentModal(event)">
                 <i class="fa-solid fa-user-plus me-1"></i> + طالب جديد
@@ -202,7 +206,8 @@
             <div class="col-md-2 col-6"><select name="branch_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">جميع الفروع</option><% branches.forEach(function(b){ %><option value="<%= b %>" <%= typeof branchFilter !== 'undefined' && branchFilter===b ? 'selected' : '' %>>فرع <%= b %></option><% }) %></select></div>
             <div class="col-md-2 col-6"><select name="phase_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">جميع المراحل</option><% phases.forEach(function(p){ %><option value="<%= p %>" <%= typeof phaseFilter !== 'undefined' && phaseFilter===p ? 'selected' : '' %>><%= p %></option><% }) %></select></div>
             <div class="col-md-3 col-6"><select name="interview_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">نتيجة المقابلة (الكل)</option><% interview_results.forEach(function(r){ %><option value="<%= r %>" <%= typeof interviewFilter !== 'undefined' && interviewFilter===r ? 'selected' : '' %>><%= r %></option><% }) %></select></div>
-            <div class="col-md-3 col-6"><select name="followup_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">حالة المتابعة (الكل)</option><% followup_statuses.forEach(function(s){ %><option value="<%= s %>" <%= typeof followupFilter !== 'undefined' && followupFilter===s ? 'selected' : '' %>><%= s %></option><% }) %></select></div>
+            <div class="col-md-2 col-6"><select name="followup_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">حالة المتابعة (الكل)</option><% followup_statuses.forEach(function(s){ %><option value="<%= s %>" <%= typeof followupFilter !== 'undefined' && followupFilter===s ? 'selected' : '' %>><%= s %></option><% }) %></select></div>
+            <div class="col-md-2 col-6"><select name="source_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">مصدر التسجيل (الكل)</option><option value="رابط خارجي" <%= typeof sourceFilter !== 'undefined' && sourceFilter==='رابط خارجي' ? 'selected' : '' %>>🌐 رابط خارجي</option><option value="تسجيل داخلي" <%= typeof sourceFilter !== 'undefined' && sourceFilter==='تسجيل داخلي' ? 'selected' : '' %>>🏫 تسجيل داخلي</option></select></div>
             <div class="col-auto"><a href="/students" class="btn btn-sm btn-light text-muted border"><i class="fa-solid fa-rotate-left"></i></a></div>
           </div>
         </form>
@@ -239,8 +244,9 @@
               <th>الفرع</th>
               <th style="min-width:155px;">نتيجة المقابلة</th>
               <th style="min-width:165px;">حالة المتابعة</th>
+              <th>المصدر</th>
               <th>الملاحظات</th>
-              <th class="text-center" style="width:145px;">الإجراءات</th>
+              <th class="text-center" style="width:165px;">الإجراءات</th>
             </tr>
           </thead>
           <tbody id="studentsTableBody">
@@ -331,9 +337,19 @@
                   </div>
                 <% } %>
               </td>
+              <td>
+                <% if(s.registration_source === 'رابط خارجي'){ %>
+                  <span class="badge bg-info-subtle text-info border border-info rounded-pill px-2 py-1 fw-bold" style="font-size:11px;" title="مسجل عبر الرابط العام أونلاين"><i class="fa-solid fa-globe me-1"></i> أونلاين</span>
+                <% } else { %>
+                  <span class="badge bg-secondary-subtle text-secondary border border-secondary rounded-pill px-2 py-1 fw-bold" style="font-size:11px;" title="مسجل حضورياً داخل المدارس"><i class="fa-solid fa-school me-1"></i> داخلي</span>
+                <% } %>
+              </td>
               <td class="text-truncate" style="max-width:160px;" title="<%= (s.display_notes || s.notes || '') %>"><small class="text-muted"><%= (s.display_notes || s.notes || '').trim() || '—' %></small></td>
               <td class="text-center">
                 <div class="btn-group btn-group-sm">
+                  <% if(s.phone && typeof getWhatsAppDirectUrl === 'function'){ %>
+                  <a href="<%= getWhatsAppDirectUrl(s.phone, 'أهلاً بك ولي أمر الطالب ' + s.name + ' في مدارس بواكير الأهلية') %>" target="_blank" class="btn btn-outline-success" title="محادثة واتساب سريعة"><i class="fa-brands fa-whatsapp"></i></a>
+                  <% } %>
                   <% if(canManageStudents){ %><a href="/students?edit_id=<%= s.id %>" class="btn btn-outline-primary" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></a><% } %>
                   
                   <!-- ATTACHMENTS BUTTON WITH COUNT BADGE -->
