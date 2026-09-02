@@ -134,50 +134,63 @@
       <div class="col-lg-8 col-md-10">
 
         <% if(typeof submitted !== 'undefined' && submitted){ %>
-          <!-- SUCCESS CONFIRMATION SCREEN -->
-          <div class="apply-card p-5 text-center shadow-lg">
-            <div class="mb-4">
-              <div class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center" style="width: 90px; height: 90px; font-size: 44px;">
-                <i class="fa-solid fa-circle-check"></i>
+          <!-- SUCCESS CONFIRMATION SCREEN (DYNAMIC ROUTING TO BRANCH WHATSAPP) -->
+          <div class="apply-card p-4 p-md-5 text-center shadow-lg">
+            
+            <!-- THANK YOU & CONFIRMATION BADGE -->
+            <div class="mb-4 position-relative d-inline-block">
+              <div class="rounded-circle text-white d-inline-flex align-items-center justify-content-center shadow-lg" style="width: 100px; height: 100px; font-size: 50px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: 4px solid #ffffff;">
+                <i class="fa-solid fa-check"></i>
               </div>
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark fs-6 shadow">
+                <i class="fa-solid fa-star"></i> تم بنجاح
+              </span>
             </div>
             
-            <h3 class="fw-bold text-dark mb-2">تم استلام طلب التسجيل بنجاح! 🎉</h3>
-            <p class="text-muted fs-6 mb-4">شكراً لثقتكم بمدارس بواكير الأهلية. تم تسجيل بيانات الطالب/ـة بنجاح وسيتم التواصل معكم لتحديد موعد المقابلة.</p>
+            <h3 class="fw-bold text-dark mb-2">شكراً لكم! تم استلام طلب التسجيل بنجاح 🎉</h3>
+            <p class="text-muted fs-6 mb-4">أهلاً بكم في عائلة <strong>مدارس بواكير الأهلية</strong>. تم تسجيل بيانات الطالب/ـة بنجاح، ويسرنا تواصلكم لمتابعة موعد المقابلة.</p>
             
-            <div class="card bg-light border-0 rounded-4 p-3 mb-4 text-start">
-              <div class="row g-2">
+            <!-- STUDENT & BRANCH SUMMARY CARD -->
+            <div class="card bg-light border-0 rounded-4 p-4 mb-4 text-start shadow-sm">
+              <div class="row g-3">
                 <div class="col-sm-6">
-                  <small class="text-muted d-block">اسم الطالب</small>
+                  <small class="text-muted d-block fw-bold"><i class="fa-solid fa-user-graduate me-1 text-primary"></i> اسم الطالب</small>
                   <strong class="text-dark fs-6"><%= student.name %></strong>
                 </div>
                 <div class="col-sm-6">
-                  <small class="text-muted d-block">الفرع المطلوب</small>
-                  <strong class="text-primary fs-6">فرع <%= student.branch %></strong>
+                  <small class="text-muted d-block fw-bold"><i class="fa-solid fa-building text-primary me-1"></i> الفرع المطلوب</small>
+                  <span class="badge bg-primary fs-6 px-3 py-1">فرع <%= student.branch %></span>
                 </div>
                 <div class="col-sm-6">
-                  <small class="text-muted d-block">المرحلة والصف</small>
+                  <small class="text-muted d-block fw-bold"><i class="fa-solid fa-layer-group text-primary me-1"></i> المرحلة والصف</small>
                   <strong class="text-dark"><%= student.phase %> - <%= student.grade ? 'صف ' + student.grade : '' %></strong>
                 </div>
                 <div class="col-sm-6">
-                  <small class="text-muted d-block">رقم جوال ولي الأمر</small>
+                  <small class="text-muted d-block fw-bold"><i class="fa-solid fa-mobile-screen text-primary me-1"></i> رقم جوال ولي الأمر</small>
                   <strong class="text-dark" style="direction:ltr;"><%= student.phone %></strong>
                 </div>
               </div>
             </div>
 
-            <div class="alert alert-success d-flex align-items-center justify-content-center gap-2 py-3 rounded-3 mb-4" role="alert">
+            <!-- AUTOMATED CONFIRMATION ALERT -->
+            <div class="alert alert-success d-flex align-items-center justify-content-center gap-2 py-3 rounded-3 mb-4 shadow-sm" role="alert">
               <i class="fa-brands fa-whatsapp fs-4 text-success"></i>
               <span>تم إرسال رسالة تأكيد آلية إلى تطبيق واتساب على الرقم المسجل.</span>
             </div>
 
-            <div class="d-flex flex-wrap gap-3 justify-content-center">
-              <% if(typeof whatsappUrl !== 'undefined' && whatsappUrl){ %>
-                <a href="<%= whatsappUrl %>" target="_blank" class="btn btn-whatsapp shadow-sm">
-                  <i class="fa-brands fa-whatsapp fs-5"></i>
-                  <span>متابعة الطلب عبر واتساب</span>
-                </a>
-              <% } %>
+            <!-- PROMINENT DYNAMIC 'متابعة الطلب' BUTTON LINKED TO BRANCH WHATSAPP -->
+            <div class="mb-4">
+              <% const targetWhatsAppLink = (typeof branchWhatsAppUrl !== 'undefined' && branchWhatsAppUrl) ? branchWhatsAppUrl : (typeof whatsappUrl !== 'undefined' ? whatsappUrl : '#'); %>
+              <a href="<%= targetWhatsAppLink %>" target="_blank" class="btn btn-success btn-lg px-5 py-3 fw-bold rounded-pill shadow-lg d-inline-flex align-items-center justify-content-center gap-2" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); font-size: 18px; transition: all 0.2s;">
+                <i class="fa-brands fa-whatsapp fs-3"></i>
+                <span>متابعة الطلب</span>
+              </a>
+              <div class="mt-2 text-muted small">
+                <i class="fa-solid fa-headset me-1 text-success"></i> اضغط على زر <strong>"متابعة الطلب"</strong> لبدء محادثة مباشرة مع مسؤولي القبول والتسجيل بـ <strong>(فرع <%= student.branch %>)</strong> عبر واتساب.
+              </div>
+            </div>
+
+            <div class="pt-3 border-top">
               <a href="/apply" class="btn btn-outline-primary px-4 py-2 rounded-3 fw-bold">
                 <i class="fa-solid fa-plus me-1"></i> تسجيل طالب آخر
               </a>
