@@ -344,135 +344,7 @@ router.post("/api/quick_update_status", requireAuth, withUser, async (req, res) 
   }
 
     // Update time tracking metadata
-  const existingTimeMeta = parseTimeTrackMeta(existing.notes);
-  const nowIso = new Date().toISOString();
-  if (!existingTimeMeta.init) existingTimeMeta.init = existing.created_at || nowIso;
-  if (field === "interview_result" && value && value !== "في انتظار المقابلة") {
-    existingTimeMeta.interview = nowIso;
-  }
-  if (field === "followup_status" && value && value !== "في انتظار المقابلة" && value !== "في انتظار التسجيل") {
-    existingTimeMeta.registration = nowIso;
-  }
-  updateData.notes = encodeTimeTrackMeta(existing.notes, existingTimeMeta);
-  const fieldChanges = computeFieldChanges(existing, updateData);
-  const updated = await updateStudent(parseInt(student_id), updateData);
-  if (updated) {
-    const fieldLabel = field === "followup_status" ? "حالة المتابعة" : "نتيجة المقابلة";
-    let details = "تم تحديث " + fieldLabel + " للطالب " + existing.name + " إلى: " + (value || "غير محدد");
-    if (autoFollowupStatus) {
-      details += " (وتحديث حالة التسجيل تلقائياً إلى " + autoFollowupStatus + ")";
-    }
-    await addStudentHistory(parseInt(student_id), "student_status_updated", details, currentUser.username, fieldChanges);
-    await addHistory("student_status_updated", details, currentUser.username);
-    return res.json({
-      success: true,
-      message: "تم التحديث بنجاح" + (autoFollowupStatus ? (" وتم تحديث حالة التسجيل إلى: " + autoFollowupStatus) : ""),
-      autoFollowupStatus: autoFollowupStatus
-    });
-  }
-  return res.status(500).json({ success: false, message: "حدث خطأ أثناء التحديث" });
-});
-
-// POST /students - Create or Update Student
-router.post("/students", requireAuth, withUser, upload.array("attachments", 10), async (req, res) => {
-  const currentUser = req.currentUser;
-  if (!currentUser) return res.redirect("/login");
-
-  if (req.isReadOnlyYear) {
-    return res.redirect("/students?msg=" + encodeURIComponent("عفواً، لا يمكن إضافة أو تعديل البيانات في عام دراسي مؤرشف (وضع القراءة فقط)"));
-  }
-  const activeBranch = (req.cookies && req.cookies.active_branch) ? decodeURIComponent(req.cookies.active_branch) : "";
-  const canManageStudents = userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students");
-  const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
-  const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
-  const statusUpdateMode = req.body.status_update === "1";
-
-  if (!canManageStudents) return res.redirect("/students?msg=" + encodeURIComponent("ليس لديك صلاحية لإضافة أو تعديل الطلاب"));
-
-  const studentId = (req.body.student_id || "").trim();
-  const currentId = studentId ? parseInt(studentId) : null;
-
-  const name = (req.body.name || "").trim();
-  const phone = (req.body.phone || "").trim();
-  const mother_phone = (req.body.mother_phone || "").trim();
-  const date_of_birth = (req.body.date_of_birth || "").trim();
-  const nationality = (req.body.nationality || "").trim();
-  const neighborhood = (req.body.neighborhood || "").trim();
-  const interview_date = (req.body.interview_date || "").trim();
-  const interview_result = (req.body.interview_result || "").trim();
-  const interview_reason = (req.body.interview_reason || "").trim();
-  const followup_status = (req.body.followup_status || "").trim();
-  const registration_reason = (req.body.registration_reason || "").trim();
-  const student_type = (req.body.student_type || "").trim();
-  const track = (req.body.track || "").trim();
-  const phase = (req.body.phase || "").trim();
-  const grade = (req.body.grade || "").trim();
-  const notes = (req.body.notes || "").trim();
-  const student_branch = (req.body.student_branch || "").trim();
-  const attachment_title = (req.body.attachment_title || "").trim();
-  const uploadedFiles = await uploadFiles(req.files || [], attachment_title);
-
-  const allStudents = await getStudents();
-  const otherStudents = currentId ? allStudents.filter(s => s.id !== currentId) : allStudents;
-
-  if (name) {
-    const nameLower = name.toLowerCase();
-    const exactDuplicate = otherStudents.find(s => {
-      const matchName = (s.name || "").trim().toLowerCase() === nameLower;
-      const matchPhone = phone && s.phone === phone;
-      return matchName && matchPhone;
-    });
-
-    if (exactDuplicate) {
-      return res.redirect("/students?msg=" + encodeURIComponent("⚠️ يوجد طالب آخر بنفس الاسم ونفس رقم الجوال مسجل مسبقاً"));
-    }
-  }
-
-  const siblingStudent = otherStudents.find(s => phone && s.phone === phone);
-
-  if (currentId) {
-    // UPDATE logic
-    const existing = await getStudentById(currentId);
-    if (!existing) return res.redirect("/students");
-    const existingAttachments = Array.isArray(existing.attachments) ? existing.attachments : [];
-    const newAttachments = [...existingAttachments, ...uploadedFiles];
-
-    let finalNotes = notes || existing.notes || "";
-    if (mother_phone && !finalNotes.includes("جوال الأم:")) {
-      finalNotes = (finalNotes ? finalNotes + " | " : "") + "جوال الأم: " + mother_phone;
-    }
-
-    // Field-level permission enforcement on Edit
-    let finalInterviewResult = existing.interview_result || "في انتظار المقابلة";
-    let finalFollowupStatus = existing.followup_status || "في انتظار المقابلة";
-
-    if (canManageInterviews && interview_result) {
-      finalInterviewResult = interview_result;
-      // Automated status workflow:
-      if (interview_result === "مقبول" && existing.interview_result !== "مقبول") {
-        finalFollowupStatus = "في انتظار التسجيل";
-      } else if (interview_result === "غير مقبول" && existing.interview_result !== "غير مقبول") {
-        finalFollowupStatus = "لم يجتز المقابلة";
-      }
-    }
-
-    if (canManageRegistration && followup_status) {
-      // If interview automated transition didn't override, apply registration manager input
-      if (!canManageInterviews || (interview_result === existing.interview_result)) {
-        finalFollowupStatus = followup_status;
-      }
-    }
-    
-        const existingTimeMeta = parseTimeTrackMeta(existing.notes);
-    const nowIso = new Date().toISOString();
-    if (!existingTimeMeta.init) existingTimeMeta.init = existing.created_at || nowIso;
-    if (finalInterviewResult && finalInterviewResult !== "في انتظار المقابلة" && (!existingTimeMeta.interview || finalInterviewResult !== existing.interview_result)) {
-      existingTimeMeta.interview = nowIso;
-    }
-    if (finalFollowupStatus && finalFollowupStatus !== "في انتظار المقابلة" && finalFollowupStatus !== "في انتظار التسجيل" && (!existingTimeMeta.registration || finalFollowupStatus !== existing.followup_status)) {
-      existingTimeMeta.registration = nowIso;
-    }
-    const finalNotesWithTime = encodeTimeTrackMeta(finalNotes, existingTimeMeta);
+  
     const newData = {
       name: name || existing.name,
       phone: phone || existing.phone,
@@ -488,7 +360,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       track: track || existing.track,
       phase: phase || existing.phase,
       grade: grade || existing.grade,
-      notes: finalNotesWithTime,
+      notes: cleanNotesForDisplay(finalNotes),
       branch: student_branch || existing.branch || activeBranch,
       attachments: newAttachments,
     };
@@ -516,18 +388,8 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     // followup_status = 'في انتظار المقابلة'
     if (!name) return res.redirect("/students?msg=" + encodeURIComponent("يرجى إدخال اسم الطالب"));
     
-    let finalNotes = notes || "";
-    if (mother_phone) {
-      finalNotes = (finalNotes ? finalNotes + " | " : "") + "جوال الأم: " + mother_phone;
-    }
-
-        const nowIso = new Date().toISOString();
-    const timeTrackMeta = {
-      init: nowIso,
-      interview: (interview_result && interview_result !== "في انتظار المقابلة") ? nowIso : "",
-      registration: (followup_status && followup_status !== "في انتظار المقابلة" && followup_status !== "في انتظار التسجيل") ? nowIso : ""
-    };
-    const finalNotesWithTime = encodeTimeTrackMeta(finalNotes, timeTrackMeta);
+    // Keep notes strictly empty unless manually written by user
+    const finalNotes = cleanNotesForDisplay(notes || "");
     const newStudent = {
       name, phone, date_of_birth, nationality, neighborhood,
       interview_date,
@@ -539,7 +401,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       track: track || "عام",
       phase: phase || "ابتدائي",
       grade: grade || "1",
-      notes: finalNotesWithTime,
+      notes: finalNotes,
       branch: student_branch || activeBranch || "الندى",
       academic_year_id: (req.sessionYear && req.sessionYear.id) ? req.sessionYear.id : (activeYear ? activeYear.id : null),
       attachments: uploadedFiles,
