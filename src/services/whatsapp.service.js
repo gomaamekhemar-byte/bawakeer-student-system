@@ -1,14 +1,12 @@
 const https = require("https");
+const { getExternalSettings } = require("./settings.service");
 
 /**
- * WhatsApp Messaging & Automation Service
- * Supports WhatsApp Cloud API, UltraMsg, Twilio, and Instant WhatsApp Web links
+ * Format phone number to international WhatsApp format
  */
-
 function formatPhoneNumber(phone) {
   if (!phone) return "";
   let clean = phone.replace(/\D/g, "");
-  // If starts with 05 (Saudi mobile), convert to 9665
   if (clean.startsWith("05") && clean.length === 10) {
     clean = "966" + clean.substring(1);
   } else if (clean.startsWith("5") && clean.length === 9) {
@@ -17,8 +15,31 @@ function formatPhoneNumber(phone) {
   return clean;
 }
 
-function generateWelcomeMessage(studentName, branchName) {
-  return `أهلاً بك في مدارس بواكير الأهلية. تم استلام طلب تسجيل الطالب/ـة [${studentName}] بنجاح في فرع [${branchName}]. سيتم التواصل معكم قريباً لتحديد موعد المقابلة.`;
+/**
+ * Dynamic Template Formatting with Intelligent Gender Substitution
+ */
+function formatWhatsAppMessage(template, studentData = {}) {
+  let msg = template || "أهلاً بكم في مدارس بواكير الأهلية. تم استلام طلب تسجيل {نوع_الطالب} [{اسم_الطالب}] بنجاح في فرع [{الفرع}]. سيتم التواصل معكم قريباً لتحديد موعد المقابلة.";
+
+  const isFemale = (studentData.student_type || "").trim() === "بنات";
+
+  // Gender-based replacements
+  const studentTypeLabel = isFemale ? "الطالبة" : "الطالب";
+  const childPronoun = isFemale ? "ابنتكم" : "ابنكم";
+  const registeredWord = isFemale ? "المسجلة" : "المسجل";
+
+  msg = msg.replace(/{نوع_الطالب}/g, studentTypeLabel);
+  msg = msg.replace(/{ضمير_المخاطب}/g, childPronoun);
+  msg = msg.replace(/{المسجل}/g, registeredWord);
+
+  // General field replacements
+  msg = msg.replace(/{اسم_الطالب}/g, studentData.name || "");
+  msg = msg.replace(/{الفرع}/g, studentData.branch || "");
+  msg = msg.replace(/{المرحلة}/g, studentData.phase || "");
+  msg = msg.replace(/{الصف}/g, studentData.grade ? `الصف ${studentData.grade}` : "");
+  msg = msg.replace(/{العام_الدراسي}/g, studentData.academic_year_name || "");
+
+  return msg;
 }
 
 function getWhatsAppDirectUrl(phone, message) {
@@ -28,22 +49,24 @@ function getWhatsAppDirectUrl(phone, message) {
   return `https://api.whatsapp.com/send?phone=${formatted}&text=${encodedMsg}`;
 }
 
-async function sendWhatsAppNotification(studentName, branchName, phone) {
+async function sendWhatsAppNotification(studentData, customPhone) {
+  const settings = await getExternalSettings();
+  const phone = customPhone || (typeof studentData === 'object' ? studentData.phone : '');
   const formattedPhone = formatPhoneNumber(phone);
-  const messageText = generateWelcomeMessage(studentName, branchName);
-  
-  // 1. If WhatsApp Cloud API credentials or Webhook URL are configured
+
+  const messageText = formatWhatsAppMessage(settings.whatsapp_template, typeof studentData === 'object' ? studentData : { name: studentData });
+
+  // If webhook is configured
   const webhookUrl = process.env.WHATSAPP_WEBHOOK_URL;
   const apiKey = process.env.WHATSAPP_API_KEY;
-  const instanceId = process.env.WHATSAPP_INSTANCE_ID;
 
   if (webhookUrl) {
     try {
       const payload = JSON.stringify({
         phone: formattedPhone,
         message: messageText,
-        student_name: studentName,
-        branch: branchName,
+        student_name: studentData.name || "",
+        branch: studentData.branch || "",
         timestamp: new Date().toISOString()
       });
 
@@ -76,7 +99,7 @@ async function sendWhatsAppNotification(studentName, branchName, phone) {
 
 module.exports = {
   formatPhoneNumber,
-  generateWelcomeMessage,
+  formatWhatsAppMessage,
   getWhatsAppDirectUrl,
   sendWhatsAppNotification
 };
