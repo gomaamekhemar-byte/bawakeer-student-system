@@ -10,6 +10,18 @@ const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRA
 const { cleanNotesForDisplay } = require("../utils/timeline");
 const XLSX = require("xlsx");
 
+function matchSourceFilter(student, sourceFilter) {
+  if (!sourceFilter || sourceFilter === "الكل") return true;
+  const isOnline = student.registration_source === "رابط خارجي";
+  if (sourceFilter === "رابط خارجي" || sourceFilter === "التسجيل الخارجي (الرابط)" || sourceFilter === "external") {
+    return isOnline;
+  }
+  if (sourceFilter === "تسجيل داخلي" || sourceFilter === "التسجيل الداخلي (المدرسة)" || sourceFilter === "internal") {
+    return !isOnline;
+  }
+  return true;
+}
+
 // GET /reports - Reports & Export Center View
 router.get("/reports", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
@@ -59,9 +71,15 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     if (phaseFilter && s.phase !== phaseFilter) return false;
     if (gradeFilter && s.grade !== gradeFilter) return false;
     if (branchFilter && s.branch !== branchFilter) return false;
-    if (sourceFilter && s.registration_source !== sourceFilter) return false;
+    if (!matchSourceFilter(s, sourceFilter)) return false;
     return true;
   });
+
+  const filtered_online_count = filtered.filter(s => s.registration_source === "رابط خارجي").length;
+  const filtered_internal_count = filtered.filter(s => s.registration_source !== "رابط خارجي").length;
+  const filtered_total = filtered.length;
+  const filtered_online_percent = filtered_total > 0 ? Math.round((filtered_online_count / filtered_total) * 1000) / 10 : 0;
+  const filtered_internal_percent = filtered_total > 0 ? Math.round((filtered_internal_count / filtered_total) * 1000) / 10 : 0;
 
   const stats = {
     total: students.length,
@@ -74,6 +92,10 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     pending_interview: students.filter(s => s.interview_result === "في انتظار المقابلة").length,
     online_count: students.filter(s => s.registration_source === "رابط خارجي").length,
     internal_count: students.filter(s => s.registration_source !== "رابط خارجي").length,
+    filtered_online_count,
+    filtered_internal_count,
+    filtered_online_percent,
+    filtered_internal_percent
   };
 
   res.render("reports", {
@@ -98,15 +120,11 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     grades: GRADES,
     tracks: TRACKS,
     nationalities: NATIONALITIES,
-    canManageStudents: userCan(currentUser, "admin", "manager", "employee") && userHasPermission(currentUser, "manage_students"),
-    canManageUsers: userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_users"),
-    canManageYears: userCan(currentUser, "admin") && userHasPermission(currentUser, "manage_years"),
-    canViewAnalytics: userHasPermission(currentUser, "view_analytics"),
     roles: ROLES
   });
 });
 
-// GET /export/excel - Export students matching filters as 100% valid XLSX
+// GET /export/excel - Excel export
 router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userHasPermission(currentUser, "export_reports")) return res.redirect("/");
@@ -133,7 +151,7 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   if (followupFilter) students = students.filter(s => s.followup_status === followupFilter);
   if (phaseFilter) students = students.filter(s => s.phase === phaseFilter);
   if (branchFilter) students = students.filter(s => s.branch === branchFilter);
-  if (sourceFilter) students = students.filter(s => s.registration_source === sourceFilter);
+  if (sourceFilter) students = students.filter(s => matchSourceFilter(s, sourceFilter));
 
   const rows = students.map((s, idx) => ({
     "م": idx + 1,
@@ -163,14 +181,14 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   ws["!cols"] = [
     { wch: 5 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 14 },
     { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 8 }, { wch: 10 },
-    { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 16 }, { wch: 22 }, { wch: 18 },
+    { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 18 },
     { wch: 20 }, { wch: 25 }, { wch: 12 }
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "كشف الطلاب");
 
   const buf = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
-  await addHistory("export_excel", "تم تصدير كشف الطلاب بصيغة Excel", currentUser.username);
+  await addHistory("export_excel", "تم تصدير كشف الطلاب بصيغة Excel مع فلترة مصادر التسجيل", currentUser.username);
 
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", 'attachment; filename="bawakeer_students.xlsx"');
@@ -206,9 +224,9 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   if (followupFilter) students = students.filter(s => s.followup_status === followupFilter);
   if (phaseFilter) students = students.filter(s => s.phase === phaseFilter);
   if (branchFilter) students = students.filter(s => s.branch === branchFilter);
-  if (sourceFilter) students = students.filter(s => s.registration_source === sourceFilter);
+  if (sourceFilter) students = students.filter(s => matchSourceFilter(s, sourceFilter));
 
-  await addHistory("export_pdf", "تم عرض تقرير كشف الطلاب للطباعة", currentUser.username);
+  await addHistory("export_pdf", "تم عرض تقرير كشف الطلاب للطباعة مع فلترة مصادر التسجيل", currentUser.username);
 
   let rows = "";
   students.forEach((s, idx) => {
@@ -227,12 +245,15 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
       <td>${s.nationality || "سعودي"}</td>
       <td>${s.phase || "—"} - ${s.grade ? "صف " + s.grade : ""}</td>
       <td>${s.branch || "—"}</td>
-      <td style="font-weight:600; color:${s.registration_source === 'رابط خارجي' ? '#0891b2' : '#64748b'};">${s.registration_source || "تسجيل داخلي"}</td>
+      <td style="font-weight:700; color:${s.registration_source === 'رابط خارجي' ? '#0891b2' : '#2563eb'};">${s.registration_source === 'رابط خارجي' ? 'رابط خارجي' : 'تسجيل داخلي'}</td>
       <td class="${intCls}">${s.interview_result || "لم يقابل"}</td>
       <td class="${folCls}">${s.followup_status || "غير محدد"}</td>
       <td>${cleanNotesForDisplay(s.notes || "") || "—"}</td>
     </tr>`;
   });
+
+  const onlineCount = students.filter(s => s.registration_source === "رابط خارجي").length;
+  const internalCount = students.filter(s => s.registration_source !== "رابط خارجي").length;
 
   const html = `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -280,17 +301,18 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   <div class="print-header">
     <h1>📋 تقرير طلاب مدارس بواكير الأهلية</h1>
     <div class="meta">
-      <div>إجمالي الطلاب: ${students.length}</div>
+      <div>إجمالي كشف التقرير: ${students.length} طالب</div>
+      <div>مصدر التسجيل: ${sourceFilter || "جميع المصادر"}</div>
       <div>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-SA")}</div>
     </div>
   </div>
   <div class="summary-cards">
     <div class="summary-card"><div class="num">${students.length}</div><div class="lbl">إجمالي الطلاب</div></div>
     <div class="summary-card"><div class="num">${students.filter(s => s.interview_result === "مقبول").length}</div><div class="lbl">مقبول</div></div>
-    <div class="summary-card"><div class="num">${students.filter(s => s.interview_result === "غير مقبول").length}</div><div class="lbl">غير مقبول</div></div>
     <div class="summary-card"><div class="num">${students.filter(s => s.followup_status === "تم التسجيل").length}</div><div class="lbl">تم التسجيل</div></div>
-    <div class="summary-card"><div class="num">${students.filter(s => s.registration_source === "رابط خارجي").length}</div><div class="lbl">أونلاين (إعلانات)</div></div>
-    <div class="summary-card"><div class="num">${students.filter(s => s.registration_source !== "رابط خارجي").length}</div><div class="lbl">تسجيل حضوري</div></div>
+    <div class="summary-card"><div class="num" style="color:#0891b2;">${onlineCount}</div><div class="lbl">التسجيل الخارجي (الرابط)</div></div>
+    <div class="summary-card"><div class="num" style="color:#2563eb;">${internalCount}</div><div class="lbl">التسجيل الداخلي (المدرسة)</div></div>
+    <div class="summary-card"><div class="num" style="color:#d97706;">${students.filter(s => s.interview_result === "في انتظار المقابلة" || s.followup_status === "في انتظار التسجيل").length}</div><div class="lbl">قيد المتابعة والانتظار</div></div>
   </div>
   <div class="table-wrapper">
     <table>
@@ -302,7 +324,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
           <th>الجنسية</th>
           <th>المرحلة والصف</th>
           <th>الفرع</th>
-          <th>المصدر</th>
+          <th>مصدر التسجيل</th>
           <th>نتيجة المقابلة</th>
           <th>حالة المتابعة</th>
           <th>ملاحظات</th>
