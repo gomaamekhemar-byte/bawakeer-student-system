@@ -331,7 +331,7 @@
                   </div>
                 <% } %>
               </td>
-              <td class="text-truncate" style="max-width:160px;" title="<%= s.notes || '' %>"><small class="text-muted"><%= s.notes || '—' %></small></td>
+              <td class="text-truncate" style="max-width:160px;" title="<%= (s.display_notes || s.notes || '') %>"><small class="text-muted"><%= (s.display_notes || s.notes || '').trim() || '—' %></small></td>
               <td class="text-center">
                 <div class="btn-group btn-group-sm">
                   <% if(canManageStudents){ %><a href="/students?edit_id=<%= s.id %>" class="btn btn-outline-primary" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></a><% } %>
@@ -596,7 +596,7 @@
               <!-- ملاحظات -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small">ملاحظات إضافية</label>
-                <textarea name="notes" class="form-control" rows="2" placeholder="اكتب ملاحظات أو تفاصيل..."><%= editingStudent ? editingStudent.notes : '' %></textarea>
+                <textarea name="notes" class="form-control" rows="2" placeholder="اكتب ملاحظات أو تفاصيل..."><%= editingStudent ? (editingStudent.display_notes || editingStudent.notes || '') : '' %></textarea>
               </div>
 
               <!-- مرفقات مع اسم المرفق الإجباري عند اختيار ملف -->
