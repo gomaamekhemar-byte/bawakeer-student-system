@@ -96,6 +96,7 @@ app.use("/", require("./routes/academic.routes"));
 app.use("/", require("./routes/analytics.routes"));
 app.use("/", require("./routes/uploads.routes"));
 app.use("/", require("./routes/setup.routes"));
+app.use("/", require("./routes/settings.routes"));
 
 // =============================================
 // Error Handlers
