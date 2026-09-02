@@ -8,6 +8,7 @@ const { getBranchNames } = require("../services/branches.service");
 const { getActiveYear, getAcademicYears } = require("../services/academic_years.service");
 const { addHistory, addStudentHistory, computeFieldChanges } = require("../services/history.service");
 const { sendWhatsAppNotification, getWhatsAppDirectUrl } = require("../services/whatsapp.service");
+const { getExternalSettings } = require("../services/settings.service");
 const supabase = require("../config/supabase");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES } = require("../utils/constants");
 const { cleanNotesForDisplay } = require("../utils/timeline");
@@ -65,7 +66,8 @@ async function uploadFiles(files, customTitle) {
 router.get("/apply", async (req, res) => {
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
-  res.render("apply", { branches, activeYear, submitted: false, error: null });
+  const settings = await getExternalSettings();
+  res.render("apply", { branches, activeYear, settings, submitted: false, error: null });
 });
 
 router.get("/register", (req, res) => res.redirect("/apply"));
@@ -73,6 +75,11 @@ router.get("/register", (req, res) => res.redirect("/apply"));
 router.post("/apply", async (req, res) => {
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
+  const settings = await getExternalSettings();
+
+  if (settings.is_portal_open === false) {
+    return res.render("apply", { branches, activeYear, settings, submitted: false, error: null });
+  }
 
   // 1. Anti-Spam Honeypot check
   if (req.body.website_trap) {
@@ -138,11 +145,12 @@ router.post("/apply", async (req, res) => {
   await addHistory("online_application", `طلب تسجيل جديد عبر الإنترنت للطالب ${name} بفرع ${student_branch}`, "بوابة التسجيل العامة");
 
   // Send WhatsApp confirmation
-  const waResult = await sendWhatsAppNotification(name, student_branch, phone);
+  const waResult = await sendWhatsAppNotification(created, phone);
 
   return res.render("apply", {
     branches,
     activeYear,
+    settings,
     submitted: true,
     student: created,
     whatsappUrl: waResult.directUrl,
