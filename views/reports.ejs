@@ -168,11 +168,11 @@
 
           <!-- PROMINENT EXPORT ACTION BUTTONS -->
           <div class="d-flex gap-2">
-            <a href="/export/excel?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>" class="btn btn-success px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <a href="/export/excel?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&grade_filter=<%= typeof gradeFilter !== 'undefined' ? gradeFilter : '' %>&student_type_filter=<%= typeof studentTypeFilter !== 'undefined' ? studentTypeFilter : '' %>&track_filter=<%= typeof trackFilter !== 'undefined' ? trackFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>" class="btn btn-success px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-excel fs-5"></i>
               <span>تصدير Excel</span>
             </a>
-            <a href="/export/pdf?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>" target="_blank" class="btn btn-danger px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <a href="/export/pdf?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&grade_filter=<%= typeof gradeFilter !== 'undefined' ? gradeFilter : '' %>&student_type_filter=<%= typeof studentTypeFilter !== 'undefined' ? studentTypeFilter : '' %>&track_filter=<%= typeof trackFilter !== 'undefined' ? trackFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>" target="_blank" class="btn btn-danger px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-pdf fs-5"></i>
               <span>طباعة PDF</span>
             </a>
@@ -182,9 +182,9 @@
         <form method="get" action="/reports">
           <div class="row g-3 align-items-end">
             <!-- 1. Branch -->
-            <div class="col-lg col-md-4 col-6">
+            <div class="col-xl-3 col-md-4 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">الفرع</label>
-              <select name="branch_filter" class="form-select" onchange="this.form.submit()">
+              <select name="branch_filter" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">جميع الفروع</option>
                 <% branches.forEach(function(b){ %>
                   <option value="<%= b %>" <%= typeof branchFilter !== 'undefined' && branchFilter===b ? 'selected' : '' %>>فرع <%= b %></option>
@@ -193,9 +193,9 @@
             </div>
 
             <!-- 2. Phase -->
-            <div class="col-lg col-md-4 col-6">
-              <label class="form-label fw-bold text-secondary small mb-1">المرحلة الدراسية</label>
-              <select name="phase_filter" class="form-select" onchange="this.form.submit()">
+            <div class="col-xl-2 col-md-4 col-6">
+              <label class="form-label fw-bold text-secondary small mb-1">المرحلة</label>
+              <select name="phase_filter" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">جميع المراحل</option>
                 <% phases.forEach(function(p){ %>
                   <option value="<%= p %>" <%= typeof phaseFilter !== 'undefined' && phaseFilter===p ? 'selected' : '' %>><%= p %></option>
@@ -203,10 +203,41 @@
               </select>
             </div>
 
-            <!-- 3. Interview Result -->
-            <div class="col-lg col-md-4 col-6">
+            <!-- 3. Grade -->
+            <div class="col-xl-2 col-md-4 col-6">
+              <label class="form-label fw-bold text-secondary small mb-1">الصف</label>
+              <select name="grade_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">جميع الصفوف</option>
+                <% grades.forEach(function(g){ %>
+                  <option value="<%= g %>" <%= typeof gradeFilter !== 'undefined' && gradeFilter===g ? 'selected' : '' %>>الصف <%= g %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <!-- 4. Student Type -->
+            <div class="col-xl-2 col-md-4 col-6">
+              <label class="form-label fw-bold text-secondary small mb-1">النوع</label>
+              <select name="student_type_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">الكل (بنين/بنات)</option>
+                <option value="بنين" <%= typeof studentTypeFilter !== 'undefined' && studentTypeFilter==='بنين' ? 'selected' : '' %>>👦 بنين</option>
+                <option value="بنات" <%= typeof studentTypeFilter !== 'undefined' && studentTypeFilter==='بنات' ? 'selected' : '' %>>👧 بنات</option>
+              </select>
+            </div>
+
+            <!-- 5. Track -->
+            <div class="col-xl-3 col-md-4 col-6">
+              <label class="form-label fw-bold text-secondary small mb-1">المسار التعليمي</label>
+              <select name="track_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">جميع المسارات</option>
+                <option value="عام" <%= typeof trackFilter !== 'undefined' && trackFilter==='عام' ? 'selected' : '' %>>مسار عام</option>
+                <option value="تحفيظ" <%= typeof trackFilter !== 'undefined' && trackFilter==='تحفيظ' ? 'selected' : '' %>>مسار تحفيظ</option>
+              </select>
+            </div>
+
+            <!-- 6. Interview Result -->
+            <div class="col-xl-3 col-md-4 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">نتيجة المقابلة</label>
-              <select name="interview_filter" class="form-select" onchange="this.form.submit()">
+              <select name="interview_filter" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">جميع النتائج (الكل)</option>
                 <% interview_results.forEach(function(r){ %>
                   <option value="<%= r %>" <%= typeof interviewFilter !== 'undefined' && interviewFilter===r ? 'selected' : '' %>><%= r %></option>
@@ -214,10 +245,10 @@
               </select>
             </div>
 
-            <!-- 4. Followup Status -->
-            <div class="col-lg col-md-4 col-6">
+            <!-- 7. Followup Status -->
+            <div class="col-xl-3 col-md-4 col-6">
               <label class="form-label fw-bold text-secondary small mb-1">حالة المتابعة</label>
-              <select name="followup_filter" class="form-select" onchange="this.form.submit()">
+              <select name="followup_filter" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">جميع الحالات (الكل)</option>
                 <% followup_statuses.forEach(function(s){ %>
                   <option value="<%= s %>" <%= typeof followupFilter !== 'undefined' && followupFilter===s ? 'selected' : '' %>><%= s %></option>
@@ -225,12 +256,12 @@
               </select>
             </div>
 
-            <!-- 5. Registration Source Filter (FEATURE 1) -->
-            <div class="col-lg col-md-4 col-12">
+            <!-- 8. Source Filter -->
+            <div class="col-xl-4 col-md-4 col-12">
               <label class="form-label fw-bold text-secondary small mb-1">
                 <i class="fa-solid fa-bullseye text-primary me-1"></i> مصدر التسجيل
               </label>
-              <select name="source_filter" class="form-select fw-bold border-primary-subtle shadow-sm" onchange="this.form.submit()">
+              <select name="source_filter" class="form-select form-select-sm fw-bold border-primary-subtle shadow-sm" onchange="this.form.submit()">
                 <option value="">الكل</option>
                 <option value="التسجيل الخارجي (الرابط)" <%= (typeof sourceFilter !== 'undefined' && (sourceFilter === 'التسجيل الخارجي (الرابط)' || sourceFilter === 'رابط خارجي')) ? 'selected' : '' %>>🌐 التسجيل الخارجي (الرابط)</option>
                 <option value="التسجيل الداخلي (المدرسة)" <%= (typeof sourceFilter !== 'undefined' && (sourceFilter === 'التسجيل الداخلي (المدرسة)' || sourceFilter === 'تسجيل داخلي')) ? 'selected' : '' %>>🏫 التسجيل الداخلي (المدرسة)</option>
@@ -248,79 +279,96 @@
       </div>
     </div>
 
-    <!-- 2.5 STATISTICAL SUMMARY BAR (FEATURE 3: REPORT SUMMARY) -->
+    <!-- 2.5 STATISTICAL SUMMARY BAR (FEATURE 3: REPORT SUMMARY & DEMOGRAPHICS) -->
     <div class="card border-0 shadow-sm rounded-3 mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-right: 5px solid #2563eb !important;">
       <div class="card-body py-3 px-4">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-          
+        
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
           <div class="d-flex align-items-center gap-2">
-            <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; font-size: 18px;">
+            <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; font-size: 16px;">
               <i class="fa-solid fa-chart-pie"></i>
             </div>
             <div>
-              <h6 class="fw-bold mb-0 text-dark">التحليل الإحصائي السريع لنتائج التقرير</h6>
-              <small class="text-muted">ملخص أعداد ونسب مصادر التسجيل للطلاب المفلترين في هذا الكشف</small>
+              <h6 class="fw-bold mb-0 text-dark">شريط المجاميع السريعة والتحليل الديموغرافي للتقرير</h6>
+              <small class="text-muted">ملخص أعداد الطلاب ونسب المسارات والنوع للنتائج المفلترة في هذا الكشف</small>
             </div>
           </div>
-
-          <div class="d-flex align-items-center flex-wrap gap-2">
-            <!-- Online / External Link Summary -->
-            <div class="bg-white border rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
-              <div class="rounded-circle bg-info-subtle text-info p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                <i class="fa-solid fa-globe fs-6"></i>
-              </div>
-              <div>
-                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي المسجلين من الرابط</small>
-                <div class="d-flex align-items-baseline gap-1">
-                  <span class="fs-5 fw-bold text-info"><%= stats.filtered_online_count %> طالب</span>
-                  <span class="badge bg-info-subtle text-info ms-1"><%= stats.filtered_online_percent %>%</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Internal / School Summary -->
-            <div class="bg-white border rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
-              <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                <i class="fa-solid fa-school fs-6"></i>
-              </div>
-              <div>
-                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي المسجلين من المدرسة</small>
-                <div class="d-flex align-items-baseline gap-1">
-                  <span class="fs-5 fw-bold text-primary"><%= stats.filtered_internal_count %> طالب</span>
-                  <span class="badge bg-primary-subtle text-primary ms-1"><%= stats.filtered_internal_percent %>%</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Waitlist Counter -->
-            <% 
-              const waitlistInResult = students.filter(function(st){ return st.followup_status === 'صف غير متاح'; }).length;
-            %>
-            <% if(waitlistInResult > 0){ %>
-            <div class="bg-white border border-warning rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
-              <div class="rounded-circle bg-warning-subtle text-warning p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                <i class="fa-solid fa-hourglass-start fs-6"></i>
-              </div>
-              <div>
-                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">قائمة الانتظار (غير متاح)</small>
-                <span class="fs-5 fw-bold text-warning"><%= waitlistInResult %> طالب</span>
-              </div>
-            </div>
-            <% } %>
-
-            <!-- Total Filtered -->
-            <div class="bg-white border rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
-              <div class="rounded-circle bg-dark-subtle text-dark p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                <i class="fa-solid fa-users fs-6"></i>
-              </div>
-              <div>
-                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي نتائج الكشف</small>
-                <span class="fs-5 fw-bold text-dark"><%= students.length %> طالب</span>
-              </div>
-            </div>
-          </div>
-
+          <span class="badge bg-primary text-white fs-7 px-3 py-1 fw-bold rounded-pill">
+            إجمالي نتائج الكشف: <%= students.length %> طالب
+          </span>
         </div>
+
+        <!-- DEMOGRAPHIC CARDS ROW -->
+        <div class="row g-2 mb-2">
+          <!-- Boys General -->
+          <div class="col-xl-3 col-md-6">
+            <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                <i class="fa-solid fa-mars"></i>
+              </div>
+              <div>
+                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنين (مسار عام)</small>
+                <span class="fs-5 fw-bold text-primary"><%= typeof stats.boys_general_count !== 'undefined' ? stats.boys_general_count : 0 %> طالب</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Boys Tahfeez -->
+          <div class="col-xl-3 col-md-6">
+            <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-info-subtle text-info p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                <i class="fa-solid fa-book-quran"></i>
+              </div>
+              <div>
+                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنين (مسار تحفيظ)</small>
+                <span class="fs-5 fw-bold text-info"><%= typeof stats.boys_tahfeez_count !== 'undefined' ? stats.boys_tahfeez_count : 0 %> طالب</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Girls General -->
+          <div class="col-xl-3 col-md-6">
+            <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-danger-subtle text-danger p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                <i class="fa-solid fa-venus"></i>
+              </div>
+              <div>
+                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنات (مسار عام)</small>
+                <span class="fs-5 fw-bold text-danger"><%= typeof stats.girls_general_count !== 'undefined' ? stats.girls_general_count : 0 %> طالبة</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Girls Tahfeez -->
+          <div class="col-xl-3 col-md-6">
+            <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-warning-subtle text-warning p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                <i class="fa-solid fa-book-quran"></i>
+              </div>
+              <div>
+                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنات (مسار تحفيظ)</small>
+                <span class="fs-5 fw-bold text-warning"><%= typeof stats.girls_tahfeez_count !== 'undefined' ? stats.girls_tahfeez_count : 0 %> طالبة</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOURCES & WAITLIST SUB-ROW -->
+        <div class="d-flex align-items-center flex-wrap gap-2 pt-2 border-top">
+          <span class="badge bg-light text-secondary border px-3 py-2">
+            <i class="fa-solid fa-globe me-1 text-info"></i> المسجلين من الرابط: <strong><%= stats.filtered_online_count %></strong> (<%= stats.filtered_online_percent %>%)
+          </span>
+          <span class="badge bg-light text-secondary border px-3 py-2">
+            <i class="fa-solid fa-school me-1 text-primary"></i> المسجلين من المدرسة: <strong><%= stats.filtered_internal_count %></strong> (<%= stats.filtered_internal_percent %>%)
+          </span>
+          <% const waitlistCountInResult = students.filter(function(st){ return st.followup_status === 'صف غير متاح'; }).length; %>
+          <% if(waitlistCountInResult > 0){ %>
+            <span class="badge bg-warning text-dark border border-warning px-3 py-2">
+              <i class="fa-solid fa-hourglass-start me-1"></i> قائمة الانتظار (صفوف غير متاحة): <strong><%= waitlistCountInResult %></strong>
+            </span>
+          <% } %>
+        </div>
+
       </div>
     </div>
 
@@ -338,8 +386,10 @@
         <table class="table table-striped table-hover align-middle mb-0 text-nowrap">
           <thead>
             <tr>
-              <th style="width: 50px;">#</th>
+              <th style="width: 40px;">#</th>
               <th>اسم الطالب</th>
+              <th>النوع</th>
+              <th>المسار</th>
               <th>رقم الجوال</th>
               <th>المرحلة والصف</th>
               <th>الفرع</th>
@@ -355,6 +405,14 @@
                 <tr data-row="<%= idx %>">
                   <td class="text-muted fw-bold"><%= idx + 1 %></td>
                   <td class="fw-bold text-dark fs-6"><%= s.name %></td>
+                  <td>
+                    <span class="badge <%= s.student_type === 'بنات' ? 'bg-danger-subtle text-danger border border-danger' : 'bg-primary-subtle text-primary border border-primary' %> px-2 py-1">
+                      <i class="fa-solid fa-<%= s.student_type === 'بنات' ? 'venus' : 'mars' %> me-1"></i><%= s.student_type || 'بنين' %>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-dark border px-2 py-1"><%= s.track || 'عام' %></span>
+                  </td>
                   <td>
                     <% if(s.phone){ %>
                       <a href="https://wa.me/<%= s.phone.replace(/[^0-9]/g, '') %>" target="_blank" class="text-success text-decoration-none fw-bold">
