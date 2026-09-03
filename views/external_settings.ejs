@@ -266,10 +266,130 @@
             </div>
           </div>
 
+          <!-- 5. مصفوفة إعدادات الفصول والمسارات (DYNAMIC GRADE MATRIX) -->
+          <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <input type="hidden" name="matrix_form_submitted" value="1">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                  <i class="fa-solid fa-network-wired fs-5"></i>
+                </div>
+                <div>
+                  <h5 class="fw-bold text-dark mb-0">مصفوفة إعدادات الفصول والمسارات (Dynamic Grade Matrix)</h5>
+                  <small class="text-muted">التحكم الدقيق فيما يتاح لكل فرع بشكل مستقل حسب الجنس والمرحلة والصف والمسار</small>
+                </div>
+              </div>
+              <span class="badge bg-warning text-dark border border-warning px-3 py-2 fw-bold">
+                <i class="fa-solid fa-lock me-1"></i> صلاحية المدير العام
+              </span>
+            </div>
+
+            <div class="card-body p-4 pt-2">
+              
+              <div class="alert alert-light border small text-muted mb-4 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-circle-info text-primary fs-5"></i>
+                <span>الصف أو المسار الذي يتم <strong>إغلاقه</strong> سيختفي تلقائياً وفورياً من خيارات ولي الأمر في الرابط العام. وإذا وصل طلب لصف مغلق سيُصنف آلياً بحالة <strong>(صف غير متاح)</strong> في قائمة الانتظار.</span>
+              </div>
+
+              <!-- BRANCH NAVIGATION TABS -->
+              <ul class="nav nav-pills nav-fill bg-light p-1 rounded-3 mb-4" id="matrixBranchTabs" role="tablist">
+                <% if(typeof branches !== 'undefined' && branches.length){ %>
+                  <% branches.forEach(function(b, bIdx){ %>
+                    <li class="nav-item" role="presentation">
+                      <button class="nav-link fw-bold py-2 <%= bIdx === 0 ? 'active' : '' %>" id="tab-branch-<%= b.id %>" data-bs-toggle="pill" data-bs-target="#content-branch-<%= b.id %>" type="button" role="tab">
+                        <i class="fa-solid fa-building me-1"></i> فرع <%= b.name %>
+                      </button>
+                    </li>
+                  <% }) %>
+                <% } %>
+              </ul>
+
+              <!-- BRANCHES CONTENT -->
+              <div class="tab-content" id="matrixBranchTabsContent">
+                <% if(typeof branches !== 'undefined' && branches.length){ %>
+                  <% branches.forEach(function(b, bIdx){ %>
+                    <div class="tab-pane fade <%= bIdx === 0 ? 'show active' : '' %>" id="content-branch-<%= b.id %>" role="tabpanel">
+                      
+                      <!-- QUICK ACTIONS FOR THIS BRANCH -->
+                      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                        <span class="fw-bold text-dark"><i class="fa-solid fa-sliders text-primary me-1"></i> التحكم بفصول فرع <%= b.name %></span>
+                        <div class="d-flex gap-2">
+                          <button type="button" class="btn btn-outline-success btn-sm fw-bold" onclick="toggleAllInBranch('<%= b.name %>', true)">
+                            <i class="fa-solid fa-check-double me-1"></i> تفعيل الكل
+                          </button>
+                          <button type="button" class="btn btn-outline-danger btn-sm fw-bold" onclick="toggleAllInBranch('<%= b.name %>', false)">
+                            <i class="fa-solid fa-ban me-1"></i> تعطيل الكل
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- GENDER TABS FOR THIS BRANCH -->
+                      <% ['بنين', 'بنات'].forEach(function(st){ %>
+                        <div class="mb-4 p-3 border rounded-3 bg-light">
+                          <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                            <h6 class="fw-bold mb-0 text-<%= st === 'بنين' ? 'primary' : 'danger' %> d-flex align-items-center gap-2">
+                              <i class="fa-solid fa-<%= st === 'بنين' ? 'mars' : 'venus' %> fs-5"></i>
+                              <span>قسم <%= st %> — فرع <%= b.name %></span>
+                            </h6>
+                            <span class="badge bg-white text-secondary border small">متاح للتسجيل</span>
+                          </div>
+
+                          <!-- PHASES GRID -->
+                          <div class="row g-3">
+                            <% Object.entries(phaseStructure).forEach(function([pName, pInfo]){ %>
+                              <div class="col-md-6">
+                                <div class="bg-white p-3 border rounded-3 h-100 shadow-sm">
+                                  <div class="fw-bold text-dark mb-2 pb-1 border-bottom d-flex align-items-center justify-content-between">
+                                    <span><i class="fa-solid fa-layer-group text-primary me-1"></i> مرحلة <%= pName %></span>
+                                    <small class="text-muted" style="font-size:11px;"><%= pInfo.grades.length %> صفوف</small>
+                                  </div>
+
+                                  <div class="d-flex flex-column gap-2">
+                                    <% pInfo.grades.forEach(function(gItem){ %>
+                                      <% pInfo.tracks.forEach(function(tName){ %>
+                                        <% 
+                                          const isAvailable = isGradeAvailable(b.name, st, pName, gItem.id, tName, settings);
+                                          const mKey = buildMatrixKey(b.name, st, pName, gItem.id, tName);
+                                        %>
+                                        <div class="d-flex align-items-center justify-content-between p-2 border rounded-2 bg-light">
+                                          <div>
+                                            <span class="fw-bold text-dark small d-block"><%= gItem.name %></span>
+                                            <% if(pInfo.tracks.length > 1){ %>
+                                              <span class="badge bg-secondary-subtle text-secondary" style="font-size:10px;"><%= tName %></span>
+                                            <% } %>
+                                          </div>
+
+                                          <div class="form-check form-switch m-0">
+                                            <input class="form-check-input matrix-toggle-input branch-group-<%= b.name %>" type="checkbox" name="matrix_<%= mKey %>" id="sw_<%= mKey %>" value="1" <%= isAvailable ? 'checked' : '' %> onchange="onMatrixToggleChange('<%= mKey %>', this.checked)">
+                                            <label class="form-check-label fw-bold small ms-1 text-<%= isAvailable ? 'success' : 'muted' %>" for="sw_<%= mKey %>" id="lbl_<%= mKey %>" style="font-size:11px;">
+                                              <%= isAvailable ? 'متاح' : 'مغلق' %>
+                                            </label>
+                                          </div>
+                                        </div>
+                                      <% }) %>
+                                    <% }) %>
+                                  </div>
+
+                                </div>
+                              </div>
+                            <% }) %>
+                          </div>
+
+                        </div>
+                      <% }) %>
+
+                    </div>
+                  <% }) %>
+                <% } %>
+              </div>
+
+            </div>
+          </div>
+
           <!-- SAVE BUTTON -->
           <div class="mt-4">
             <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow py-3">
-              <i class="fa-solid fa-floppy-disk me-1"></i> حفظ وتطبيق الإعدادات فوراً
+              <i class="fa-solid fa-floppy-disk me-1"></i> حفظ وتطبيق الإعدادات والمصفوفة فوراً
             </button>
           </div>
 
@@ -362,6 +482,38 @@
 
     // Initial render
     document.addEventListener('DOMContentLoaded', updatePreviews);
+  </script>
+  <script>
+    function onMatrixToggleChange(key, isChecked) {
+      const lbl = document.getElementById('lbl_' + key);
+      if (lbl) {
+        lbl.textContent = isChecked ? 'متاح' : 'مغلق';
+        lbl.className = 'form-check-label fw-bold small ms-1 text-' + (isChecked ? 'success' : 'muted');
+      }
+
+      // Optional AJAX auto-save in background
+      fetch('/api/matrix/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: key, enabled: isChecked })
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log('Matrix toggle saved:', data);
+      })
+      .catch(err => {
+        console.warn('Matrix toggle error:', err);
+      });
+    }
+
+    function toggleAllInBranch(branchName, state) {
+      const inputs = document.querySelectorAll('.branch-group-' + branchName);
+      inputs.forEach(inp => {
+        inp.checked = state;
+        const key = inp.name.replace('matrix_', '');
+        onMatrixToggleChange(key, state);
+      });
+    }
   </script>
 </body>
 </html>
