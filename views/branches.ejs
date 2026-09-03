@@ -19,25 +19,67 @@
     .table thead th { background-color: #1e3a8a !important; color: #ffffff !important; font-weight: 700; padding: 12px; }
     .form-switch .form-check-input { width: 2.4em; height: 1.25em; cursor: pointer; }
     .phase-card { border-right: 4px solid #2563eb !important; }
-    /* Enhanced Custom Scrollbar for Modal Body */
+    
+    /* Bulletproof Modal Scrolling Rules */
+    .academic-structure-modal .modal-dialog {
+      max-width: 1150px;
+      margin: 1.5rem auto;
+    }
+    .academic-structure-modal .modal-content {
+      height: 88vh !important;
+      max-height: 88vh !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+      border-radius: 1rem !important;
+    }
+    .academic-structure-modal .modal-header {
+      flex-shrink: 0 !important;
+      background-color: #ffffff !important;
+      border-bottom: 1px solid #dee2e6 !important;
+      z-index: 10;
+    }
+    .academic-structure-modal .structure-form {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      height: 100% !important;
+    }
+    .academic-structure-modal .modal-body {
+      overflow-y: scroll !important;
+      -webkit-overflow-scrolling: touch !important;
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      padding: 1.5rem !important;
+    }
+    .academic-structure-modal .modal-footer {
+      flex-shrink: 0 !important;
+      background-color: #ffffff !important;
+      border-top: 1px solid #dee2e6 !important;
+      z-index: 10;
+    }
     .custom-modal-scrollbar {
-      scrollbar-width: thin;
-      scrollbar-color: #2563eb #f1f5f9;
+      scrollbar-width: thin !important;
+      scrollbar-color: #2563eb #e2e8f0 !important;
     }
     .custom-modal-scrollbar::-webkit-scrollbar {
-      width: 8px;
+      width: 10px !important;
+      display: block !important;
     }
     .custom-modal-scrollbar::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 4px;
+      background: #f1f5f9 !important;
+      border-radius: 6px !important;
     }
     .custom-modal-scrollbar::-webkit-scrollbar-thumb {
-      background-color: #2563eb;
-      border-radius: 4px;
-      border: 2px solid #f1f5f9;
+      background-color: #2563eb !important;
+      border-radius: 6px !important;
+      border: 2px solid #f1f5f9 !important;
     }
     .custom-modal-scrollbar::-webkit-scrollbar-thumb:hover {
-      background-color: #1d4ed8;
+      background-color: #1d4ed8 !important;
     }
   </style>
 </head>
@@ -287,16 +329,14 @@
 
   <!-- MODALS: POST-CREATION ACADEMIC STRUCTURE CONTROLS FOR EACH BRANCH -->
   <% if(typeof branches !== 'undefined' && branches && branches.length > 0){ branches.forEach(function(branch){ %>
-    <div class="modal fade" id="structureModal_<%= branch.id %>" tabindex="-1" aria-labelledby="structureModalLabel_<%= branch.id %>" aria-hidden="true">
-      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-height: 90vh;">
-        <form method="post" action="/branches" class="modal-content border-0 shadow rounded-4" style="max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
-          <input type="hidden" name="action" value="edit_structure">
-          <input type="hidden" name="target_branch_name" value="<%= branch.name %>">
-
-          <!-- 1. STICKY HEADER -->
-          <div class="modal-header bg-white py-3 border-bottom sticky-top" style="position: sticky; top: 0; z-index: 1055; background-color: #ffffff !important;">
+    <div class="modal fade academic-structure-modal" id="structureModal_<%= branch.id %>" tabindex="-1" aria-labelledby="structureModalLabel_<%= branch.id %>" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          
+          <!-- 1. FIXED HEADER -->
+          <div class="modal-header py-3 px-4">
             <div class="d-flex align-items-center gap-2">
-              <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+              <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                 <i class="fa-solid fa-network-wired fs-5"></i>
               </div>
               <div>
@@ -309,9 +349,14 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
 
-          <!-- 2. SCROLLABLE BODY (WITH VERTICAL SCROLLBAR & MAX-HEIGHT) -->
-          <div class="modal-body p-4 custom-modal-scrollbar" style="overflow-y: auto; max-height: calc(85vh - 130px); flex: 1 1 auto;">
-              <div class="alert alert-light border small text-muted mb-4 d-flex align-items-center gap-2">
+          <!-- 2. FORM WRAPPER -->
+          <form method="post" action="/branches" class="structure-form">
+            <input type="hidden" name="action" value="edit_structure">
+            <input type="hidden" name="target_branch_name" value="<%= branch.name %>">
+
+            <!-- 3. SCROLLABLE BODY (FORCED OVERFLOW-Y SCROLL) -->
+            <div class="modal-body custom-modal-scrollbar">
+              <div class="alert alert-light border small text-muted mb-4 d-flex align-items-center gap-2 shadow-xs">
                 <i class="fa-solid fa-shield-halved text-primary fs-5"></i>
                 <span><strong>حماية البيانات التاريخية:</strong> إغلاق أي مرحلة أو صف يمنع التسجيلات الجديدة فورياً، ولا يحذف أي طالب مسجل مسبقاً في قاعدة البيانات.</span>
               </div>
@@ -324,7 +369,7 @@
                   %>
                   <div class="border rounded-3 p-3 bg-white shadow-xs">
                     
-                    <!-- 1. PHASE MASTER SWITCH -->
+                    <!-- PHASE MASTER SWITCH -->
                     <div class="d-flex align-items-center justify-content-between p-2 px-3 bg-light rounded-2 mb-3 border">
                       <div class="d-flex align-items-center gap-2">
                         <i class="fa-solid fa-layer-group text-primary fs-5"></i>
@@ -344,7 +389,7 @@
                       </div>
                     </div>
 
-                    <!-- 2. INDIVIDUAL GRADES & TRACKS IN THIS PHASE -->
+                    <!-- INDIVIDUAL GRADES & TRACKS IN THIS PHASE -->
                     <div id="grades_box_<%= branch.id %>_<%= pName %>" style="<%= isPhaseActive ? '' : 'display:none;' %>">
                       <div class="table-responsive">
                         <table class="table table-bordered table-sm align-middle text-center mb-0" style="font-size: 13px;">
@@ -421,21 +466,21 @@
 
             </div>
 
-          </div>
-
-          <!-- 3. STICKY FOOTER -->
-          <div class="modal-footer bg-white py-2 px-4 border-top sticky-bottom d-flex justify-content-between align-items-center" style="position: sticky; bottom: 0; z-index: 1055; background-color: #ffffff !important;">
-            <span class="text-muted small">
-              <i class="fa-solid fa-bolt text-warning me-1"></i> يتم حفظ المفاتيح تلقائياً عبر AJAX بمجرد الضغط عليها.
-            </span>
-            <div class="d-flex gap-2">
-              <button type="button" class="btn btn-outline-secondary fw-bold px-3" data-bs-dismiss="modal">إغلاق</button>
-              <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm">
-                <i class="fa-solid fa-check me-1"></i> حفظ جميع تعديلات الهيكل
-              </button>
+            <!-- 4. FIXED FOOTER -->
+            <div class="modal-footer py-2 px-4 d-flex justify-content-between align-items-center">
+              <span class="text-muted small">
+                <i class="fa-solid fa-bolt text-warning me-1"></i> يتم حفظ المفاتيح تلقائياً عبر AJAX بمجرد الضغط عليها.
+              </span>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary fw-bold px-3" data-bs-dismiss="modal">إغلاق</button>
+                <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm">
+                  <i class="fa-solid fa-check me-1"></i> حفظ جميع تعديلات الهيكل
+                </button>
+              </div>
             </div>
-          </div>
-        </form>
+
+          </form>
+        </div>
       </div>
     </div>
   <% })} %>
