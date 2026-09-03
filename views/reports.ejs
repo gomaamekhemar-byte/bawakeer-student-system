@@ -298,79 +298,143 @@
           </span>
         </div>
 
-        <!-- DEMOGRAPHIC PROFESSIONAL DATA TABLE (REPLACING CROWDED BADGES) -->
+        <!-- DEMOGRAPHIC PROFESSIONAL MULTI-LEVEL HEADER DATA TABLE -->
         <% if(typeof reportDemographicRows !== 'undefined' && reportDemographicRows && reportDemographicRows.length > 0){ %>
           <div class="table-responsive rounded-3 border overflow-hidden mb-3 shadow-xs">
-            <table class="table table-striped table-hover align-middle mb-0 text-center" style="font-size: 14px;">
-              <thead class="table-dark text-white fw-bold">
-                <tr>
-                  <th class="text-end py-3 px-4" style="width: 25%;">
+            <table class="table table-hover align-middle mb-0 text-center" style="font-size: 13.5px; border-collapse: separate; border-spacing: 0;">
+              <thead class="text-white fw-bold">
+                <!-- ROW 1: MAIN HEADERS -->
+                <tr style="border-bottom: 2px solid #334155;">
+                  <th rowspan="2" class="text-end py-3 px-3 align-middle bg-dark text-white" style="width: 22%; border-left: 2px solid #475569;">
                     <i class="fa-solid fa-graduation-cap text-warning me-1"></i> الصف الدراسي
                   </th>
-                  <th class="py-3 px-3 text-center" style="width: 15%; background-color: #1e3a8a;">
-                    <i class="fa-solid fa-mars text-info me-1"></i> بنين
+                  <th colspan="3" class="py-2 px-2 text-center text-white" style="background-color: #1e3a8a; border-left: 3px solid #0f172a;">
+                    <i class="fa-solid fa-mars text-info me-1"></i> بنين ♂️
                   </th>
-                  <th class="py-3 px-3 text-center" style="width: 15%; background-color: #9d174d;">
-                    <i class="fa-solid fa-venus me-1" style="color: #f472b6;"></i> بنات
+                  <th colspan="3" class="py-2 px-2 text-center text-white" style="background-color: #831843; border-left: 3px solid #0f172a;">
+                    <i class="fa-solid fa-venus text-pink-300 me-1" style="color: #f472b6;"></i> بنات ♀️
                   </th>
-                  <th class="py-3 px-3 text-center" style="width: 15%; background-color: #065f46;">
-                    <i class="fa-solid fa-layer-group text-success me-1" style="color: #34d399;"></i> مسار عام
-                  </th>
-                  <th class="py-3 px-3 text-center" style="width: 15%; background-color: #92400e;">
-                    <i class="fa-solid fa-book-quran text-warning me-1" style="color: #fbbf24;"></i> مسار تحفيظ
-                  </th>
-                  <th class="py-3 px-4 text-center bg-black text-white" style="width: 15%;">
-                    <i class="fa-solid fa-calculator text-light me-1"></i> الإجمالي
+                  <th colspan="3" class="py-2 px-2 text-center text-white bg-black">
+                    <i class="fa-solid fa-chart-column text-warning me-1"></i> الإجمالي الكلي 📊
                   </th>
                 </tr>
+
+                <!-- ROW 2: SUB HEADERS -->
+                <tr class="small text-white font-monospace fw-bold" style="border-bottom: 2px solid #334155;">
+                  <!-- Under بنين -->
+                  <th class="py-2 px-2 text-center" style="background-color: #2563eb; width: 8%;">عام</th>
+                  <th class="py-2 px-2 text-center" style="background-color: #1d4ed8; width: 8%;">تحفيظ</th>
+                  <th class="py-2 px-2 text-center" style="background-color: #172554; width: 10%; border-left: 3px solid #0f172a;">الإجمالي</th>
+
+                  <!-- Under بنات -->
+                  <th class="py-2 px-2 text-center" style="background-color: #db2777; width: 8%;">عام</th>
+                  <th class="py-2 px-2 text-center" style="background-color: #be185d; width: 8%;">تحفيظ</th>
+                  <th class="py-2 px-2 text-center" style="background-color: #500724; width: 10%; border-left: 3px solid #0f172a;">الإجمالي</th>
+
+                  <!-- Under الإجمالي الكلي -->
+                  <th class="py-2 px-2 text-center" style="background-color: #047857; width: 9%;">إجمالي عام</th>
+                  <th class="py-2 px-2 text-center" style="background-color: #b45309; width: 9%;">إجمالي تحفيظ</th>
+                  <th class="py-2 px-2 text-center bg-black text-warning" style="width: 11%;">المجموع النهائي</th>
+                </tr>
               </thead>
+
               <tbody class="table-group-divider">
                 <% reportDemographicRows.forEach(function(r, rIdx){ %>
                   <tr class="<%= rIdx % 2 === 0 ? 'bg-white' : 'bg-light' %>">
-                    <td class="text-end py-3 px-4 fw-bold text-dark">
-                      <span class="badge bg-secondary-subtle text-secondary me-2 small"><%= r.phase %></span>
+                    <!-- 1. Grade Name -->
+                    <td class="text-end py-2 px-3 fw-bold text-dark" style="border-left: 2px solid #cbd5e1;">
+                      <span class="badge bg-secondary-subtle text-secondary me-1 small"><%= r.phase %></span>
                       <span><%= r.gradeName %></span>
                     </td>
-                    <td class="py-3 px-3 fw-bold text-primary fs-6">
-                      <%= r.boys %>
+
+                    <!-- 2. Boys General -->
+                    <td class="py-2 px-2 text-primary font-monospace">
+                      <%= r.boysGeneral %>
                     </td>
-                    <td class="py-3 px-3 fw-bold text-danger fs-6">
-                      <%= r.girls %>
+
+                    <!-- 3. Boys Tahfeez -->
+                    <td class="py-2 px-2 text-primary font-monospace">
+                      <%= r.boysTahfeez %>
                     </td>
-                    <td class="py-3 px-3 fw-semibold text-success fs-6">
-                      <%= r.general %>
+
+                    <!-- 4. Boys Total (Highlighted & Thick Divider) -->
+                    <td class="py-2 px-2 fw-bold text-primary bg-primary-subtle" style="border-left: 3px solid #64748b;">
+                      <%= r.boysTotal %>
                     </td>
-                    <td class="py-3 px-3 fw-semibold text-warning-emphasis fs-6">
-                      <%= r.tahfeez %>
+
+                    <!-- 5. Girls General -->
+                    <td class="py-2 px-2 text-danger font-monospace">
+                      <%= r.girlsGeneral %>
                     </td>
-                    <td class="py-3 px-4 bg-dark-subtle fw-bolder text-dark fs-6">
-                      <span class="badge bg-dark text-white px-3 py-2 rounded-pill fs-7">
-                        <%= r.total %> طالب
+
+                    <!-- 6. Girls Tahfeez -->
+                    <td class="py-2 px-2 text-danger font-monospace">
+                      <%= r.girlsTahfeez %>
+                    </td>
+
+                    <!-- 7. Girls Total (Highlighted & Thick Divider) -->
+                    <td class="py-2 px-2 fw-bold text-danger bg-danger-subtle" style="border-left: 3px solid #64748b;">
+                      <%= r.girlsTotal %>
+                    </td>
+
+                    <!-- 8. Grand General -->
+                    <td class="py-2 px-2 text-success font-monospace fw-semibold" style="background-color: #f0fdf4;">
+                      <%= r.generalTotal %>
+                    </td>
+
+                    <!-- 9. Grand Tahfeez -->
+                    <td class="py-2 px-2 text-warning-emphasis font-monospace fw-semibold" style="background-color: #fffbeb;">
+                      <%= r.tahfeezTotal %>
+                    </td>
+
+                    <!-- 10. Grand Row Total (Final Total Highlighted) -->
+                    <td class="py-2 px-2 bg-dark text-white fw-bold">
+                      <span class="badge bg-white text-dark px-2 py-1 rounded-pill fw-bold">
+                        <%= r.rowTotal %>
                       </span>
                     </td>
                   </tr>
                 <% }) %>
               </tbody>
+
               <!-- GRAND TOTAL FOOTER -->
-              <tfoot class="border-top-3 border-dark fw-bold" style="border-top: 2px solid #334155; font-size: 15px;">
+              <tfoot class="fw-bold" style="border-top: 3px solid #0f172a; font-size: 14px;">
                 <tr class="table-secondary">
-                  <td class="text-end py-3 px-4 fw-bolder text-dark">
+                  <td class="text-end py-3 px-3 fw-bolder text-dark" style="border-left: 2px solid #94a3b8;">
                     <i class="fa-solid fa-chart-pie text-primary me-1"></i> المجموع الكلي للنتائج المفلترة
                   </td>
-                  <td class="py-3 px-3 fw-bolder text-primary fs-6" style="background-color: #eff6ff;">
-                    <%= reportDemographicTotals.boys %>
+
+                  <!-- Boys Totals -->
+                  <td class="py-3 px-2 font-monospace fw-bold text-primary" style="background-color: #eff6ff;">
+                    <%= reportDemographicTotals.boysGeneral %>
                   </td>
-                  <td class="py-3 px-3 fw-bolder text-danger fs-6" style="background-color: #fdf2f8;">
-                    <%= reportDemographicTotals.girls %>
+                  <td class="py-3 px-2 font-monospace fw-bold text-primary" style="background-color: #eff6ff;">
+                    <%= reportDemographicTotals.boysTahfeez %>
                   </td>
-                  <td class="py-3 px-3 fw-bolder text-success fs-6" style="background-color: #ecfdf5;">
-                    <%= reportDemographicTotals.general %>
+                  <td class="py-3 px-2 font-monospace fw-bolder text-primary bg-primary-subtle" style="border-left: 3px solid #64748b;">
+                    <%= reportDemographicTotals.boysTotal %>
                   </td>
-                  <td class="py-3 px-3 fw-bolder text-warning-emphasis fs-6" style="background-color: #fffbeb;">
-                    <%= reportDemographicTotals.tahfeez %>
+
+                  <!-- Girls Totals -->
+                  <td class="py-3 px-2 font-monospace fw-bold text-danger" style="background-color: #fdf2f8;">
+                    <%= reportDemographicTotals.girlsGeneral %>
                   </td>
-                  <td class="py-3 px-4 bg-dark text-white fw-bolder fs-6">
-                    <span class="fs-6 font-monospace"><%= reportDemographicTotals.total %> طالب</span>
+                  <td class="py-3 px-2 font-monospace fw-bold text-danger" style="background-color: #fdf2f8;">
+                    <%= reportDemographicTotals.girlsTahfeez %>
+                  </td>
+                  <td class="py-3 px-2 font-monospace fw-bolder text-danger bg-danger-subtle" style="border-left: 3px solid #64748b;">
+                    <%= reportDemographicTotals.girlsTotal %>
+                  </td>
+
+                  <!-- Grand General & Tahfeez & Final Total -->
+                  <td class="py-3 px-2 font-monospace fw-bolder text-success" style="background-color: #ecfdf5;">
+                    <%= reportDemographicTotals.generalTotal %>
+                  </td>
+                  <td class="py-3 px-2 font-monospace fw-bolder text-warning-emphasis" style="background-color: #fffbeb;">
+                    <%= reportDemographicTotals.tahfeezTotal %>
+                  </td>
+                  <td class="py-3 px-2 bg-black text-white fw-bolder">
+                    <span class="fs-6 text-warning font-monospace"><%= reportDemographicTotals.rowTotal %> طالب</span>
                   </td>
                 </tr>
               </tfoot>
