@@ -318,6 +318,7 @@
                   <% if(s.followup_status==='تم التسجيل'){ %><span class="badge-status bg-info-subtle text-info border border-info"><i class="fa-solid fa-user-check"></i> تم التسجيل</span>
                   <% } else if(s.followup_status==='في انتظار التسجيل'){ %><span class="badge-status bg-warning-subtle text-warning border border-warning"><i class="fa-solid fa-hourglass-start"></i> انتظار التسجيل</span>
                   <% } else if(s.followup_status==='لم يجتز المقابلة'){ %><span class="badge-status bg-danger-subtle text-danger border border-danger"><i class="fa-solid fa-xmark"></i> لم يجتز</span>
+                  <% } else if(s.followup_status==='صف غير متاح'){ %><span class="badge-status bg-warning text-dark border border-warning fw-bold"><i class="fa-solid fa-hourglass-start"></i> صف غير متاح</span>
                   <% } else if(s.followup_status==='لا يرغب في التسجيل'){ %><span class="badge-status bg-secondary-subtle text-secondary border border-secondary"><i class="fa-solid fa-ban"></i> لا يرغب</span>
                   <% } else { %><span class="badge-status bg-light text-muted border">انتظار المقابلة</span><% } %>
                 <% } %>
