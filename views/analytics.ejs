@@ -149,7 +149,7 @@
         <span>الداش بورد والمؤشرات التحليلية | مدارس بواكير الأهلية</span>
       </div>
 
-      <!-- DYNAMIC COMBINED FILTERS: BRANCH & REGISTRATION SOURCE -->
+      <!-- DYNAMIC MULTI-FILTER FORM: BRANCH, GRADE, TYPE, TRACK, SOURCE -->
       <form method="get" action="/analytics" class="d-flex align-items-center flex-wrap gap-2" id="analyticsFilterForm" onsubmit="event.preventDefault(); refreshAnalytics();">
         
         <!-- 1. Branch Filter -->
@@ -158,7 +158,7 @@
             <label class="text-white small fw-bold text-nowrap" for="branchFilterSelect">
               <i class="fa-solid fa-building me-1"></i> الفرع:
             </label>
-            <select name="branch" id="branchFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 150px;" onchange="refreshAnalytics()">
+            <select name="branch" id="branchFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 130px;" onchange="refreshAnalytics()">
               <option value="الكل" <%= (!selectedBranch || selectedBranch === 'الكل') ? 'selected' : '' %>>🌐 جميع الفروع</option>
               <% branches.forEach(function(b){ %>
                 <option value="<%= b %>" <%= (selectedBranch === b) ? 'selected' : '' %>>🏢 فرع <%= b %></option>
@@ -172,19 +172,59 @@
           </span>
         <% } %>
 
-        <!-- 2. Registration Source Filter (FEATURE 1) -->
+        <!-- 2. Grade Filter (الصف) -->
         <div class="d-flex align-items-center gap-1">
-          <label class="text-white small fw-bold text-nowrap" for="sourceFilterSelect">
-            <i class="fa-solid fa-filter me-1"></i> تصفية حسب مصدر التسجيل:
+          <label class="text-white small fw-bold text-nowrap" for="gradeFilterSelect">
+            <i class="fa-solid fa-graduation-cap me-1"></i> الصف:
           </label>
-          <select name="source" id="sourceFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 190px;" onchange="refreshAnalytics()">
-            <option value="الكل" <%= (!selectedSource || selectedSource === 'الكل' || selectedSource === 'جميع المصادر') ? 'selected' : '' %>>📋 جميع المصادر</option>
-            <option value="الرابط الخارجي" <%= (typeof selectedSource !== 'undefined' && (selectedSource === 'الرابط الخارجي' || selectedSource === 'رابط خارجي')) ? 'selected' : '' %>>🌐 الرابط الخارجي</option>
-            <option value="التسجيل الداخلي (المدرسة)" <%= (typeof selectedSource !== 'undefined' && (selectedSource === 'التسجيل الداخلي (المدرسة)' || selectedSource === 'تسجيل داخلي')) ? 'selected' : '' %>>🏫 التسجيل الداخلي (المدرسة)</option>
+          <select name="grade" id="gradeFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 110px;" onchange="refreshAnalytics()">
+            <option value="الكل" <%= (!selectedGrade || selectedGrade === 'الكل') ? 'selected' : '' %>>جميع الصفوف</option>
+            <option value="1" <%= selectedGrade === '1' ? 'selected' : '' %>>الصف الأول</option>
+            <option value="2" <%= selectedGrade === '2' ? 'selected' : '' %>>الصف الثاني</option>
+            <option value="3" <%= selectedGrade === '3' ? 'selected' : '' %>>الصف الثالث</option>
+            <option value="4" <%= selectedGrade === '4' ? 'selected' : '' %>>الصف الرابع</option>
+            <option value="5" <%= selectedGrade === '5' ? 'selected' : '' %>>الصف الخامس</option>
+            <option value="6" <%= selectedGrade === '6' ? 'selected' : '' %>>الصف السادس</option>
           </select>
         </div>
 
-        <!-- Refresh Spinner Indicator (hidden by default) -->
+        <!-- 3. Student Type Filter (النوع: بنين / بنات) -->
+        <div class="d-flex align-items-center gap-1">
+          <label class="text-white small fw-bold text-nowrap" for="typeFilterSelect">
+            <i class="fa-solid fa-venus-mars me-1"></i> النوع:
+          </label>
+          <select name="type" id="typeFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 110px;" onchange="refreshAnalytics()">
+            <option value="الكل" <%= (!selectedType || selectedType === 'الكل') ? 'selected' : '' %>>الكل (بنين/بنات)</option>
+            <option value="بنين" <%= selectedType === 'بنين' ? 'selected' : '' %>>👦 بنين</option>
+            <option value="بنات" <%= selectedType === 'بنات' ? 'selected' : '' %>>👧 بنات</option>
+          </select>
+        </div>
+
+        <!-- 4. Track Filter (المسار: عام / تحفيظ) -->
+        <div class="d-flex align-items-center gap-1">
+          <label class="text-white small fw-bold text-nowrap" for="trackFilterSelect">
+            <i class="fa-solid fa-book-open me-1"></i> المسار:
+          </label>
+          <select name="track" id="trackFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 110px;" onchange="refreshAnalytics()">
+            <option value="الكل" <%= (!selectedTrack || selectedTrack === 'الكل') ? 'selected' : '' %>>جميع المسارات</option>
+            <option value="عام" <%= selectedTrack === 'عام' ? 'selected' : '' %>>مسار عام</option>
+            <option value="تحفيظ" <%= selectedTrack === 'تحفيظ' ? 'selected' : '' %>>مسار تحفيظ</option>
+          </select>
+        </div>
+
+        <!-- 5. Registration Source Filter -->
+        <div class="d-flex align-items-center gap-1">
+          <label class="text-white small fw-bold text-nowrap" for="sourceFilterSelect">
+            <i class="fa-solid fa-filter me-1"></i> المصدر:
+          </label>
+          <select name="source" id="sourceFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 130px;" onchange="refreshAnalytics()">
+            <option value="الكل" <%= (!selectedSource || selectedSource === 'الكل' || selectedSource === 'جميع المصادر') ? 'selected' : '' %>>جميع المصادر</option>
+            <option value="الرابط الخارجي" <%= (typeof selectedSource !== 'undefined' && (selectedSource === 'الرابط الخارجي' || selectedSource === 'رابط خارجي')) ? 'selected' : '' %>>🌐 الرابط الخارجي</option>
+            <option value="التسجيل الداخلي (المدرسة)" <%= (typeof selectedSource !== 'undefined' && (selectedSource === 'التسجيل الداخلي (المدرسة)' || selectedSource === 'تسجيل داخلي')) ? 'selected' : '' %>>🏫 التسجيل الداخلي</option>
+          </select>
+        </div>
+
+        <!-- Refresh Spinner Indicator -->
         <div id="filterLoadingSpinner" class="spinner-border spinner-border-sm text-white d-none ms-1" role="status">
           <span class="visually-hidden">Loading...</span>
         </div>
@@ -439,6 +479,99 @@
           </div>
         </div>
 
+      </div>
+    <!-- 2.8 DEMOGRAPHIC MATRIX GRID (التحليل الشبكي الهرمي: الفرع -> الصف -> بنين/بنات -> عام/تحفيظ) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+            <i class="fa-solid fa-table-cells-large fs-5"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold text-dark mb-0">التحليل الديموغرافي الشبكي (Demographic Matrix Grid)</h5>
+            <small class="text-muted">توزيع أعداد الطلاب بشكل هرمي متداخل حسب الفرع، الصف، النوع، والمسار التعليمي</small>
+          </div>
+        </div>
+        <span class="badge bg-primary text-white px-3 py-2 fw-bold">
+          <i class="fa-solid fa-chart-column me-1"></i> مصفوفة تفصيلية هرمية
+        </span>
+      </div>
+
+      <div class="card-body p-4 pt-2">
+        <% if(typeof demographicMatrixGrid !== 'undefined' && demographicMatrixGrid.length){ %>
+          <% demographicMatrixGrid.forEach(function(bData){ %>
+            <div class="mb-4 border rounded-3 overflow-hidden shadow-sm bg-white">
+              <!-- Branch Subheader -->
+              <div class="bg-light p-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fa-solid fa-building text-primary fs-5"></i>
+                  <h6 class="fw-bold text-dark mb-0">فرع <%= bData.branch %></h6>
+                </div>
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                  <span class="badge bg-primary-subtle text-primary border border-primary">
+                    <i class="fa-solid fa-mars me-1"></i> إجمالي البنين: <strong><%= bData.totals.boysTotal %></strong> (عام: <%= bData.totals.boysGeneral %> | تحفيظ: <%= bData.totals.boysTahfeez %>)
+                  </span>
+                  <span class="badge bg-danger-subtle text-danger border border-danger">
+                    <i class="fa-solid fa-venus me-1"></i> إجمالي البنات: <strong><%= bData.totals.girlsTotal %></strong> (عام: <%= bData.totals.girlsGeneral %> | تحفيظ: <%= bData.totals.girlsTahfeez %>)
+                  </span>
+                  <span class="badge bg-dark text-white">
+                    إجمالي الفرع: <strong><%= bData.totals.branchTotal %> طالب</strong>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Matrix Table for this Branch -->
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle text-center mb-0" style="font-size: 13px;">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 120px;">المرحلة</th>
+                      <th style="width: 180px;" class="text-start ps-3">الصف الدراسي</th>
+                      <th class="bg-primary-subtle text-primary border-primary">بنين (عام)</th>
+                      <th class="bg-primary-subtle text-primary border-primary">بنين (تحفيظ)</th>
+                      <th class="bg-primary text-white">إجمالي البنين</th>
+                      <th class="bg-danger-subtle text-danger border-danger">بنات (عام)</th>
+                      <th class="bg-danger-subtle text-danger border-danger">بنات (تحفيظ)</th>
+                      <th class="bg-danger text-white">إجمالي البنات</th>
+                      <th class="bg-dark text-white" style="width: 120px;">المجموع الكلي</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% if(bData.rows && bData.rows.length){ %>
+                      <% bData.rows.forEach(function(r){ %>
+                        <tr class="<%= r.rowTotal > 0 ? '' : 'text-muted' %>">
+                          <td class="fw-bold"><%= r.phase %></td>
+                          <td class="text-start ps-3 fw-bold text-dark"><%= r.gradeName %></td>
+                          <td><span class="badge bg-light text-primary border"><%= r.boysGeneral %></span></td>
+                          <td><span class="badge bg-light text-primary border"><%= r.boysTahfeez %></span></td>
+                          <td class="fw-bold text-primary bg-primary-subtle"><%= r.boysTotal %></td>
+                          <td><span class="badge bg-light text-danger border"><%= r.girlsGeneral %></span></td>
+                          <td><span class="badge bg-light text-danger border"><%= r.girlsTahfeez %></span></td>
+                          <td class="fw-bold text-danger bg-danger-subtle"><%= r.girlsTotal %></td>
+                          <td class="fw-bold fs-6 <%= r.rowTotal > 0 ? 'text-dark bg-light' : 'text-muted' %>"><%= r.rowTotal %></td>
+                        </tr>
+                      <% }) %>
+                    <% } else { %>
+                      <tr><td colspan="9" class="text-muted py-3">لا توجد بيانات مطابقة لمعايير الفلترة الحالية</td></tr>
+                    <% } %>
+                  </tbody>
+                  <tfoot class="table-secondary fw-bold">
+                    <tr>
+                      <td colspan="2" class="text-start ps-3">مجموع فرع <%= bData.branch %></td>
+                      <td><%= bData.totals.boysGeneral %></td>
+                      <td><%= bData.totals.boysTahfeez %></td>
+                      <td class="text-primary"><%= bData.totals.boysTotal %></td>
+                      <td><%= bData.totals.girlsGeneral %></td>
+                      <td><%= bData.totals.girlsTahfeez %></td>
+                      <td class="text-danger"><%= bData.totals.girlsTotal %></td>
+                      <td class="fs-6 text-dark"><%= bData.totals.branchTotal %></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          <% }) %>
+        <% } %>
       </div>
     </div>
 
@@ -727,15 +860,29 @@
   <script>
     function refreshAnalytics() {
       const branchSel = document.getElementById('branchFilterSelect');
+      const gradeSel = document.getElementById('gradeFilterSelect');
+      const typeSel = document.getElementById('typeFilterSelect');
+      const trackSel = document.getElementById('trackFilterSelect');
       const sourceSel = document.getElementById('sourceFilterSelect');
+
       const branch = branchSel ? branchSel.value : 'الكل';
+      const grade = gradeSel ? gradeSel.value : 'الكل';
+      const type = typeSel ? typeSel.value : 'الكل';
+      const track = trackSel ? trackSel.value : 'الكل';
       const source = sourceSel ? sourceSel.value : 'الكل';
       const spinner = document.getElementById('filterLoadingSpinner');
 
       if (spinner) spinner.classList.remove('d-none');
 
-      const url = '/analytics?branch=' + encodeURIComponent(branch) + '&source=' + encodeURIComponent(source);
-      window.history.pushState({ branch, source }, '', url);
+      const params = new URLSearchParams();
+      if (branch) params.set('branch', branch);
+      if (grade) params.set('grade', grade);
+      if (type) params.set('type', type);
+      if (track) params.set('track', track);
+      if (source) params.set('source', source);
+
+      const url = '/analytics?' + params.toString();
+      window.history.pushState({ branch, grade, type, track, source }, '', url);
 
       const container = document.getElementById('analyticsMainContent');
       if (container) {
