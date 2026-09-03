@@ -10,7 +10,7 @@ const { addHistory, addStudentHistory, computeFieldChanges } = require("../servi
 const { sendWhatsAppNotification, getWhatsAppDirectUrl } = require("../services/whatsapp.service");
 const { getExternalSettings } = require("../services/settings.service");
 const supabase = require("../config/supabase");
-const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES } = require("../utils/constants");
+const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES, PHASE_STRUCTURE } = require("../utils/constants");
 const { cleanNotesForDisplay } = require("../utils/timeline");
 
 const storage = multer.memoryStorage();
@@ -387,7 +387,9 @@ async function handleGetStudents(req, res) {
     branches,
     activeYear,
     allPhonesMap,
-    getWhatsAppDirectUrl
+    getWhatsAppDirectUrl,
+    settings: await getExternalSettings(),
+    phaseStructure: PHASE_STRUCTURE
   });
 }
 
