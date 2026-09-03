@@ -292,6 +292,22 @@
               </div>
             </div>
 
+            <!-- Waitlist Counter -->
+            <% 
+              const waitlistInResult = students.filter(function(st){ return st.followup_status === 'صف غير متاح'; }).length;
+            %>
+            <% if(waitlistInResult > 0){ %>
+            <div class="bg-white border border-warning rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
+              <div class="rounded-circle bg-warning-subtle text-warning p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                <i class="fa-solid fa-hourglass-start fs-6"></i>
+              </div>
+              <div>
+                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">قائمة الانتظار (غير متاح)</small>
+                <span class="fs-5 fw-bold text-warning"><%= waitlistInResult %> طالب</span>
+              </div>
+            </div>
+            <% } %>
+
             <!-- Total Filtered -->
             <div class="bg-white border rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-3">
               <div class="rounded-circle bg-dark-subtle text-dark p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
@@ -387,12 +403,16 @@
                       <span class="badge-status bg-warning-subtle text-warning border border-warning">
                         <i class="fa-solid fa-hourglass-start"></i> في انتظار التسجيل
                       </span>
+                    <% } else if(s.followup_status === 'صف غير متاح'){ %>
+                      <span class="badge-status bg-warning text-dark border border-warning fw-bold">
+                        <i class="fa-solid fa-hourglass-start"></i> صف غير متاح (انتظار)
+                      </span>
                     <% } else if(s.followup_status === 'لا يرغب في التسجيل'){ %>
                       <span class="badge-status bg-danger-subtle text-danger border border-danger">
                         <i class="fa-solid fa-ban"></i> لا يرغب
                       </span>
                     <% } else { %>
-                      <span class="badge-status bg-light text-muted border">لم يسجل</span>
+                      <span class="badge-status bg-light text-muted border"><%= s.followup_status || 'لم يسجل' %></span>
                     <% } %>
                   </td>
                   <td class="text-truncate" style="max-width: 200px;"><small class="text-muted"><%= s.notes || '—' %></small></td>
