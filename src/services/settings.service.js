@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { PHASE_STRUCTURE, PHASES, STUDENT_TYPES } = require('../utils/constants');
 
 let memorySettings = {
   is_portal_open: true,
@@ -17,8 +18,18 @@ let memorySettings = {
     "الروابي": "0553620441",
     "الندى": "0597196787"
   },
+  grade_matrix: {}, // Dynamic Grade Matrix: key -> boolean
   updated_at: new Date().toISOString()
 };
+
+function buildMatrixKey(branch, student_type, phase, grade, track) {
+  const b = String(branch || '').trim();
+  const st = String(student_type || '').trim();
+  const p = String(phase || '').trim();
+  const g = String(grade || '').trim();
+  const t = String(track || 'عام').trim();
+  return `${b}_${st}_${p}_${g}_${t}`;
+}
 
 async function getExternalSettings() {
   try {
@@ -36,6 +47,10 @@ async function getExternalSettings() {
         branch_phones: {
           ...memorySettings.branch_phones,
           ...(parsed.branch_phones || {})
+        },
+        grade_matrix: {
+          ...memorySettings.grade_matrix,
+          ...(parsed.grade_matrix || {})
         }
       };
     }
@@ -51,10 +66,16 @@ async function saveExternalSettings(newConfig, username) {
     ...(newConfig.branch_phones || {})
   };
 
+  const mergedGradeMatrix = {
+    ...memorySettings.grade_matrix,
+    ...(newConfig.grade_matrix || {})
+  };
+
   memorySettings = {
     ...memorySettings,
     ...newConfig,
     branch_phones: mergedBranchPhones,
+    grade_matrix: mergedGradeMatrix,
     updated_at: new Date().toISOString(),
     updated_by: username || 'admin'
   };
@@ -93,8 +114,71 @@ function getBranchWhatsAppPhone(branchIdOrName, settings) {
   return "0553620441"; // Default fallback
 }
 
+function isGradeAvailable(branch, student_type, phase, grade, track, settings) {
+  const cfg = settings || memorySettings;
+  const matrix = cfg.grade_matrix;
+  if (!matrix || Object.keys(matrix).length === 0) {
+    return true; // Default: all active if matrix has never been configured
+  }
+
+  const key = buildMatrixKey(branch, student_type, phase, grade, track);
+  if (matrix[key] !== undefined) {
+    return matrix[key] === true || matrix[key] === 'true' || matrix[key] === 1;
+  }
+
+  // Fallback checking general track
+  const fallbackKey = buildMatrixKey(branch, student_type, phase, grade, 'عام');
+  if (matrix[fallbackKey] !== undefined) {
+    return matrix[fallbackKey] === true || matrix[fallbackKey] === 'true' || matrix[fallbackKey] === 1;
+  }
+
+  return true; // default open
+}
+
+function getAvailableHierarchy(branch, student_type, settings) {
+  const cfg = settings || memorySettings;
+  const result = {
+    branch,
+    student_type,
+    phases: []
+  };
+
+  for (const [pName, pInfo] of Object.entries(PHASE_STRUCTURE)) {
+    const phaseObj = {
+      name: pName,
+      grades: []
+    };
+
+    for (const gradeItem of pInfo.grades) {
+      const activeTracks = [];
+      for (const trackName of pInfo.tracks) {
+        if (isGradeAvailable(branch, student_type, pName, gradeItem.id, trackName, cfg)) {
+          activeTracks.push(trackName);
+        }
+      }
+
+      if (activeTracks.length > 0) {
+        phaseObj.grades.push({
+          id: gradeItem.id,
+          name: gradeItem.name,
+          tracks: activeTracks
+        });
+      }
+    }
+
+    if (phaseObj.grades.length > 0) {
+      result.phases.push(phaseObj);
+    }
+  }
+
+  return result;
+}
+
 module.exports = {
   getExternalSettings,
   saveExternalSettings,
-  getBranchWhatsAppPhone
+  getBranchWhatsAppPhone,
+  isGradeAvailable,
+  getAvailableHierarchy,
+  buildMatrixKey
 };
