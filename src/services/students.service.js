@@ -40,6 +40,10 @@ function normalizeStudent(student) {
 
   student.registration_source = meta.registration_source || 'تسجيل داخلي';
   student.mother_phone = meta.mother_phone || '';
+  student.is_deleted = meta.is_deleted === true || student.followup_status === 'محذوف';
+  student.deleted_at = meta.deleted_at || null;
+  student.deleted_by = meta.deleted_by || null;
+  student.previous_followup_status = meta.previous_followup_status || 'في انتظار التسجيل';
   
   // Display attachments excluding internal metadata object
   student.attachments = rawAtts.filter(a => a && !a.__meta);
@@ -50,6 +54,7 @@ function normalizeStudent(student) {
   return student;
 }
 
+// Global active students query (excludes soft-deleted students)
 async function getStudents() {
   try {
     const { data, error } = await supabase
@@ -61,40 +66,63 @@ async function getStudents() {
       return [];
     }
     return (data || [])
-      .filter(s => s && s.is_deleted !== true && s.followup_status !== 'محذوف')
-      .map(normalizeStudent);
+      .map(normalizeStudent)
+      .filter(s => s && s.is_deleted !== true && s.followup_status !== 'محذوف');
   } catch (err) {
     console.error('Fatal getStudents exception:', err);
     return [];
   }
 }
 
+// Retrieve single active student
 async function getStudentById(id) {
-  const { data, error } = await supabase.from('students').select('*').eq('id', id).single();
-  if (error) return null;
-  return data ? normalizeStudent(data) : null;
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) return null;
+    const s = normalizeStudent(data);
+    if (s.is_deleted || s.followup_status === 'محذوف') return null;
+    return s;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Retrieve student including deleted records
+async function getStudentByIdIncludingDeleted(id) {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) return null;
+    return normalizeStudent(data);
+  } catch (e) {
+    return null;
+  }
 }
 
 async function createStudent(studentData) {
-  // Automatically calculate next ID to prevent sequence collision
-  if (!studentData.id) {
-    const { data: latest } = await supabase.from('students').select('id').order('id', { ascending: false }).limit(1);
-    const maxId = (latest && latest[0] && latest[0].id) ? parseInt(latest[0].id) : 0;
-    studentData.id = maxId + 1;
+  const sanitized = sanitizeStudentData(studentData);
+  sanitized.updated_at = new Date().toISOString();
+
+  // If id is not specified, calculate next id to prevent sequence conflicts
+  if (!sanitized.id) {
+    try {
+      const { data: maxRows } = await supabase
+        .from('students')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+      const nextId = (maxRows && maxRows[0] && maxRows[0].id ? maxRows[0].id : 0) + 1;
+      sanitized.id = nextId;
+    } catch (e) {}
   }
 
-  // Preserve metadata in attachments
-  const rawAtts = Array.isArray(studentData.attachments) ? studentData.attachments.filter(a => !a.__meta) : [];
-  const metaItem = {
-    __meta: {
-      registration_source: studentData.registration_source || 'تسجيل داخلي',
-      mother_phone: studentData.mother_phone || ''
-    }
-  };
-  studentData.attachments = [...rawAtts, metaItem];
-
-  const sanitized = sanitizeStudentData(studentData);
-  
   const { data, error } = await supabase
     .from('students')
     .insert([sanitized])
@@ -109,24 +137,8 @@ async function createStudent(studentData) {
 }
 
 async function updateStudent(id, studentData) {
-  const existing = await getStudentById(id);
-  const existingSource = existing ? existing.registration_source : 'تسجيل داخلي';
-  const existingMotherPhone = existing ? existing.mother_phone : '';
-
-  const rawAtts = Array.isArray(studentData.attachments) 
-    ? studentData.attachments.filter(a => !a.__meta) 
-    : (existing ? existing.attachments : []);
-
-  const metaItem = {
-    __meta: {
-      registration_source: studentData.registration_source || existingSource,
-      mother_phone: studentData.mother_phone || existingMotherPhone
-    }
-  };
-  studentData.attachments = [...rawAtts, metaItem];
-  studentData.updated_at = new Date().toISOString();
-
   const sanitized = sanitizeStudentData(studentData);
+  sanitized.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase
     .from('students')
@@ -142,96 +154,131 @@ async function updateStudent(id, studentData) {
   return data ? normalizeStudent(data) : null;
 }
 
-async function deleteStudent(id) {
-  if (!id) {
-    return { success: false, error: 'معرف الطالب غير محدد أو مفقود' };
-  }
+// Soft Delete Student
+async function softDeleteStudent(id, username) {
+  if (!id) return { success: false, error: 'معرف الطالب غير محدد' };
   const studentId = parseInt(id);
-  if (isNaN(studentId) || studentId <= 0) {
-    return { success: false, error: 'معرف الطالب غير صالح (NaN)' };
-  }
+  if (isNaN(studentId) || studentId <= 0) return { success: false, error: 'معرف الطالب غير صالح' };
 
   try {
-    // 1. Find existing student to inspect attachments and name
-    const student = await getStudentById(studentId);
-    if (!student) {
-      return { success: false, error: 'الطالب غير موجود مسبقاً في قاعدة البيانات' };
+    const student = await getStudentByIdIncludingDeleted(studentId);
+    if (!student) return { success: false, error: 'الطالب غير موجود مسبقاً في قاعدة البيانات' };
+
+    // Update attachments metadata
+    const { data: rawData } = await supabase.from('students').select('attachments, followup_status, notes').eq('id', studentId).single();
+    let attachments = Array.isArray(rawData && rawData.attachments) ? rawData.attachments : [];
+    
+    let metaIndex = attachments.findIndex(a => a && a.__meta);
+    let meta = metaIndex !== -1 ? attachments[metaIndex].__meta : {};
+
+    meta.is_deleted = true;
+    meta.deleted_at = new Date().toISOString();
+    meta.deleted_by = username || 'admin';
+    meta.previous_followup_status = rawData.followup_status || student.followup_status || 'في انتظار التسجيل';
+
+    if (metaIndex !== -1) {
+      attachments[metaIndex] = { __meta: meta };
+    } else {
+      attachments.push({ __meta: meta });
     }
 
-    const studentName = student.name || 'طالب رقم ' + studentId;
+    const cleanNotes = (rawData.notes || '').replace(/\[تم الحذف ونقله لسلة المحذوفات[\s\S]*?\]/g, '').trim();
+    const newNotes = cleanNotes + '\n[تم الحذف ونقله لسلة المحذوفات بواسطة ' + (username || 'admin') + ' في ' + new Date().toISOString() + ']';
 
-    // 2. Cascade Delete Step 1: Remove attached files from Supabase Storage safely
-    if (student.attachments && Array.isArray(student.attachments)) {
-      const fileNames = student.attachments
-        .filter(att => att && att.filename)
-        .map(att => att.filename);
-      if (fileNames.length > 0) {
-        try {
-          await supabase.storage.from('student-attachments').remove(fileNames);
-        } catch (storageErr) {
-          console.warn('Storage cleanup warning during student delete:', storageErr.message);
-        }
-      }
+    const { data: updatedData, error } = await supabase
+      .from('students')
+      .update({
+        followup_status: 'محذوف',
+        attachments: attachments,
+        notes: newNotes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', studentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('softDeleteStudent error:', error);
+      return { success: false, error: error.message };
     }
 
-    // 3. Cascade Delete Step 2: Delete related records in student_history first
-    try {
-      const { deleteStudentHistory } = require('./history.service');
-      await deleteStudentHistory(studentId);
-    } catch (histErr) {
-      console.warn('student_history cleanup warning:', histErr.message);
-    }
-
-    // 4. Primary Delete Attempt: Direct Hard DELETE from students table
-    let hardDeleteSuccess = false;
-    try {
-      const { error: deleteError } = await supabase
-        .from('students')
-        .delete()
-        .eq('id', studentId);
-
-      if (!deleteError) {
-        hardDeleteSuccess = true;
-      } else {
-        console.warn('Direct DELETE failed, will apply Soft Delete fallback:', deleteError.message);
-      }
-    } catch (directDelEx) {
-      console.warn('Direct DELETE exception:', directDelEx.message);
-    }
-
-    // 5. Fallback: Soft Delete if Hard DELETE failed due to FK constraints or RLS
-    if (!hardDeleteSuccess) {
-      try {
-        const { error: softError } = await supabase
-          .from('students')
-          .update({
-            followup_status: 'محذوف',
-            notes: (student.notes || '') + '\n[تم الحذف بواسطة الإدارة في ' + new Date().toISOString() + ']'
-          })
-          .eq('id', studentId);
-
-        if (softError) {
-          console.error('Soft delete fallback error:', softError);
-          return { success: false, error: softError.message || 'فشل حذف الطالب في قاعدة البيانات' };
-        }
-      } catch (softEx) {
-        console.error('Soft delete fallback exception:', softEx);
-        return { success: false, error: softEx.message || 'فشل الحذف المرن' };
-      }
-    }
-
-    return { success: true, studentName };
+    return { success: true, student: normalizeStudent(updatedData), studentName: student.name };
   } catch (err) {
-    console.error('Fatal exception in deleteStudent service:', err);
-    return { success: false, error: err.message || 'استثناء غير متوقع أثناء حذف الطالب' };
+    console.error('softDeleteStudent exception:', err);
+    return { success: false, error: err.message };
   }
+}
+
+// Restore Deleted Student
+async function restoreStudent(id, username) {
+  if (!id) return { success: false, error: 'معرف الطالب غير محدد' };
+  const studentId = parseInt(id);
+  if (isNaN(studentId) || studentId <= 0) return { success: false, error: 'معرف الطالب غير صالح' };
+
+  try {
+    const student = await getStudentByIdIncludingDeleted(studentId);
+    if (!student) return { success: false, error: 'تعذر العثور على سجل الطالب لاسترجاعه' };
+
+    const { data: rawData } = await supabase.from('students').select('attachments, followup_status, notes').eq('id', studentId).single();
+    let attachments = Array.isArray(rawData && rawData.attachments) ? rawData.attachments : [];
+    
+    let metaIndex = attachments.findIndex(a => a && a.__meta);
+    let meta = metaIndex !== -1 ? attachments[metaIndex].__meta : {};
+
+    const prevStatus = meta.previous_followup_status && meta.previous_followup_status !== 'محذوف' 
+      ? meta.previous_followup_status 
+      : 'في انتظار التسجيل';
+
+    meta.is_deleted = false;
+    meta.deleted_at = null;
+    meta.restored_at = new Date().toISOString();
+    meta.restored_by = username || 'admin';
+
+    if (metaIndex !== -1) {
+      attachments[metaIndex] = { __meta: meta };
+    } else {
+      attachments.push({ __meta: meta });
+    }
+
+    const cleanNotes = (rawData.notes || '').replace(/\[تم الحذف ونقله لسلة المحذوفات[\s\S]*?\]/g, '').trim();
+    const newNotes = cleanNotes + '\n[تم استرجاع الطالب بنجاح بواسطة ' + (username || 'admin') + ' في ' + new Date().toISOString() + ']';
+
+    const { data: updatedData, error } = await supabase
+      .from('students')
+      .update({
+        followup_status: prevStatus,
+        attachments: attachments,
+        notes: newNotes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', studentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('restoreStudent error:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, student: normalizeStudent(updatedData) };
+  } catch (err) {
+    console.error('restoreStudent exception:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+async function deleteStudent(id, username) {
+  return await softDeleteStudent(id, username);
 }
 
 module.exports = {
   getStudents,
   getStudentById,
+  getStudentByIdIncludingDeleted,
   createStudent,
   updateStudent,
   deleteStudent,
+  softDeleteStudent,
+  restoreStudent,
   normalizeStudent
 };
