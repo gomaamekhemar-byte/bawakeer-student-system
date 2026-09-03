@@ -172,6 +172,14 @@
               </div>
             </div>
 
+            <% if(student.followup_status === 'صف غير متاح'){ %>
+              <!-- WAITLIST NOTICE -->
+              <div class="alert alert-warning d-flex align-items-center justify-content-center gap-2 py-3 rounded-3 mb-4 shadow-sm" role="alert">
+                <i class="fa-solid fa-hourglass-start fs-4 text-warning"></i>
+                <span><strong>ملاحظة هامة:</strong> تم إدراج طلبكم على <strong>قائمة الانتظار (الصف المطلوب غير متاح حالياً بالفرع)</strong>، وسيتم التواصل معكم فور توفر مقاعد شاغرة.</span>
+              </div>
+            <% } %>
+
             <!-- AUTOMATED CONFIRMATION ALERT -->
             <div class="alert alert-success d-flex align-items-center justify-content-center gap-2 py-3 rounded-3 mb-4 shadow-sm" role="alert">
               <i class="fa-brands fa-whatsapp fs-4 text-success"></i>
@@ -268,7 +276,7 @@
                   </div>
                   <div class="col-md-4">
                     <label class="form-label fw-bold small text-dark">نوع الطالب <span class="text-danger">*</span></label>
-                    <select name="student_type" class="form-select" required>
+                    <select name="student_type" id="studentTypeSelect" class="form-select" required onchange="updateCascadingDropdowns()">
                       <option value="بنين" selected>بنين</option>
                       <option value="بنات">بنات</option>
                     </select>
@@ -386,7 +394,7 @@
                 <div class="row g-3 mb-4">
                   <div class="col-md-6">
                     <label class="form-label fw-bold small text-dark">الفرع المطلوب <span class="text-danger">*</span></label>
-                    <select name="student_branch" class="form-select fw-bold" required>
+                    <select name="student_branch" id="studentBranchSelect" class="form-select fw-bold" required onchange="updateCascadingDropdowns()">
                       <% branches.forEach(function(b){ %>
                         <option value="<%= b %>">فرع <%= b %></option>
                       <% }) %>
@@ -394,34 +402,38 @@
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-bold small text-dark">المرحلة الدراسية <span class="text-danger">*</span></label>
-                    <select name="phase" class="form-select" required>
-                      <option value="روضة">روضة</option>
+                    <select name="phase" id="phaseSelect" class="form-select" required onchange="onPhaseSelectChange()">
                       <option value="ابتدائي" selected>ابتدائي</option>
+                      <option value="روضة">روضة</option>
                       <option value="متوسط">متوسط</option>
                       <option value="ثانوي">ثانوي</option>
                     </select>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-bold small text-dark">الصف الدراسي <span class="text-danger">*</span></label>
-                    <select name="grade" class="form-select" required>
-                      <option value="1" selected>الصف الأول</option>
-                      <option value="2">الصف الثاني</option>
-                      <option value="3">الصف الثالث</option>
-                      <option value="4">الصف الرابع</option>
-                      <option value="5">الصف الخامس</option>
-                      <option value="6">الصف السادس</option>
+                    <select name="grade" id="gradeSelect" class="form-select" required onchange="onGradeSelectChange()">
+                      <option value="1" selected>الصف الأول الابتدائي</option>
                     </select>
                   </div>
 
                   <% if(typeof settings === 'undefined' || settings.show_track !== false){ %>
-                  <div class="col-md-6">
+                  <div class="col-md-6" id="trackContainer">
                     <label class="form-label fw-bold small text-dark">المسار التعليمي</label>
-                    <select name="track" class="form-select">
+                    <select name="track" id="trackSelect" class="form-select">
                       <option value="عام" selected>عام</option>
                       <option value="تحفيظ">تحفيظ</option>
                     </select>
                   </div>
+                  <% } else { %>
+                    <input type="hidden" name="track" id="trackSelect" value="عام">
                   <% } %>
+                  
+                  <div class="col-12 d-none" id="matrixNoticeCol">
+                    <div class="alert alert-warning small py-2 mb-0 d-flex align-items-center gap-2">
+                      <i class="fa-solid fa-circle-exclamation fs-5"></i>
+                      <span id="matrixNoticeText"></span>
+                    </div>
+                  </div>
 
                   <% if(typeof settings === 'undefined' || settings.show_notes !== false){ %>
                   <div class="col-md-12">
@@ -593,6 +605,177 @@
         }
       }
     }
+  </script>
+  <!-- DYNAMIC CASCADING DROPDOWNS ENGINE (FEATURE 2) -->
+  <script>
+    const serverGradeMatrix = <%- JSON.stringify((typeof settings !== 'undefined' && settings.grade_matrix) ? settings.grade_matrix : {}) %>;
+    const serverPhaseStructure = <%- JSON.stringify(typeof phaseStructure !== 'undefined' ? phaseStructure : {}) %>;
+
+    function isMatrixCellOpen(branch, stType, phase, grade, track) {
+      if (!serverGradeMatrix || Object.keys(serverGradeMatrix).length === 0) return true;
+      const key = branch + '_' + stType + '_' + phase + '_' + grade + '_' + (track || 'عام');
+      if (serverGradeMatrix[key] !== undefined) {
+        return serverGradeMatrix[key] === true || serverGradeMatrix[key] === 'true' || serverGradeMatrix[key] === 1;
+      }
+      const fallback = branch + '_' + stType + '_' + phase + '_' + grade + '_عام';
+      if (serverGradeMatrix[fallback] !== undefined) {
+        return serverGradeMatrix[fallback] === true || serverGradeMatrix[fallback] === 'true' || serverGradeMatrix[fallback] === 1;
+      }
+      return true;
+    }
+
+    function updateCascadingDropdowns() {
+      const branchSel = document.getElementById('studentBranchSelect');
+      const stTypeSel = document.getElementById('studentTypeSelect');
+      const phaseSel = document.getElementById('phaseSelect');
+      const gradeSel = document.getElementById('gradeSelect');
+      const trackSel = document.getElementById('trackSelect');
+      const noticeCol = document.getElementById('matrixNoticeCol');
+      const noticeText = document.getElementById('matrixNoticeText');
+
+      if (!branchSel || !stTypeSel || !phaseSel) return;
+
+      const branch = branchSel.value;
+      const stType = stTypeSel.value;
+      const currentPhase = phaseSel.value;
+
+      // 1. Calculate available phases for this branch + gender
+      phaseSel.innerHTML = '';
+      let availablePhasesCount = 0;
+
+      for (const [pName, pInfo] of Object.entries(serverPhaseStructure)) {
+        let hasOpenGrades = false;
+        for (const gItem of pInfo.grades) {
+          for (const tName of pInfo.tracks) {
+            if (isMatrixCellOpen(branch, stType, pName, gItem.id, tName)) {
+              hasOpenGrades = true;
+              break;
+            }
+          }
+          if (hasOpenGrades) break;
+        }
+
+        if (hasOpenGrades) {
+          const opt = document.createElement('option');
+          opt.value = pName;
+          opt.textContent = pName;
+          if (pName === currentPhase) opt.selected = true;
+          phaseSel.appendChild(opt);
+          availablePhasesCount++;
+        }
+      }
+
+      if (availablePhasesCount === 0) {
+        // No phases available
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'لا تتوفر مقاعد شاغرة حالياً';
+        phaseSel.appendChild(opt);
+        if (noticeCol && noticeText) {
+          noticeText.textContent = 'عفواً، جميع فصول هذا الفرع والقسم غير متاحة حالياً. يمكنك التقديم للإدراج في قائمة الانتظار.';
+          noticeCol.classList.remove('d-none');
+        }
+      } else {
+        if (noticeCol) noticeCol.classList.add('d-none');
+        if (!phaseSel.value && phaseSel.options.length > 0) {
+          phaseSel.selectedIndex = 0;
+        }
+      }
+
+      onPhaseSelectChange();
+    }
+
+    function onPhaseSelectChange() {
+      const branchSel = document.getElementById('studentBranchSelect');
+      const stTypeSel = document.getElementById('studentTypeSelect');
+      const phaseSel = document.getElementById('phaseSelect');
+      const gradeSel = document.getElementById('gradeSelect');
+
+      if (!branchSel || !stTypeSel || !phaseSel || !gradeSel) return;
+
+      const branch = branchSel.value;
+      const stType = stTypeSel.value;
+      const phase = phaseSel.value;
+      const currentGrade = gradeSel.value;
+
+      gradeSel.innerHTML = '';
+      const pInfo = serverPhaseStructure[phase];
+      if (!pInfo) return;
+
+      let openGradesCount = 0;
+      pInfo.grades.forEach(gItem => {
+        let isGradeOpen = false;
+        pInfo.tracks.forEach(tName => {
+          if (isMatrixCellOpen(branch, stType, phase, gItem.id, tName)) {
+            isGradeOpen = true;
+          }
+        });
+
+        if (isGradeOpen) {
+          const opt = document.createElement('option');
+          opt.value = gItem.id;
+          opt.textContent = gItem.name;
+          if (gItem.id === currentGrade) opt.selected = true;
+          gradeSel.appendChild(opt);
+          openGradesCount++;
+        }
+      });
+
+      if (openGradesCount === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'لا توجد صفوف متاحة';
+        gradeSel.appendChild(opt);
+      } else {
+        if (!gradeSel.value && gradeSel.options.length > 0) {
+          gradeSel.selectedIndex = 0;
+        }
+      }
+
+      onGradeSelectChange();
+    }
+
+    function onGradeSelectChange() {
+      const branchSel = document.getElementById('studentBranchSelect');
+      const stTypeSel = document.getElementById('studentTypeSelect');
+      const phaseSel = document.getElementById('phaseSelect');
+      const gradeSel = document.getElementById('gradeSelect');
+      const trackSel = document.getElementById('trackSelect');
+
+      if (!trackSel || !branchSel || !stTypeSel || !phaseSel || !gradeSel) return;
+
+      const branch = branchSel.value;
+      const stType = stTypeSel.value;
+      const phase = phaseSel.value;
+      const grade = gradeSel.value;
+      const currentTrack = trackSel.value;
+
+      trackSel.innerHTML = '';
+      const pInfo = serverPhaseStructure[phase];
+      if (!pInfo) return;
+
+      pInfo.tracks.forEach(tName => {
+        if (isMatrixCellOpen(branch, stType, phase, grade, tName)) {
+          const opt = document.createElement('option');
+          opt.value = tName;
+          opt.textContent = tName;
+          if (tName === currentTrack) opt.selected = true;
+          trackSel.appendChild(opt);
+        }
+      });
+
+      if (trackSel.options.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = 'عام';
+        opt.textContent = 'عام';
+        trackSel.appendChild(opt);
+      }
+    }
+
+    // Initialize cascading dropdowns on DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+      updateCascadingDropdowns();
+    });
   </script>
 </body>
 </html>
