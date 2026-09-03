@@ -2,9 +2,16 @@ const express = require("express");
 const router = express.Router();
 const { requireAuth } = require("../middleware/auth");
 const { withUser } = require("../middleware/permissions");
-const { getExternalSettings, saveExternalSettings } = require("../services/settings.service");
+const {
+  getExternalSettings,
+  saveExternalSettings,
+  isGradeAvailable,
+  getAvailableHierarchy,
+  buildMatrixKey
+} = require("../services/settings.service");
 const { getBranches } = require("../services/branches.service");
 const { addHistory } = require("../services/history.service");
+const { PHASE_STRUCTURE, PHASES, STUDENT_TYPES } = require("../utils/constants");
 
 // GET /external_settings - Exclusive to Admin (General Manager)
 router.get("/external_settings", requireAuth, withUser, async (req, res) => {
@@ -20,11 +27,16 @@ router.get("/external_settings", requireAuth, withUser, async (req, res) => {
     currentUser,
     settings,
     branches,
+    phaseStructure: PHASE_STRUCTURE,
+    phases: PHASES,
+    studentTypes: STUDENT_TYPES,
+    isGradeAvailable,
+    buildMatrixKey,
     message: req.query.msg || null
   });
 });
 
-// POST /external_settings - Update portal configuration & branch WhatsApp numbers
+// POST /external_settings - Update portal configuration, branch WhatsApp numbers & Grade Matrix
 router.post("/external_settings", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || currentUser.role !== "admin") {
@@ -32,6 +44,7 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
   }
 
   const branches = await getBranches(false);
+  const currentSettings = await getExternalSettings();
 
   const is_portal_open = req.body.is_portal_open === "1";
   const portal_announcement = (req.body.portal_announcement || "").trim();
@@ -43,7 +56,7 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
   const show_track = req.body.show_track === "1";
   const show_notes = req.body.show_notes === "1";
 
-  // Build branch_phones map keyed by branch ID and branch Name
+  // 1. Build branch_phones map keyed by branch ID and branch Name
   const branch_phones = {};
   branches.forEach(b => {
     const val = (req.body[`branch_phone_${b.id}`] || req.body[`branch_phone_${b.name}`] || "").trim();
@@ -52,6 +65,27 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
       branch_phones[b.name] = val;
     }
   });
+
+  // 2. Process Dynamic Grade Matrix toggles
+  // If matrix form was submitted, reconstruct matrix for all known branch combinations
+  const grade_matrix = { ...(currentSettings.grade_matrix || {}) };
+
+  if (req.body.matrix_form_submitted === "1") {
+    branches.forEach(b => {
+      STUDENT_TYPES.forEach(st => {
+        Object.entries(PHASE_STRUCTURE).forEach(([pName, pInfo]) => {
+          pInfo.grades.forEach(gItem => {
+            pInfo.tracks.forEach(tName => {
+              const key = buildMatrixKey(b.name, st, pName, gItem.id, tName);
+              const fieldName = `matrix_${key}`;
+              // If checkbox was checked, it will be in req.body as '1'
+              grade_matrix[key] = req.body[fieldName] === "1";
+            });
+          });
+        });
+      });
+    });
+  }
 
   const updatedConfig = {
     is_portal_open,
@@ -63,19 +97,55 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
     show_neighborhood,
     show_track,
     show_notes,
-    branch_phones
+    branch_phones,
+    grade_matrix
   };
 
   await saveExternalSettings(updatedConfig, currentUser.username);
-  await addHistory("settings_updated", "تم تحديث إعدادات بوابة التسجيل الخارجي وأرقام تواصل الفروع", currentUser.username);
+  await addHistory("settings_updated", "تم تحديث إعدادات بوابة التسجيل ومصفوفة الفصول والمسارات", currentUser.username);
 
   const settings = await getExternalSettings();
   res.render("external_settings", {
     currentUser,
     settings,
     branches,
-    message: "تم حفظ وتطبيق إعدادات التسجيل الخارجي وأرقام الفروع بنجاح ✅"
+    phaseStructure: PHASE_STRUCTURE,
+    phases: PHASES,
+    studentTypes: STUDENT_TYPES,
+    isGradeAvailable,
+    buildMatrixKey,
+    message: "تم حفظ وتطبيق إعدادات التسجيل ومصفوفة الفصول والمسارات بنجاح ✅"
   });
+});
+
+// POST /api/matrix/toggle - AJAX Instant Matrix Toggle
+router.post("/api/matrix/toggle", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser || currentUser.role !== "admin") {
+    return res.status(403).json({ success: false, error: "غير مصرح" });
+  }
+
+  const { key, enabled } = req.body;
+  if (!key) {
+    return res.status(400).json({ success: false, error: "المفتاح مطلوب" });
+  }
+
+  const currentSettings = await getExternalSettings();
+  const grade_matrix = { ...(currentSettings.grade_matrix || {}) };
+  grade_matrix[key] = !!enabled;
+
+  await saveExternalSettings({ grade_matrix }, currentUser.username);
+  return res.json({ success: true, key, enabled: grade_matrix[key] });
+});
+
+// GET /api/matrix/hierarchy - Public API for Cascading Dropdowns
+router.get("/api/matrix/hierarchy", async (req, res) => {
+  const branch = (req.query.branch || "").trim();
+  const student_type = (req.query.student_type || "بنين").trim();
+  const settings = await getExternalSettings();
+
+  const hierarchy = getAvailableHierarchy(branch, student_type, settings);
+  res.json({ success: true, ...hierarchy });
 });
 
 module.exports = router;
