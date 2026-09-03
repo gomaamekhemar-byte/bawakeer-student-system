@@ -18,6 +18,7 @@ let memorySettings = {
     "الروابي": "0553620441",
     "الندى": "0597196787"
   },
+  branch_master_switches: {}, // branchName -> boolean (Master Switch for entire branch)
   grade_matrix: {}, // Dynamic Grade Matrix: key -> boolean
   updated_at: new Date().toISOString()
 };
@@ -29,6 +30,24 @@ function buildMatrixKey(branch, student_type, phase, grade, track) {
   const g = String(grade || '').trim();
   const t = String(track || 'عام').trim();
   return `${b}_${st}_${p}_${g}_${t}`;
+}
+
+function isBranchMasterActive(branchName, settings) {
+  const cfg = settings || memorySettings;
+  const masters = cfg.branch_master_switches || {};
+  const b = String(branchName || '').trim();
+  if (masters[b] !== undefined) {
+    return masters[b] === true || masters[b] === 'true' || masters[b] === 1;
+  }
+  return true; // Default active if not explicitly turned off
+}
+
+function getActiveBranches(allBranches, settings) {
+  const cfg = settings || memorySettings;
+  return (allBranches || []).filter(b => {
+    const bName = typeof b === 'string' ? b : (b.name || '');
+    return isBranchMasterActive(bName, cfg);
+  });
 }
 
 async function getExternalSettings() {
@@ -48,6 +67,10 @@ async function getExternalSettings() {
           ...memorySettings.branch_phones,
           ...(parsed.branch_phones || {})
         },
+        branch_master_switches: {
+          ...memorySettings.branch_master_switches,
+          ...(parsed.branch_master_switches || {})
+        },
         grade_matrix: {
           ...memorySettings.grade_matrix,
           ...(parsed.grade_matrix || {})
@@ -66,6 +89,11 @@ async function saveExternalSettings(newConfig, username) {
     ...(newConfig.branch_phones || {})
   };
 
+  const mergedBranchMasters = {
+    ...memorySettings.branch_master_switches,
+    ...(newConfig.branch_master_switches || {})
+  };
+
   const mergedGradeMatrix = {
     ...memorySettings.grade_matrix,
     ...(newConfig.grade_matrix || {})
@@ -75,6 +103,7 @@ async function saveExternalSettings(newConfig, username) {
     ...memorySettings,
     ...newConfig,
     branch_phones: mergedBranchPhones,
+    branch_master_switches: mergedBranchMasters,
     grade_matrix: mergedGradeMatrix,
     updated_at: new Date().toISOString(),
     updated_by: username || 'admin'
@@ -116,6 +145,12 @@ function getBranchWhatsAppPhone(branchIdOrName, settings) {
 
 function isGradeAvailable(branch, student_type, phase, grade, track, settings) {
   const cfg = settings || memorySettings;
+
+  // 1. Check Master Switch for the entire branch
+  if (!isBranchMasterActive(branch, cfg)) {
+    return false;
+  }
+
   const matrix = cfg.grade_matrix;
   if (!matrix || Object.keys(matrix).length === 0) {
     return true; // Default: all active if matrix has never been configured
@@ -140,8 +175,13 @@ function getAvailableHierarchy(branch, student_type, settings) {
   const result = {
     branch,
     student_type,
+    is_branch_active: isBranchMasterActive(branch, cfg),
     phases: []
   };
+
+  if (!result.is_branch_active) {
+    return result;
+  }
 
   for (const [pName, pInfo] of Object.entries(PHASE_STRUCTURE)) {
     const phaseObj = {
@@ -178,6 +218,8 @@ module.exports = {
   getExternalSettings,
   saveExternalSettings,
   getBranchWhatsAppPhone,
+  isBranchMasterActive,
+  getActiveBranches,
   isGradeAvailable,
   getAvailableHierarchy,
   buildMatrixKey
