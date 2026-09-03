@@ -6,6 +6,8 @@ const {
   getExternalSettings,
   saveExternalSettings,
   isGradeAvailable,
+  isBranchMasterActive,
+  getActiveBranches,
   getAvailableHierarchy,
   buildMatrixKey
 } = require("../services/settings.service");
@@ -31,12 +33,13 @@ router.get("/external_settings", requireAuth, withUser, async (req, res) => {
     phases: PHASES,
     studentTypes: STUDENT_TYPES,
     isGradeAvailable,
+    isBranchMasterActive,
     buildMatrixKey,
     message: req.query.msg || null
   });
 });
 
-// POST /external_settings - Update portal configuration, branch WhatsApp numbers & Grade Matrix
+// POST /external_settings - Update portal configuration, branch WhatsApp numbers, Master switches & Grade Matrix
 router.post("/external_settings", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || currentUser.role !== "admin") {
@@ -66,8 +69,15 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
     }
   });
 
-  // 2. Process Dynamic Grade Matrix toggles
-  // If matrix form was submitted, reconstruct matrix for all known branch combinations
+  // 2. Process Branch Master Switches
+  const branch_master_switches = { ...(currentSettings.branch_master_switches || {}) };
+  branches.forEach(b => {
+    const isMasterOn = req.body[`branch_master_${b.id}`] === "1" || req.body[`branch_master_${b.name}`] === "1";
+    branch_master_switches[b.name] = isMasterOn;
+    branch_master_switches[String(b.id)] = isMasterOn;
+  });
+
+  // 3. Process Dynamic Grade Matrix toggles
   const grade_matrix = { ...(currentSettings.grade_matrix || {}) };
 
   if (req.body.matrix_form_submitted === "1") {
@@ -75,10 +85,9 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
       STUDENT_TYPES.forEach(st => {
         Object.entries(PHASE_STRUCTURE).forEach(([pName, pInfo]) => {
           pInfo.grades.forEach(gItem => {
-            pInfo.tracks.forEach(tName => {
+            ['عام', 'تحفيظ'].forEach(tName => {
               const key = buildMatrixKey(b.name, st, pName, gItem.id, tName);
               const fieldName = `matrix_${key}`;
-              // If checkbox was checked, it will be in req.body as '1'
               grade_matrix[key] = req.body[fieldName] === "1";
             });
           });
@@ -98,11 +107,12 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
     show_track,
     show_notes,
     branch_phones,
+    branch_master_switches,
     grade_matrix
   };
 
   await saveExternalSettings(updatedConfig, currentUser.username);
-  await addHistory("settings_updated", "تم تحديث إعدادات بوابة التسجيل ومصفوفة الفصول والمسارات", currentUser.username);
+  await addHistory("settings_updated", "تم تحديث إعدادات بوابة التسجيل ومصفوفة الفصول الشاملة ومفاتيح الفروع الرئيسية", currentUser.username);
 
   const settings = await getExternalSettings();
   res.render("external_settings", {
@@ -113,24 +123,34 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
     phases: PHASES,
     studentTypes: STUDENT_TYPES,
     isGradeAvailable,
+    isBranchMasterActive,
     buildMatrixKey,
     message: "تم حفظ وتطبيق إعدادات التسجيل ومصفوفة الفصول والمسارات بنجاح ✅"
   });
 });
 
-// POST /api/matrix/toggle - AJAX Instant Matrix Toggle
+// POST /api/matrix/toggle - AJAX Instant Matrix & Branch Master Toggle
 router.post("/api/matrix/toggle", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || currentUser.role !== "admin") {
     return res.status(403).json({ success: false, error: "غير مصرح" });
   }
 
-  const { key, enabled } = req.body;
+  const { key, enabled, type, branch } = req.body;
+  const currentSettings = await getExternalSettings();
+
+  // If it's a branch master switch toggle
+  if (type === "branch_master" && branch) {
+    const branch_master_switches = { ...(currentSettings.branch_master_switches || {}) };
+    branch_master_switches[branch] = !!enabled;
+    await saveExternalSettings({ branch_master_switches }, currentUser.username);
+    return res.json({ success: true, branch, enabled: !!enabled, type: "branch_master" });
+  }
+
   if (!key) {
     return res.status(400).json({ success: false, error: "المفتاح مطلوب" });
   }
 
-  const currentSettings = await getExternalSettings();
   const grade_matrix = { ...(currentSettings.grade_matrix || {}) };
   grade_matrix[key] = !!enabled;
 
@@ -138,14 +158,20 @@ router.post("/api/matrix/toggle", requireAuth, withUser, async (req, res) => {
   return res.json({ success: true, key, enabled: grade_matrix[key] });
 });
 
-// GET /api/matrix/hierarchy - Public API for Cascading Dropdowns
+// GET /api/matrix/hierarchy - Public API for Cascading Dropdowns & Active Branches
 router.get("/api/matrix/hierarchy", async (req, res) => {
   const branch = (req.query.branch || "").trim();
   const student_type = (req.query.student_type || "بنين").trim();
   const settings = await getExternalSettings();
+  const allBranches = await getBranches(true);
+  const activeBranchList = getActiveBranches(allBranches, settings).map(b => b.name);
 
   const hierarchy = getAvailableHierarchy(branch, student_type, settings);
-  res.json({ success: true, ...hierarchy });
+  res.json({
+    success: true,
+    active_branches: activeBranchList,
+    ...hierarchy
+  });
 });
 
 module.exports = router;
