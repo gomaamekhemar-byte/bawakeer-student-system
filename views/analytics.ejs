@@ -149,7 +149,7 @@
         <span>الداش بورد والمؤشرات التحليلية | مدارس بواكير الأهلية</span>
       </div>
 
-      <!-- DYNAMIC MULTI-FILTER FORM: BRANCH, GRADE, TYPE, TRACK, SOURCE -->
+      <!-- DYNAMIC UNIFIED ADAPTIVE FILTERS BAR -->
       <form method="get" action="/analytics" class="d-flex align-items-center flex-wrap gap-2" id="analyticsFilterForm" onsubmit="event.preventDefault(); refreshAnalytics();">
         
         <!-- 1. Branch Filter -->
@@ -158,9 +158,9 @@
             <label class="text-white small fw-bold text-nowrap" for="branchFilterSelect">
               <i class="fa-solid fa-building me-1"></i> الفرع:
             </label>
-            <select name="branch" id="branchFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 130px;" onchange="refreshAnalytics()">
+            <select name="branch" id="branchFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 125px;" onchange="refreshAnalytics()">
               <option value="الكل" <%= (!selectedBranch || selectedBranch === 'الكل') ? 'selected' : '' %>>🌐 جميع الفروع</option>
-              <% branches.forEach(function(b){ %>
+              <% ((typeof availableFilters !== 'undefined' && availableFilters.branches) ? availableFilters.branches : branches).forEach(function(b){ %>
                 <option value="<%= b %>" <%= (selectedBranch === b) ? 'selected' : '' %>>🏢 فرع <%= b %></option>
               <% }) %>
             </select>
@@ -172,55 +172,68 @@
           </span>
         <% } %>
 
-        <!-- 2. Grade Filter (الصف) -->
+        <!-- 2. Phase Filter -->
+        <div class="d-flex align-items-center gap-1">
+          <label class="text-white small fw-bold text-nowrap" for="phaseFilterSelect">
+            <i class="fa-solid fa-layer-group me-1"></i> المرحلة:
+          </label>
+          <select name="phase" id="phaseFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 115px;" onchange="refreshAnalytics()">
+            <option value="الكل" <%= (!selectedPhase || selectedPhase === 'الكل') ? 'selected' : '' %>>جميع المراحل</option>
+            <% ((typeof availableFilters !== 'undefined' && availableFilters.phases) ? availableFilters.phases : phases).forEach(function(p){ %>
+              <option value="<%= p %>" <%= (selectedPhase === p) ? 'selected' : '' %>><%= p %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- 3. Grade Filter -->
         <div class="d-flex align-items-center gap-1">
           <label class="text-white small fw-bold text-nowrap" for="gradeFilterSelect">
             <i class="fa-solid fa-graduation-cap me-1"></i> الصف:
           </label>
           <select name="grade" id="gradeFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 110px;" onchange="refreshAnalytics()">
             <option value="الكل" <%= (!selectedGrade || selectedGrade === 'الكل') ? 'selected' : '' %>>جميع الصفوف</option>
-            <option value="1" <%= selectedGrade === '1' ? 'selected' : '' %>>الصف الأول</option>
-            <option value="2" <%= selectedGrade === '2' ? 'selected' : '' %>>الصف الثاني</option>
-            <option value="3" <%= selectedGrade === '3' ? 'selected' : '' %>>الصف الثالث</option>
-            <option value="4" <%= selectedGrade === '4' ? 'selected' : '' %>>الصف الرابع</option>
-            <option value="5" <%= selectedGrade === '5' ? 'selected' : '' %>>الصف الخامس</option>
-            <option value="6" <%= selectedGrade === '6' ? 'selected' : '' %>>الصف السادس</option>
+            <% ((typeof availableFilters !== 'undefined' && availableFilters.grades) ? availableFilters.grades : grades).forEach(function(g){ %>
+              <option value="<%= g %>" <%= (selectedGrade === g) ? 'selected' : '' %>>الصف <%= g %></option>
+            <% }) %>
           </select>
         </div>
 
-        <!-- 3. Student Type Filter (النوع: بنين / بنات) -->
+        <!-- 4. Student Type Filter -->
         <div class="d-flex align-items-center gap-1">
           <label class="text-white small fw-bold text-nowrap" for="typeFilterSelect">
             <i class="fa-solid fa-venus-mars me-1"></i> النوع:
           </label>
-          <select name="type" id="typeFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 110px;" onchange="refreshAnalytics()">
-            <option value="الكل" <%= (!selectedType || selectedType === 'الكل') ? 'selected' : '' %>>الكل (بنين/بنات)</option>
-            <option value="بنين" <%= selectedType === 'بنين' ? 'selected' : '' %>>👦 بنين</option>
-            <option value="بنات" <%= selectedType === 'بنات' ? 'selected' : '' %>>👧 بنات</option>
+          <select name="type" id="typeFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 105px;" onchange="refreshAnalytics()">
+            <option value="الكل" <%= (!selectedType || selectedType === 'الكل') ? 'selected' : '' %>>الكل</option>
+            <% ((typeof availableFilters !== 'undefined' && availableFilters.types) ? availableFilters.types : student_types).forEach(function(t){ %>
+              <option value="<%= t %>" <%= (selectedType === t) ? 'selected' : '' %>><%= t === 'بنين' ? '👦 بنين' : '👧 بنات' %></option>
+            <% }) %>
           </select>
         </div>
 
-        <!-- 4. Track Filter (المسار: عام / تحفيظ) -->
+        <!-- 5. Track Filter -->
         <div class="d-flex align-items-center gap-1">
           <label class="text-white small fw-bold text-nowrap" for="trackFilterSelect">
             <i class="fa-solid fa-book-open me-1"></i> المسار:
           </label>
           <select name="track" id="trackFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 110px;" onchange="refreshAnalytics()">
             <option value="الكل" <%= (!selectedTrack || selectedTrack === 'الكل') ? 'selected' : '' %>>جميع المسارات</option>
-            <option value="عام" <%= selectedTrack === 'عام' ? 'selected' : '' %>>مسار عام</option>
-            <option value="تحفيظ" <%= selectedTrack === 'تحفيظ' ? 'selected' : '' %>>مسار تحفيظ</option>
+            <% ((typeof availableFilters !== 'undefined' && availableFilters.tracks) ? availableFilters.tracks : tracks).forEach(function(tr){ %>
+              <option value="<%= tr %>" <%= (selectedTrack === tr) ? 'selected' : '' %>><%= tr %></option>
+            <% }) %>
           </select>
         </div>
 
-        <!-- 5. Registration Source Filter -->
+        <!-- 6. Registration Source Filter -->
         <div class="d-flex align-items-center gap-1">
           <label class="text-white small fw-bold text-nowrap" for="sourceFilterSelect">
             <i class="fa-solid fa-filter me-1"></i> المصدر:
           </label>
-          <select name="source" id="sourceFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 130px;" onchange="refreshAnalytics()">
+          <select name="source" id="sourceFilterSelect" class="form-select form-select-sm fw-bold shadow-sm" style="min-width: 125px;" onchange="refreshAnalytics()">
             <option value="الكل" <%= (!selectedSource || selectedSource === 'الكل' || selectedSource === 'جميع المصادر') ? 'selected' : '' %>>جميع المصادر</option>
-            <option value="الرابط الخارجي" <%= (typeof selectedSource !== 'undefined' && (selectedSource === 'الرابط الخارجي' || selectedSource === 'رابط خارجي')) ? 'selected' : '' %>>🌐 الرابط الخارجي</option>
-            <option value="التسجيل الداخلي (المدرسة)" <%= (typeof selectedSource !== 'undefined' && (selectedSource === 'التسجيل الداخلي (المدرسة)' || selectedSource === 'تسجيل داخلي')) ? 'selected' : '' %>>🏫 التسجيل الداخلي</option>
+            <% ((typeof availableFilters !== 'undefined' && availableFilters.sources) ? availableFilters.sources : ['الرابط الخارجي', 'التسجيل الداخلي (المدرسة)']).forEach(function(src){ %>
+              <option value="<%= src %>" <%= (selectedSource === src) ? 'selected' : '' %>><%= src === 'الرابط الخارجي' ? '🌐 الرابط الخارجي' : '🏫 التسجيل الداخلي' %></option>
+            <% }) %>
           </select>
         </div>
 
@@ -480,97 +493,115 @@
         </div>
 
       </div>
-    <!-- 2.8 DEMOGRAPHIC MATRIX GRID (التحليل الشبكي الهرمي: الفرع -> الصف -> بنين/بنات -> عام/تحفيظ) -->
+    <!-- 2.8 SMART COLLAPSIBLE DEMOGRAPHIC MATRIX (العرض الشبكي الذكي القابل للطي) -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
       <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
-          <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
-            <i class="fa-solid fa-table-cells-large fs-5"></i>
+          <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+            <i class="fa-solid fa-layer-group fs-5"></i>
           </div>
           <div>
-            <h5 class="fw-bold text-dark mb-0">التحليل الديموغرافي الشبكي (Demographic Matrix Grid)</h5>
-            <small class="text-muted">توزيع أعداد الطلاب بشكل هرمي متداخل حسب الفرع، الصف، النوع، والمسار التعليمي</small>
+            <h5 class="fw-bold text-dark mb-0">التوزيع الديموغرافي الذكي المدمج (Smart Collapsible View)</h5>
+            <small class="text-muted">عرض هرمي مدمج وقابل للطي حسب الفروع مع إخفاء الصفوف الصفرية تلقائياً لتوفير المساحة</small>
           </div>
         </div>
-        <span class="badge bg-primary text-white px-3 py-2 fw-bold">
-          <i class="fa-solid fa-chart-column me-1"></i> مصفوفة تفصيلية هرمية
-        </span>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary fw-bold px-3" onclick="toggleAllBranchAccordions(true)">
+            <i class="fa-solid fa-angles-down me-1"></i> فتح الكل
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3" onclick="toggleAllBranchAccordions(false)">
+            <i class="fa-solid fa-angles-up me-1"></i> طي الكل
+          </button>
+        </div>
       </div>
 
-      <div class="card-body p-4 pt-2">
+      <div class="card-body p-3 pt-0">
         <% if(typeof demographicMatrixGrid !== 'undefined' && demographicMatrixGrid.length){ %>
-          <% demographicMatrixGrid.forEach(function(bData){ %>
-            <div class="mb-4 border rounded-3 overflow-hidden shadow-sm bg-white">
-              <!-- Branch Subheader -->
-              <div class="bg-light p-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                  <i class="fa-solid fa-building text-primary fs-5"></i>
-                  <h6 class="fw-bold text-dark mb-0">فرع <%= bData.branch %></h6>
-                </div>
-                <div class="d-flex align-items-center flex-wrap gap-2">
-                  <span class="badge bg-primary-subtle text-primary border border-primary">
-                    <i class="fa-solid fa-mars me-1"></i> إجمالي البنين: <strong><%= bData.totals.boysTotal %></strong> (عام: <%= bData.totals.boysGeneral %> | تحفيظ: <%= bData.totals.boysTahfeez %>)
-                  </span>
-                  <span class="badge bg-danger-subtle text-danger border border-danger">
-                    <i class="fa-solid fa-venus me-1"></i> إجمالي البنات: <strong><%= bData.totals.girlsTotal %></strong> (عام: <%= bData.totals.girlsGeneral %> | تحفيظ: <%= bData.totals.girlsTahfeez %>)
-                  </span>
-                  <span class="badge bg-dark text-white">
-                    إجمالي الفرع: <strong><%= bData.totals.branchTotal %> طالب</strong>
-                  </span>
-                </div>
-              </div>
+          <div class="accordion" id="demographicBranchesAccordion">
+            <% demographicMatrixGrid.forEach(function(bData, bIdx){ %>
+              <div class="accordion-item border rounded-3 mb-3 overflow-hidden shadow-sm">
+                
+                <!-- Accordion Header -->
+                <h2 class="accordion-header" id="heading-branch-<%= bIdx %>">
+                  <button class="accordion-button <%= bIdx === 0 ? '' : 'collapsed' %> bg-light py-3 px-3 d-flex align-items-center justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-branch-<%= bIdx %>" aria-expanded="<%= bIdx === 0 ? 'true' : 'false' %>" aria-controls="collapse-branch-<%= bIdx %>">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                      <span class="badge bg-primary fs-6 p-2 rounded-2"><i class="fa-solid fa-building"></i></span>
+                      <strong class="fs-6 text-dark">فرع <%= bData.branch %></strong>
+                      <span class="badge bg-white text-dark border ms-2 shadow-xs">
+                        إجمالي الفرع: <strong><%= bData.totals.branchTotal %> طالب</strong>
+                      </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 me-3 small d-none d-md-flex">
+                      <span class="badge bg-primary-subtle text-primary border border-primary">
+                        <i class="fa-solid fa-mars me-1"></i> بنين: <strong><%= bData.totals.boysTotal %></strong> (<%= bData.totals.boysGeneral > 0 ? ('عام: ' + bData.totals.boysGeneral) : '' %><%= (bData.totals.boysGeneral > 0 && bData.totals.boysTahfeez > 0) ? ' | ' : '' %><%= bData.totals.boysTahfeez > 0 ? ('تحفيظ: ' + bData.totals.boysTahfeez) : '' %>)
+                      </span>
+                      <span class="badge bg-danger-subtle text-danger border border-danger">
+                        <i class="fa-solid fa-venus me-1"></i> بنات: <strong><%= bData.totals.girlsTotal %></strong> (<%= bData.totals.girlsGeneral > 0 ? ('عام: ' + bData.totals.girlsGeneral) : '' %><%= (bData.totals.girlsGeneral > 0 && bData.totals.girlsTahfeez > 0) ? ' | ' : '' %><%= bData.totals.girlsTahfeez > 0 ? ('تحفيظ: ' + bData.totals.girlsTahfeez) : '' %>)
+                      </span>
+                    </div>
+                  </button>
+                </h2>
 
-              <!-- Matrix Table for this Branch -->
-              <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle text-center mb-0" style="font-size: 13px;">
-                  <thead class="table-light">
-                    <tr>
-                      <th style="width: 120px;">المرحلة</th>
-                      <th style="width: 180px;" class="text-start ps-3">الصف الدراسي</th>
-                      <th class="bg-primary-subtle text-primary border-primary">بنين (عام)</th>
-                      <th class="bg-primary-subtle text-primary border-primary">بنين (تحفيظ)</th>
-                      <th class="bg-primary text-white">إجمالي البنين</th>
-                      <th class="bg-danger-subtle text-danger border-danger">بنات (عام)</th>
-                      <th class="bg-danger-subtle text-danger border-danger">بنات (تحفيظ)</th>
-                      <th class="bg-danger text-white">إجمالي البنات</th>
-                      <th class="bg-dark text-white" style="width: 120px;">المجموع الكلي</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <% if(bData.rows && bData.rows.length){ %>
+                <!-- Accordion Body: Integrated Compact Rows -->
+                <div id="collapse-branch-<%= bIdx %>" class="accordion-collapse collapse <%= bIdx === 0 ? 'show' : '' %>" aria-labelledby="heading-branch-<%= bIdx %>">
+                  <div class="accordion-body p-3 bg-white">
+                    <div class="d-flex flex-column gap-2">
                       <% bData.rows.forEach(function(r){ %>
-                        <tr class="<%= r.rowTotal > 0 ? '' : 'text-muted' %>">
-                          <td class="fw-bold"><%= r.phase %></td>
-                          <td class="text-start ps-3 fw-bold text-dark"><%= r.gradeName %></td>
-                          <td><span class="badge bg-light text-primary border"><%= r.boysGeneral %></span></td>
-                          <td><span class="badge bg-light text-primary border"><%= r.boysTahfeez %></span></td>
-                          <td class="fw-bold text-primary bg-primary-subtle"><%= r.boysTotal %></td>
-                          <td><span class="badge bg-light text-danger border"><%= r.girlsGeneral %></span></td>
-                          <td><span class="badge bg-light text-danger border"><%= r.girlsTahfeez %></span></td>
-                          <td class="fw-bold text-danger bg-danger-subtle"><%= r.girlsTotal %></td>
-                          <td class="fw-bold fs-6 <%= r.rowTotal > 0 ? 'text-dark bg-light' : 'text-muted' %>"><%= r.rowTotal %></td>
-                        </tr>
+                        <!-- COMPACT INTEGRATED ROW -->
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 px-3 border rounded-3 bg-light hover-shadow">
+                          
+                          <!-- Grade and Phase Title -->
+                          <div class="d-flex align-items-center gap-2" style="min-width: 220px;">
+                            <span class="badge bg-secondary-subtle text-secondary small"><%= r.phase %></span>
+                            <span class="fw-bold text-dark fs-6"><%= r.gradeName %></span>
+                          </div>
+
+                          <!-- Integrated Details: Boys & Girls -->
+                          <div class="d-flex align-items-center flex-wrap gap-2 flex-grow-1 justify-content-center">
+                            
+                            <!-- Boys Details -->
+                            <% if(r.boysTotal > 0){ %>
+                              <div class="bg-white border border-primary-subtle rounded-2 px-3 py-1 small d-flex align-items-center gap-2 shadow-xs">
+                                <span class="text-primary fw-bold"><i class="fa-solid fa-mars me-1"></i> إجمالي البنين: <strong><%= r.boysTotal %></strong></span>
+                                <span class="text-muted fw-semibold" style="font-size: 11px;">(<%= r.boysSummaryText %>)</span>
+                              </div>
+                            <% } %>
+
+                            <% if(r.boysTotal > 0 && r.girlsTotal > 0){ %>
+                              <span class="text-muted d-none d-sm-inline opacity-50">|</span>
+                            <% } %>
+
+                            <!-- Girls Details -->
+                            <% if(r.girlsTotal > 0){ %>
+                              <div class="bg-white border border-danger-subtle rounded-2 px-3 py-1 small d-flex align-items-center gap-2 shadow-xs">
+                                <span class="text-danger fw-bold"><i class="fa-solid fa-venus me-1"></i> إجمالي البنات: <strong><%= r.girlsTotal %></strong></span>
+                                <span class="text-muted fw-semibold" style="font-size: 11px;">(<%= r.girlsSummaryText %>)</span>
+                              </div>
+                            <% } %>
+
+                          </div>
+
+                          <!-- Row Total Badge -->
+                          <div class="text-end" style="min-width: 110px;">
+                            <span class="badge bg-dark text-white px-3 py-2 fw-bold rounded-pill">
+                              الإجمالي: <%= r.rowTotal %> طالب
+                            </span>
+                          </div>
+
+                        </div>
                       <% }) %>
-                    <% } else { %>
-                      <tr><td colspan="9" class="text-muted py-3">لا توجد بيانات مطابقة لمعايير الفلترة الحالية</td></tr>
-                    <% } %>
-                  </tbody>
-                  <tfoot class="table-secondary fw-bold">
-                    <tr>
-                      <td colspan="2" class="text-start ps-3">مجموع فرع <%= bData.branch %></td>
-                      <td><%= bData.totals.boysGeneral %></td>
-                      <td><%= bData.totals.boysTahfeez %></td>
-                      <td class="text-primary"><%= bData.totals.boysTotal %></td>
-                      <td><%= bData.totals.girlsGeneral %></td>
-                      <td><%= bData.totals.girlsTahfeez %></td>
-                      <td class="text-danger"><%= bData.totals.girlsTotal %></td>
-                      <td class="fs-6 text-dark"><%= bData.totals.branchTotal %></td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    </div>
+                  </div>
+                </div>
+
               </div>
-            </div>
-          <% }) %>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="text-center py-4 text-muted">
+            <i class="fa-solid fa-inbox fs-2 mb-2 d-block text-secondary"></i>
+            <span>لا توجد بيانات طلاب مطابقة لمعايير الفلترة المحددة</span>
+          </div>
         <% } %>
       </div>
     </div>
@@ -858,8 +889,30 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    function toggleAllBranchAccordions(open) {
+      const items = document.querySelectorAll('#demographicBranchesAccordion .accordion-collapse');
+      const buttons = document.querySelectorAll('#demographicBranchesAccordion .accordion-button');
+      items.forEach(el => {
+        if (open) {
+          el.classList.add('show');
+        } else {
+          el.classList.remove('show');
+        }
+      });
+      buttons.forEach(btn => {
+        if (open) {
+          btn.classList.remove('collapsed');
+          btn.setAttribute('aria-expanded', 'true');
+        } else {
+          btn.classList.add('collapsed');
+          btn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
     function refreshAnalytics() {
       const branchSel = document.getElementById('branchFilterSelect');
+      const phaseSel = document.getElementById('phaseFilterSelect');
       const gradeSel = document.getElementById('gradeFilterSelect');
       const typeSel = document.getElementById('typeFilterSelect');
       const trackSel = document.getElementById('trackFilterSelect');
@@ -875,7 +928,9 @@
       if (spinner) spinner.classList.remove('d-none');
 
       const params = new URLSearchParams();
+      const phase = phaseSel ? phaseSel.value : 'الكل';
       if (branch) params.set('branch', branch);
+      if (phase) params.set('phase', phase);
       if (grade) params.set('grade', grade);
       if (type) params.set('type', type);
       if (track) params.set('track', track);
