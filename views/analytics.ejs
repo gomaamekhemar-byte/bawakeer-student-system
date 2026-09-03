@@ -270,10 +270,10 @@
       </div>
     </div>
 
-    <!-- 2. KEY PERFORMANCE RATES -->
+    <!-- 2. KEY PERFORMANCE RATES & WAITLIST DEMAND (FEATURE 4) -->
     <div class="row g-3 mb-4">
-      <div class="col-md-4">
-        <div class="rate-card">
+      <div class="col-lg-3 col-md-6">
+        <div class="rate-card h-100">
           <div class="rate-circle-badge bg-success-subtle text-success border border-success">
             <%= analytics.acceptanceRate %>%
           </div>
@@ -282,8 +282,8 @@
         </div>
       </div>
 
-      <div class="col-md-4">
-        <div class="rate-card">
+      <div class="col-lg-3 col-md-6">
+        <div class="rate-card h-100">
           <div class="rate-circle-badge bg-primary-subtle text-primary border border-primary">
             <%= analytics.registrationRate %>%
           </div>
@@ -292,13 +292,26 @@
         </div>
       </div>
 
-      <div class="col-md-4">
-        <div class="rate-card">
+      <div class="col-lg-3 col-md-6">
+        <div class="rate-card h-100">
           <div class="rate-circle-badge bg-info-subtle text-info border border-info">
             <%= analytics.conversionRate %>%
           </div>
           <h6 class="fw-bold text-dark mb-1">معدل التحويل (Conversion)</h6>
           <small class="text-muted">نسبة من تم تسجيلهم من المقبولين</small>
+        </div>
+      </div>
+
+      <div class="col-lg-3 col-md-6">
+        <div class="rate-card h-100 border-warning shadow-sm" style="background: #fffdf5;">
+          <div class="rate-circle-badge bg-warning-subtle text-warning border border-warning">
+            <%= typeof analytics.waitlist_count !== 'undefined' ? analytics.waitlist_count : 0 %>
+          </div>
+          <h6 class="fw-bold text-dark mb-1 d-flex align-items-center justify-content-center gap-1">
+            <span>الطلب على الصفوف غير المتاحة</span>
+            <span class="badge bg-warning text-dark font-monospace" style="font-size:10px;"><%= typeof analytics.waitlist_rate !== 'undefined' ? analytics.waitlist_rate : 0 %>%</span>
+          </h6>
+          <small class="text-muted">طلبات قائمة الانتظار لدراسة فتح فصول جديدة</small>
         </div>
       </div>
     </div>
