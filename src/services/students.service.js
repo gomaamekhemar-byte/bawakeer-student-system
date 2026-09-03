@@ -51,15 +51,22 @@ function normalizeStudent(student) {
 }
 
 async function getStudents() {
-  const { data, error } = await supabase
-    .from('students')
-    .select('*')
-    .order('id', { ascending: false });
-  if (error) {
-    console.error('CRITICAL getStudents error:', error);
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .order('id', { ascending: false });
+    if (error) {
+      console.error('CRITICAL getStudents error:', error);
+      return [];
+    }
+    return (data || [])
+      .filter(s => s && s.is_deleted !== true && s.followup_status !== 'محذوف')
+      .map(normalizeStudent);
+  } catch (err) {
+    console.error('Fatal getStudents exception:', err);
     return [];
   }
-  return (data || []).map(normalizeStudent);
 }
 
 async function getStudentById(id) {
@@ -136,15 +143,88 @@ async function updateStudent(id, studentData) {
 }
 
 async function deleteStudent(id) {
-  const { deleteStudentHistory } = require('./history.service');
-  await deleteStudentHistory(id);
-
-  const { error } = await supabase.from('students').delete().eq('id', id);
-  if (error) {
-    console.error('deleteStudent error:', error);
-    return false;
+  if (!id) {
+    return { success: false, error: 'معرف الطالب غير محدد أو مفقود' };
   }
-  return true;
+  const studentId = parseInt(id);
+  if (isNaN(studentId) || studentId <= 0) {
+    return { success: false, error: 'معرف الطالب غير صالح (NaN)' };
+  }
+
+  try {
+    // 1. Find existing student to inspect attachments and name
+    const student = await getStudentById(studentId);
+    if (!student) {
+      return { success: false, error: 'الطالب غير موجود مسبقاً في قاعدة البيانات' };
+    }
+
+    const studentName = student.name || 'طالب رقم ' + studentId;
+
+    // 2. Cascade Delete Step 1: Remove attached files from Supabase Storage safely
+    if (student.attachments && Array.isArray(student.attachments)) {
+      const fileNames = student.attachments
+        .filter(att => att && att.filename)
+        .map(att => att.filename);
+      if (fileNames.length > 0) {
+        try {
+          await supabase.storage.from('student-attachments').remove(fileNames);
+        } catch (storageErr) {
+          console.warn('Storage cleanup warning during student delete:', storageErr.message);
+        }
+      }
+    }
+
+    // 3. Cascade Delete Step 2: Delete related records in student_history first
+    try {
+      const { deleteStudentHistory } = require('./history.service');
+      await deleteStudentHistory(studentId);
+    } catch (histErr) {
+      console.warn('student_history cleanup warning:', histErr.message);
+    }
+
+    // 4. Primary Delete Attempt: Direct Hard DELETE from students table
+    let hardDeleteSuccess = false;
+    try {
+      const { error: deleteError } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', studentId);
+
+      if (!deleteError) {
+        hardDeleteSuccess = true;
+      } else {
+        console.warn('Direct DELETE failed, will apply Soft Delete fallback:', deleteError.message);
+      }
+    } catch (directDelEx) {
+      console.warn('Direct DELETE exception:', directDelEx.message);
+    }
+
+    // 5. Fallback: Soft Delete if Hard DELETE failed due to FK constraints or RLS
+    if (!hardDeleteSuccess) {
+      try {
+        const { error: softError } = await supabase
+          .from('students')
+          .update({
+            followup_status: 'محذوف',
+            notes: (student.notes || '') + '\n[تم الحذف بواسطة الإدارة في ' + new Date().toISOString() + ']'
+          })
+          .eq('id', studentId);
+
+        if (softError) {
+          console.error('Soft delete fallback error:', softError);
+          return { success: false, error: softError.message || 'فشل حذف الطالب في قاعدة البيانات' };
+        }
+      } catch (softEx) {
+        console.error('Soft delete fallback exception:', softEx);
+        return { success: false, error: softEx.message || 'فشل الحذف المرن' };
+      }
+    }
+
+    return { success: true, studentName };
+  } catch (err) {
+    console.error('Fatal exception in deleteStudent service:', err);
+    return { success: false, error: err.message || 'استثناء غير متوقع أثناء حذف الطالب' };
+  }
 }
 
 module.exports = {
