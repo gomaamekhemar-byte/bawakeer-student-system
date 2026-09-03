@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const { requireAuth } = require("../middleware/auth");
 const { withUser, userCan, userHasPermission, userMatchesScope } = require("../middleware/permissions");
-const { getStudents, getStudentById, createStudent, updateStudent, deleteStudent } = require("../services/students.service");
+const { getStudents, getStudentById, getStudentByIdIncludingDeleted, createStudent, updateStudent, deleteStudent, softDeleteStudent, restoreStudent } = require("../services/students.service");
 const { getBranchNames } = require("../services/branches.service");
 const { getActiveYear, getAcademicYears } = require("../services/academic_years.service");
 const { addHistory, addStudentHistory, computeFieldChanges } = require("../services/history.service");
@@ -711,8 +711,44 @@ async function handleDeleteStudent(req, res) {
       return res.redirect("/students?msg=" + encodeURIComponent("خطأ: معرف الطالب غير صحيح"));
     }
 
-    // 1 & 2. Safe execution of resilient cascade delete & soft delete fallback
-    const result = await deleteStudent(studentId);
+    // 1. Capture complete student data snapshot BEFORE deleting
+    const existingStudent = await getStudentByIdIncludingDeleted(studentId);
+    if (!existingStudent) {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(404).json({ success: false, error: "الطالب غير موجود مسبقاً في قاعدة البيانات" });
+      }
+      return res.redirect("/students?msg=" + encodeURIComponent("خطأ: الطالب غير موجود مسبقاً"));
+    }
+
+    const recordSnapshot = {
+      id: existingStudent.id,
+      name: existingStudent.name,
+      phone: existingStudent.phone,
+      mother_phone: existingStudent.mother_phone || '',
+      date_of_birth: existingStudent.date_of_birth || '',
+      nationality: existingStudent.nationality || 'سعودي',
+      neighborhood: existingStudent.neighborhood || '',
+      branch: existingStudent.branch || '',
+      phase: existingStudent.phase || '',
+      grade: existingStudent.grade || '',
+      track: existingStudent.track || 'عام',
+      student_type: existingStudent.student_type || 'بنين',
+      registration_source: existingStudent.registration_source || 'تسجيل داخلي',
+      interview_result: existingStudent.interview_result || 'لم يقابل',
+      interview_reason: existingStudent.interview_reason || '',
+      interview_date: existingStudent.interview_date || '',
+      followup_status: existingStudent.followup_status || 'غير محدد',
+      registration_reason: existingStudent.registration_reason || '',
+      notes: existingStudent.notes || '',
+      attachments_count: (existingStudent.attachments || []).length,
+      created_at: existingStudent.created_at || '',
+      deleted_at: new Date().toISOString(),
+      deleted_by: currentUser.username
+    };
+
+    // 2. Soft Delete: keeps records intact for restore while hiding from active queries
+    const result = await softDeleteStudent(studentId, currentUser.username);
     if (!result || !result.success) {
       const errMsg = (result && result.error) ? result.error : "تعذر استكمال حذف الطالب في قاعدة البيانات";
       console.error("Delete student failed for ID " + studentId + ":", errMsg);
@@ -723,18 +759,23 @@ async function handleDeleteStudent(req, res) {
       return res.redirect("/students?msg=" + encodeURIComponent("تعذر حذف الطالب: " + errMsg));
     }
 
-    // Add safe global history log (no foreign key to deleted student record)
+    // 3. Save to Audit Trail with full record_snapshot JSON
     try {
-      await addHistory("student_deleted", `تم حذف الطالب (${result.studentName || studentId}) بواسطة ${currentUser.username}`, currentUser.username);
+      await addHistory(
+        "student_deleted",
+        `تم نقل الطالب (${existingStudent.name} - فرع ${existingStudent.branch}) إلى سلة المحذوفات بواسطة ${currentUser.username}`,
+        currentUser.username,
+        recordSnapshot
+      );
     } catch (histErr) {
       console.warn("Audit history warning:", histErr.message);
     }
 
     const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
     if (isJson) {
-      return res.json({ success: true, message: "تم حذف الطالب بنجاح", studentId });
+      return res.json({ success: true, message: "تم حذف الطالب ونقله لسلة المحذوفات بنجاح", studentId, snapshot: recordSnapshot });
     }
-    return res.redirect("/students?msg=" + encodeURIComponent("تم حذف الطالب بنجاح ✅"));
+    return res.redirect("/students?msg=" + encodeURIComponent("تم حذف الطالب بنجاح ونقله لسلة المحذوفات ✅"));
   } catch (fatalErr) {
     console.error("CRITICAL EXCEPTION in handleDeleteStudent:", fatalErr);
     const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
@@ -752,10 +793,67 @@ async function handleDeleteStudent(req, res) {
   }
 }
 
+// RESTORE STUDENT CONTROLLER
+async function handleRestoreStudent(req, res) {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser || !userCan(currentUser, "admin")) {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(403).json({ success: false, error: "ليس لديك صلاحية لاسترجاع الطلاب (صلاحية المدير العام فقط)" });
+      }
+      return res.redirect("/history?msg=" + encodeURIComponent("ليس لديك صلاحية لاسترجاع الطلاب"));
+    }
+
+    const rawId = req.params.id || (req.body && (req.body.student_id || req.body.id)) || req.query.id;
+    if (!rawId) {
+      return res.status(400).json({ success: false, error: "معرف الطالب مفقود أو غير محدد" });
+    }
+
+    const studentId = parseInt(rawId);
+    if (isNaN(studentId) || studentId <= 0) {
+      return res.status(400).json({ success: false, error: "معرف الطالب غير صالح" });
+    }
+
+    const result = await restoreStudent(studentId, currentUser.username);
+    if (!result || !result.success) {
+      return res.status(500).json({ success: false, error: result ? result.error : "فشل استرجاع الطالب" });
+    }
+
+    // Add Audit Log for Restore Action
+    try {
+      await addHistory(
+        "student_restored",
+        `تم استرجاع بيانات الطالب (${result.student.name} - فرع ${result.student.branch}) وإعادته للقوائم النشطة بواسطة ${currentUser.username}`,
+        currentUser.username,
+        result.student
+      );
+    } catch (e) {}
+
+    const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+    if (isJson) {
+      return res.json({
+        success: true,
+        message: `تم استرجاع الطالب ${result.student.name} بنجاح إلى فرع ${result.student.branch}`,
+        student: result.student
+      });
+    }
+
+    return res.redirect("/history?msg=" + encodeURIComponent(`تم استرجاع الطالب ${result.student.name} بنجاح وإعادته للقائمة النشطة ✅`));
+  } catch (err) {
+    console.error("CRITICAL EXCEPTION in handleRestoreStudent:", err);
+    return res.status(500).json({ success: false, error: "حدث خطأ غير متوقع أثناء استرجاع الطالب", details: err.message });
+  }
+}
+
 router.post("/delete/:id", requireAuth, withUser, handleDeleteStudent);
 router.post("/students/delete/:id", requireAuth, withUser, handleDeleteStudent);
 router.post("/api/students/delete", requireAuth, withUser, handleDeleteStudent);
 router.delete("/api/students/:id", requireAuth, withUser, handleDeleteStudent);
+
+router.post("/api/students/:id/restore", requireAuth, withUser, handleRestoreStudent);
+router.put("/api/students/:id/restore", requireAuth, withUser, handleRestoreStudent);
+router.post("/students/restore/:id", requireAuth, withUser, handleRestoreStudent);
 
 // GET /api/lookup_parent?phone=05xxxxxxxx
 router.get("/api/lookup_parent", requireAuth, withUser, async (req, res) => {
