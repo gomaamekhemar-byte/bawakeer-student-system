@@ -153,6 +153,61 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   const girls_general_count = filtered.filter(s => s.student_type === "بنات" && (s.track === "عام" || !s.track)).length;
   const girls_tahfeez_count = filtered.filter(s => s.student_type === "بنات" && s.track === "تحفيظ").length;
 
+  // Build demographic data table for reports based on filtered students
+  const reportGradeMap = {};
+  filtered.forEach(s => {
+    const key = `${s.phase || ''}_${s.grade || ''}`;
+    if (!reportGradeMap[key]) {
+      const gNum = s.grade || '';
+      const pName = s.phase || '';
+      let gTitle = '';
+      if (pName === 'روضة') {
+        gTitle = gNum === '1' ? 'روضة أولى (KG1)' : (gNum === '2' ? 'روضة ثانية (KG2)' : 'تمهيدي (KG3)');
+      } else {
+        const arabicNums = { '1': 'الأول', '2': 'الثاني', '3': 'الثالث', '4': 'الرابع', '5': 'الخامس', '6': 'السادس' };
+        gTitle = `الصف ${arabicNums[gNum] || gNum} (${pName})`;
+      }
+
+      reportGradeMap[key] = {
+        phase: pName,
+        grade: gNum,
+        gradeName: gTitle,
+        boys: 0,
+        girls: 0,
+        general: 0,
+        tahfeez: 0,
+        total: 0
+      };
+    }
+
+    const item = reportGradeMap[key];
+    const isBoy = s.student_type === 'بنين';
+    const isTahfeez = s.track === 'تحفيظ';
+
+    if (isBoy) item.boys++;
+    else item.girls++;
+
+    if (isTahfeez) item.tahfeez++;
+    else item.general++;
+
+    item.total++;
+  });
+
+  const reportDemographicRows = Object.values(reportGradeMap).sort((a, b) => {
+    const phaseOrder = { 'روضة': 1, 'ابتدائي': 2, 'متوسط': 3, 'ثانوي': 4 };
+    const pDiff = (phaseOrder[a.phase] || 99) - (phaseOrder[b.phase] || 99);
+    if (pDiff !== 0) return pDiff;
+    return String(a.grade).localeCompare(String(b.grade), undefined, { numeric: true });
+  });
+
+  const reportDemographicTotals = {
+    boys: reportDemographicRows.reduce((acc, r) => acc + r.boys, 0),
+    girls: reportDemographicRows.reduce((acc, r) => acc + r.girls, 0),
+    general: reportDemographicRows.reduce((acc, r) => acc + r.general, 0),
+    tahfeez: reportDemographicRows.reduce((acc, r) => acc + r.tahfeez, 0),
+    total: reportDemographicRows.reduce((acc, r) => acc + r.total, 0)
+  };
+
   const stats = {
     total: students.length,
     accepted: students.filter(s => s.interview_result === "مقبول").length,
@@ -177,6 +232,8 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   res.render("reports", {
     students: filtered,
     stats,
+    reportDemographicRows,
+    reportDemographicTotals,
     currentUser,
     activeBranch,
     branches: availableFilters.branches.length ? availableFilters.branches : branches,
