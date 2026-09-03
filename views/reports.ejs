@@ -298,59 +298,67 @@
           </span>
         </div>
 
-        <!-- DEMOGRAPHIC CARDS ROW -->
+        <!-- DEMOGRAPHIC CARDS ROW (ONLY NON-ZERO METRICS SHOWN) -->
         <div class="row g-2 mb-2">
           <!-- Boys General -->
-          <div class="col-xl-3 col-md-6">
-            <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
-              <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
-                <i class="fa-solid fa-mars"></i>
-              </div>
-              <div>
-                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنين (مسار عام)</small>
-                <span class="fs-5 fw-bold text-primary"><%= typeof stats.boys_general_count !== 'undefined' ? stats.boys_general_count : 0 %> طالب</span>
+          <% if(stats.boys_general_count > 0){ %>
+            <div class="col-xl-3 col-md-6">
+              <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                  <i class="fa-solid fa-mars"></i>
+                </div>
+                <div>
+                  <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنين (مسار عام)</small>
+                  <span class="fs-5 fw-bold text-primary"><%= stats.boys_general_count %> طالب</span>
+                </div>
               </div>
             </div>
-          </div>
+          <% } %>
 
           <!-- Boys Tahfeez -->
-          <div class="col-xl-3 col-md-6">
-            <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
-              <div class="rounded-circle bg-info-subtle text-info p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
-                <i class="fa-solid fa-book-quran"></i>
-              </div>
-              <div>
-                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنين (مسار تحفيظ)</small>
-                <span class="fs-5 fw-bold text-info"><%= typeof stats.boys_tahfeez_count !== 'undefined' ? stats.boys_tahfeez_count : 0 %> طالب</span>
+          <% if(stats.boys_tahfeez_count > 0){ %>
+            <div class="col-xl-3 col-md-6">
+              <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-info-subtle text-info p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                  <i class="fa-solid fa-book-quran"></i>
+                </div>
+                <div>
+                  <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنين (مسار تحفيظ)</small>
+                  <span class="fs-5 fw-bold text-info"><%= stats.boys_tahfeez_count %> طالب</span>
+                </div>
               </div>
             </div>
-          </div>
+          <% } %>
 
           <!-- Girls General -->
-          <div class="col-xl-3 col-md-6">
-            <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
-              <div class="rounded-circle bg-danger-subtle text-danger p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
-                <i class="fa-solid fa-venus"></i>
-              </div>
-              <div>
-                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنات (مسار عام)</small>
-                <span class="fs-5 fw-bold text-danger"><%= typeof stats.girls_general_count !== 'undefined' ? stats.girls_general_count : 0 %> طالبة</span>
+          <% if(stats.girls_general_count > 0){ %>
+            <div class="col-xl-3 col-md-6">
+              <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-danger-subtle text-danger p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                  <i class="fa-solid fa-venus"></i>
+                </div>
+                <div>
+                  <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنات (مسار عام)</small>
+                  <span class="fs-5 fw-bold text-danger"><%= stats.girls_general_count %> طالبة</span>
+                </div>
               </div>
             </div>
-          </div>
+          <% } %>
 
           <!-- Girls Tahfeez -->
-          <div class="col-xl-3 col-md-6">
-            <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
-              <div class="rounded-circle bg-warning-subtle text-warning p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
-                <i class="fa-solid fa-book-quran"></i>
-              </div>
-              <div>
-                <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنات (مسار تحفيظ)</small>
-                <span class="fs-5 fw-bold text-warning"><%= typeof stats.girls_tahfeez_count !== 'undefined' ? stats.girls_tahfeez_count : 0 %> طالبة</span>
+          <% if(stats.girls_tahfeez_count > 0){ %>
+            <div class="col-xl-3 col-md-6">
+              <div class="bg-white border rounded-3 p-2 shadow-sm d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-warning-subtle text-warning p-2 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                  <i class="fa-solid fa-book-quran"></i>
+                </div>
+                <div>
+                  <small class="text-muted d-block" style="font-size: 11px; font-weight: 700;">إجمالي البنات (مسار تحفيظ)</small>
+                  <span class="fs-5 fw-bold text-warning"><%= stats.girls_tahfeez_count %> طالبة</span>
+                </div>
               </div>
             </div>
-          </div>
+          <% } %>
         </div>
 
         <!-- SOURCES & WAITLIST SUB-ROW -->
