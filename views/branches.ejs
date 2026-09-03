@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>إدارة الفروع | مدارس بواكير الأهلية</title>
+  <title>إدارة الفروع والهيكل الأكاديمي | مدارس بواكير الأهلية</title>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,6 +17,8 @@
     .navbar-erp { background: #ffffff; border-bottom: 1px solid #e3e8ee; }
     .erp-sub-header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 14px 0; }
     .table thead th { background-color: #1e3a8a !important; color: #ffffff !important; font-weight: 700; padding: 12px; }
+    .form-switch .form-check-input { width: 2.4em; height: 1.25em; cursor: pointer; }
+    .phase-card { border-right: 4px solid #2563eb !important; }
   </style>
 </head>
 <body>
@@ -39,6 +41,9 @@
         <a href="/academic_years" class="btn btn-outline-info text-dark btn-sm fw-bold">
           <i class="fa-solid fa-calendar-days me-1"></i> الأعوام الدراسية
         </a>
+        <a href="/external_settings" class="btn btn-outline-warning text-dark btn-sm fw-bold">
+          <i class="fa-solid fa-sliders me-1"></i> إعدادات البوابة
+        </a>
       </div>
 
       <div class="d-flex align-items-center gap-3">
@@ -55,7 +60,7 @@
     <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
       <div class="fw-bold fs-5 d-flex align-items-center gap-2">
         <i class="fa-solid fa-building"></i>
-        <span>إدارة الفروع المدرسية | مدارس بواكير الأهلية</span>
+        <span>إدارة الفروع والهيكل الأكاديمي المستقل | مدارس بواكير الأهلية</span>
       </div>
       <a href="/students" class="btn btn-light text-primary btn-sm fw-bold shadow-sm">
         <i class="fa-solid fa-arrow-right me-1"></i> العودة للطلاب
@@ -63,7 +68,7 @@
     </div>
   </div>
 
-  <div class="container px-4 py-4" style="max-width: 1100px;">
+  <div class="container-fluid px-4 py-4" style="max-width: 1250px;">
     <% if(typeof message !== 'undefined' && message){ %>
       <div class="alert alert-primary alert-dismissible fade show shadow-sm fw-bold mb-4" role="alert">
         <i class="fa-solid fa-circle-info me-2"></i> <%= message %>
@@ -71,42 +76,136 @@
       </div>
     <% } %>
 
-    <!-- ADD BRANCH CARD (BOOTSTRAP GRID) -->
-    <div class="card border-0 shadow-sm rounded-3 mb-4">
-      <div class="card-header bg-white py-3 border-0">
-        <h5 class="fw-bold mb-0 text-dark">
-          <i class="fa-solid fa-plus-circle text-primary me-2"></i> إضافة فرع جديد
-        </h5>
+    <!-- 1. معالج إنشاء فرع جديد (DYNAMIC BRANCH CREATION WIZARD) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+            <i class="fa-solid fa-plus fs-5"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-0 text-dark">معالج إنشاء فرع جديد وتحديد هيكله الأكاديمي</h5>
+            <small class="text-muted">تحديد اسم الفرع وموقعه واختيار المراحل والصفوف والمسارات المفتوحة للتسجيل</small>
+          </div>
+        </div>
+        <button class="btn btn-outline-primary btn-sm fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#createBranchCollapse" aria-expanded="true">
+          <i class="fa-solid fa-chevron-down me-1"></i> إظهار/إخفاء نموذج الإنشاء
+        </button>
       </div>
-      <div class="card-body p-4 pt-2">
-        <form method="post" action="/branches" class="row g-3 align-items-end">
-          <input type="hidden" name="action" value="create">
-          
-          <div class="col-md-5">
-            <label class="form-label fw-bold text-secondary small">اسم الفرع <span class="text-danger">*</span></label>
-            <input name="name" class="form-control" required placeholder="مثال: فرع الروابي">
-          </div>
 
-          <div class="col-md-5">
-            <label class="form-label fw-bold text-secondary small">الموقع / العنوان</label>
-            <input name="location" class="form-control" placeholder="مثال: الرياض - حي الروابي">
-          </div>
+      <div class="collapse show" id="createBranchCollapse">
+        <div class="card-body p-4 pt-2">
+          <form method="post" action="/branches" id="createBranchForm">
+            <input type="hidden" name="action" value="create">
+            
+            <!-- Basic Details -->
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark small">اسم الفرع <span class="text-danger">*</span></label>
+                <input name="name" class="form-control" required placeholder="مثال: فرع حي الصحافة">
+              </div>
 
-          <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
-              <i class="fa-solid fa-floppy-disk me-1"></i> إضافة
-            </button>
-          </div>
-        </form>
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark small">الموقع / العنوان</label>
+                <input name="location" class="form-control" placeholder="مثال: الرياض - طريق الملك فهد">
+              </div>
+            </div>
+
+            <!-- ACADEMIC STRUCTURE CHECKBOXES -->
+            <div class="border rounded-3 p-3 bg-light mb-3">
+              <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="fa-solid fa-network-wired text-primary fs-5"></i>
+                  <strong class="text-dark">الهيكل الأكاديمي للفرع الجديد (المراحل والصفوف المعتمدة)</strong>
+                </div>
+                <small class="text-muted">حدد المراحل والصفوف المتاحة، والصفوف غير المحددة ستظل مغلقة بالفرع</small>
+              </div>
+
+              <div class="row g-3">
+                <% Object.entries(phaseStructure).forEach(function([pName, pInfo]){ %>
+                  <div class="col-lg-6">
+                    <div class="bg-white p-3 border rounded-3 h-100 shadow-xs phase-card">
+                      
+                      <!-- Phase Master Checkbox -->
+                      <div class="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom">
+                        <div class="form-check form-check-inline m-0">
+                          <input class="form-check-input" type="checkbox" name="create_phase_<%= pName %>" id="chk_create_phase_<%= pName %>" value="1" checked onchange="toggleCreatePhaseContainer('<%= pName %>', this.checked)">
+                          <label class="form-check-label fw-bold text-dark" for="chk_create_phase_<%= pName %>">
+                            <i class="fa-solid fa-layer-group text-primary me-1"></i> تفعيل مرحلة <%= pName %>
+                          </label>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                          <button type="button" class="btn btn-outline-secondary py-0 px-2 small" onclick="setCreatePhaseAll('<%= pName %>', true)">الكل</button>
+                          <button type="button" class="btn btn-outline-secondary py-0 px-2 small" onclick="setCreatePhaseAll('<%= pName %>', false)">إلغاء</button>
+                        </div>
+                      </div>
+
+                      <!-- Phase Grades Container -->
+                      <div id="create_phase_container_<%= pName %>" class="d-flex flex-column gap-2 pt-1">
+                        <% pInfo.grades.forEach(function(gItem){ %>
+                          <div class="p-2 border rounded-2 bg-light">
+                            <span class="fw-bold text-dark small d-block mb-1"><%= gItem.name %>:</span>
+                            <div class="d-flex flex-wrap gap-3 small">
+                              <!-- Boys General -->
+                              <div class="form-check">
+                                <input class="form-check-input create-phase-<%= pName %>" type="checkbox" name="create_matrix_بنين_<%= pName %>_<%= gItem.id %>_عام" id="chk_c_b_<%= pName %>_<%= gItem.id %>_gen" value="1" checked>
+                                <label class="form-check-label text-primary fw-semibold" for="chk_c_b_<%= pName %>_<%= gItem.id %>_gen">بنين (عام)</label>
+                              </div>
+
+                              <!-- Boys Tahfeez -->
+                              <% if(pInfo.tracks.includes('تحفيظ')){ %>
+                                <div class="form-check">
+                                  <input class="form-check-input create-phase-<%= pName %>" type="checkbox" name="create_matrix_بنين_<%= pName %>_<%= gItem.id %>_تحفيظ" id="chk_c_b_<%= pName %>_<%= gItem.id %>_tah" value="1" checked>
+                                  <label class="form-check-label text-primary fw-semibold" for="chk_c_b_<%= pName %>_<%= gItem.id %>_tah">بنين (تحفيظ)</label>
+                                </div>
+                              <% } %>
+
+                              <!-- Girls General -->
+                              <div class="form-check">
+                                <input class="form-check-input create-phase-<%= pName %>" type="checkbox" name="create_matrix_بنات_<%= pName %>_<%= gItem.id %>_عام" id="chk_c_g_<%= pName %>_<%= gItem.id %>_gen" value="1" checked>
+                                <label class="form-check-label text-danger fw-semibold" for="chk_c_g_<%= pName %>_<%= gItem.id %>_gen">بنات (عام)</label>
+                              </div>
+
+                              <!-- Girls Tahfeez -->
+                              <% if(pInfo.tracks.includes('تحفيظ')){ %>
+                                <div class="form-check">
+                                  <input class="form-check-input create-phase-<%= pName %>" type="checkbox" name="create_matrix_بنات_<%= pName %>_<%= gItem.id %>_تحفيظ" id="chk_c_g_<%= pName %>_<%= gItem.id %>_tah" value="1" checked>
+                                  <label class="form-check-label text-danger fw-semibold" for="chk_c_g_<%= pName %>_<%= gItem.id %>_tah">بنات (تحفيظ)</label>
+                                </div>
+                              <% } %>
+                            </div>
+                          </div>
+                        <% }) %>
+                      </div>
+
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="text-end">
+              <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+                <i class="fa-solid fa-floppy-disk me-1"></i> حفظ وإنشاء الفرع بالهيكل المعتمد
+              </button>
+            </div>
+
+          </form>
+        </div>
       </div>
     </div>
 
-    <!-- BRANCHES LIST TABLE (BOOTSTRAP TABLE) -->
-    <div class="card border-0 shadow-sm rounded-3">
-      <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-        <h5 class="fw-bold mb-0 text-dark">
-          <i class="fa-solid fa-school text-primary me-2"></i> فروع المدارس الحالية
+    <!-- 2. قائمة الفروع الحالية والتحكم المستمر (BRANCHES LIST & POST-CREATION SETTINGS) -->
+    <div class="card border-0 shadow-sm rounded-4">
+      <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+          <i class="fa-solid fa-school text-primary"></i>
+          <span>فروع المدارس الحالية وإدارة الهيكل الأكاديمي</span>
         </h5>
+        <span class="badge bg-secondary-subtle text-secondary px-3 py-2 fw-bold">
+          إجمالي الفروع: <%= branches.length %>
+        </span>
       </div>
 
       <div class="table-responsive">
@@ -116,41 +215,42 @@
               <th style="width: 50px;">#</th>
               <th>اسم الفرع</th>
               <th>الموقع والعنوان</th>
-              <th>الحالة</th>
-              <th class="text-center" style="width: 160px;">الإجراءات</th>
+              <th>المفتاح الرئيسي للفرع</th>
+              <th class="text-center" style="width: 320px;">الإجراءات والتحكم الأكاديمي</th>
             </tr>
           </thead>
           <tbody>
             <% if(typeof branches !== 'undefined' && branches && branches.length > 0){ branches.forEach(function(branch, idx){ %>
+              <% const isMasterOn = isBranchMasterActive(branch.name, settings); %>
               <tr>
                 <td class="text-muted fw-bold"><%= idx + 1 %></td>
-                <td class="fw-bold text-dark fs-6"><%= branch.name %></td>
+                <td class="fw-bold text-dark fs-6">
+                  <i class="fa-solid fa-building text-secondary me-1"></i> <%= branch.name %>
+                </td>
                 <td class="text-muted"><%= branch.location || '—' %></td>
                 <td>
-                  <% if(branch.is_active){ %>
-                    <span class="badge bg-success-subtle text-success border border-success px-3 py-2 fw-bold">
-                      <i class="fa-solid fa-check me-1"></i> نشط
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="form-check form-switch m-0">
+                      <input class="form-check-input" type="checkbox" id="master_sw_<%= branch.id %>" <%= isMasterOn ? 'checked' : '' %> onchange="onBranchMasterSwitchToggle('<%= branch.name %>', this.checked, '<%= branch.id %>')">
+                    </div>
+                    <span class="badge <%= isMasterOn ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger' %> px-2 py-1 fw-bold" id="badge_master_<%= branch.id %>">
+                      <%= isMasterOn ? 'مفعل ومتاح' : 'متوقف ومغلق' %>
                     </span>
-                  <% } else { %>
-                    <span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 fw-bold">
-                      <i class="fa-solid fa-pause me-1"></i> متوقف
-                    </span>
-                  <% } %>
+                  </div>
                 </td>
                 <td class="text-center">
-                  <div class="btn-group btn-group-sm">
-                    <form method="post" action="/branches" class="d-inline">
-                      <input type="hidden" name="action" value="toggle_active">
-                      <input type="hidden" name="branch_id" value="<%= branch.id %>">
-                      <button type="submit" class="btn <%= branch.is_active ? 'btn-outline-secondary' : 'btn-outline-success' %> fw-bold" title="<%= branch.is_active ? 'إيقاف الفرع' : 'تفعيل الفرع' %>">
-                        <i class="fa-solid <%= branch.is_active ? 'fa-pause' : 'fa-play' %>"></i> <%= branch.is_active ? 'إيقاف' : 'تفعيل' %>
-                      </button>
-                    </form>
+                  <div class="d-flex align-items-center justify-content-center gap-2">
+                    <!-- Button to open Structure Modal -->
+                    <button type="button" class="btn btn-primary btn-sm fw-bold shadow-xs d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#structureModal_<%= branch.id %>">
+                      <i class="fa-solid fa-sliders"></i>
+                      <span>إدارة الهيكل الأكاديمي</span>
+                    </button>
 
-                    <form method="post" action="/branches" class="d-inline ms-1" onsubmit="return confirm('هل أنت متأكد من حذف هذا الفرع؟')">
+                    <!-- Delete branch button (safe) -->
+                    <form method="post" action="/branches" class="d-inline" onsubmit="return confirm('هل أنت متأكد من رغبتك في حذف الفرع؟ (تنبيه: سيتم رفض الحذف إذا كان هناك طلاب مقيدين لحماية البيانات التاريخية)')">
                       <input type="hidden" name="action" value="delete">
                       <input type="hidden" name="branch_id" value="<%= branch.id %>">
-                      <button type="submit" class="btn btn-outline-danger fw-bold" title="حذف">
+                      <button type="submit" class="btn btn-outline-danger btn-sm" title="حذف الفرع">
                         <i class="fa-solid fa-trash"></i>
                       </button>
                     </form>
@@ -165,6 +265,215 @@
 
   </div>
 
+  <!-- MODALS: POST-CREATION ACADEMIC STRUCTURE CONTROLS FOR EACH BRANCH -->
+  <% if(typeof branches !== 'undefined' && branches && branches.length > 0){ branches.forEach(function(branch){ %>
+    <div class="modal fade" id="structureModal_<%= branch.id %>" tabindex="-1" aria-labelledby="structureModalLabel_<%= branch.id %>" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow rounded-4">
+          <div class="modal-header bg-light py-3">
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                <i class="fa-solid fa-network-wired"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold text-dark" id="structureModalLabel_<%= branch.id %>">
+                  الهيكل الأكاديمي والمفاتيح الهرمية — فرع <%= branch.name %>
+                </h5>
+                <small class="text-muted">التحكم الفوري بتفعيل أو إغلاق المراحل والصفوف والمسارات لهذا الفرع</small>
+              </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <form method="post" action="/branches">
+            <input type="hidden" name="action" value="edit_structure">
+            <input type="hidden" name="target_branch_name" value="<%= branch.name %>">
+
+            <div class="modal-body p-4">
+              <div class="alert alert-light border small text-muted mb-4 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-shield-halved text-primary fs-5"></i>
+                <span><strong>حماية البيانات التاريخية:</strong> إغلاق أي مرحلة أو صف يمنع التسجيلات الجديدة فورياً، ولا يحذف أي طالب مسجل مسبقاً في قاعدة البيانات.</span>
+              </div>
+
+              <!-- HIERARCHICAL PHASE PANELS -->
+              <div class="d-flex flex-column gap-3">
+                <% Object.entries(phaseStructure).forEach(function([pName, pInfo]){ %>
+                  <% 
+                    const isPhaseActive = isPhaseActiveInBranch(branch.name, pName, settings);
+                  %>
+                  <div class="border rounded-3 p-3 bg-white shadow-xs">
+                    
+                    <!-- 1. PHASE MASTER SWITCH -->
+                    <div class="d-flex align-items-center justify-content-between p-2 px-3 bg-light rounded-2 mb-3 border">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-primary fs-5"></i>
+                        <strong class="fs-6 text-dark">مرحلة <%= pName %> بالكامل</strong>
+                        <span class="badge <%= isPhaseActive ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger' %> ms-2 small" id="badge_phase_<%= branch.id %>_<%= pName %>">
+                          <%= isPhaseActive ? 'مفتوحة بالفرع' : 'مغلقة بالكامل' %>
+                        </span>
+                      </div>
+
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="form-check form-switch m-0">
+                          <input class="form-check-input" type="checkbox" name="edit_phase_<%= branch.name %>_<%= pName %>" id="sw_phase_<%= branch.id %>_<%= pName %>" value="1" <%= isPhaseActive ? 'checked' : '' %> onchange="onPhaseMasterSwitchToggle('<%= branch.name %>', '<%= pName %>', this.checked, '<%= branch.id %>')">
+                          <label class="form-check-label fw-bold small ms-1 <%= isPhaseActive ? 'text-success' : 'text-muted' %>" id="lbl_phase_<%= branch.id %>_<%= pName %>">
+                            <%= isPhaseActive ? 'تفعيل المرحلة' : 'تعطيل المرحلة' %>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 2. INDIVIDUAL GRADES & TRACKS IN THIS PHASE -->
+                    <div id="grades_box_<%= branch.id %>_<%= pName %>" style="<%= isPhaseActive ? '' : 'display:none;' %>">
+                      <div class="table-responsive">
+                        <table class="table table-bordered table-sm align-middle text-center mb-0" style="font-size: 13px;">
+                          <thead class="table-light">
+                            <tr>
+                              <th style="width: 160px;" class="text-start ps-3">الصف الدراسي</th>
+                              <th class="bg-primary-subtle text-primary border-primary">👦 بنين (عام)</th>
+                              <th class="bg-primary-subtle text-primary border-primary">👦 بنين (تحفيظ)</th>
+                              <th class="bg-danger-subtle text-danger border-danger">👧 بنات (عام)</th>
+                              <th class="bg-danger-subtle text-danger border-danger">👧 بنات (تحفيظ)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <% pInfo.grades.forEach(function(gItem){ %>
+                              <% 
+                                const k_b_gen = buildMatrixKey(branch.name, 'بنين', pName, gItem.id, 'عام');
+                                const k_b_tah = buildMatrixKey(branch.name, 'بنين', pName, gItem.id, 'تحفيظ');
+                                const k_g_gen = buildMatrixKey(branch.name, 'بنات', pName, gItem.id, 'عام');
+                                const k_g_tah = buildMatrixKey(branch.name, 'بنات', pName, gItem.id, 'تحفيظ');
+
+                                const is_b_gen = isGradeAvailable(branch.name, 'بنين', pName, gItem.id, 'عام', settings);
+                                const is_b_tah = isGradeAvailable(branch.name, 'بنين', pName, gItem.id, 'تحفيظ', settings);
+                                const is_g_gen = isGradeAvailable(branch.name, 'بنات', pName, gItem.id, 'عام', settings);
+                                const is_g_tah = isGradeAvailable(branch.name, 'بنات', pName, gItem.id, 'تحفيظ', settings);
+                              %>
+                              <tr>
+                                <td class="text-start ps-3 fw-bold text-dark"><%= gItem.name %></td>
+
+                                <!-- بنين عام -->
+                                <td>
+                                  <div class="form-check form-switch d-inline-flex m-0">
+                                    <input class="form-check-input matrix-sw-<%= branch.id %>" type="checkbox" name="edit_matrix_<%= k_b_gen %>" id="m_<%= k_b_gen %>" value="1" <%= is_b_gen ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_b_gen %>', this.checked)">
+                                  </div>
+                                </td>
+
+                                <!-- بنين تحفيظ -->
+                                <td>
+                                  <% if(pInfo.tracks.includes('تحفيظ')){ %>
+                                    <div class="form-check form-switch d-inline-flex m-0">
+                                      <input class="form-check-input matrix-sw-<%= branch.id %>" type="checkbox" name="edit_matrix_<%= k_b_tah %>" id="m_<%= k_b_tah %>" value="1" <%= is_b_tah ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_b_tah %>', this.checked)">
+                                    </div>
+                                  <% } else { %>
+                                    <span class="text-muted small">غير متاح</span>
+                                  <% } %>
+                                </td>
+
+                                <!-- بنات عام -->
+                                <td>
+                                  <div class="form-check form-switch d-inline-flex m-0">
+                                    <input class="form-check-input matrix-sw-<%= branch.id %>" type="checkbox" name="edit_matrix_<%= k_g_gen %>" id="m_<%= k_g_gen %>" value="1" <%= is_g_gen ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_g_gen %>', this.checked)">
+                                  </div>
+                                </td>
+
+                                <!-- بنات تحفيظ -->
+                                <td>
+                                  <% if(pInfo.tracks.includes('تحفيظ')){ %>
+                                    <div class="form-check form-switch d-inline-flex m-0">
+                                      <input class="form-check-input matrix-sw-<%= branch.id %>" type="checkbox" name="edit_matrix_<%= k_g_tah %>" id="m_<%= k_g_tah %>" value="1" <%= is_g_tah ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_g_tah %>', this.checked)">
+                                    </div>
+                                  <% } else { %>
+                                    <span class="text-muted small">غير متاح</span>
+                                  <% } %>
+                                </td>
+                              </tr>
+                            <% }) %>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                  </div>
+                <% }) %>
+              </div>
+
+            </div>
+
+            <div class="modal-footer bg-light py-2">
+              <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">إغلاق</button>
+              <button type="submit" class="btn btn-primary fw-bold px-4">
+                <i class="fa-solid fa-check me-1"></i> حفظ جميع تعديلات الهيكل
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  <% })} %>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // 1. Wizard helpers
+    function toggleCreatePhaseContainer(phaseName, isChecked) {
+      const box = document.getElementById('create_phase_container_' + phaseName);
+      if (box) {
+        box.style.display = isChecked ? 'flex' : 'none';
+      }
+    }
+
+    function setCreatePhaseAll(phaseName, state) {
+      const inputs = document.querySelectorAll('.create-phase-' + phaseName);
+      inputs.forEach(inp => inp.checked = state);
+    }
+
+    // 2. Branch Master Switch Toggle
+    function onBranchMasterSwitchToggle(branchName, isChecked, branchId) {
+      const badge = document.getElementById('badge_master_' + branchId);
+      if (badge) {
+        badge.textContent = isChecked ? 'مفعل ومتاح' : 'متوقف ومغلق';
+        badge.className = 'badge px-2 py-1 fw-bold ' + (isChecked ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger');
+      }
+
+      fetch('/api/branches/structure/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'branch_master', branch: branchName, enabled: isChecked })
+      }).catch(err => console.warn('Branch master toggle error:', err));
+    }
+
+    // 3. Phase Master Switch Toggle (Hierarchical: hides/shows phase grades box)
+    function onPhaseMasterSwitchToggle(branchName, phaseName, isChecked, branchId) {
+      const box = document.getElementById('grades_box_' + branchId + '_' + phaseName);
+      const badge = document.getElementById('badge_phase_' + branchId + '_' + phaseName);
+      const lbl = document.getElementById('lbl_phase_' + branchId + '_' + phaseName);
+
+      if (box) box.style.display = isChecked ? 'block' : 'none';
+      if (badge) {
+        badge.textContent = isChecked ? 'مفتوحة بالفرع' : 'مغلقة بالكامل';
+        badge.className = 'badge ms-2 small ' + (isChecked ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger');
+      }
+      if (lbl) {
+        lbl.textContent = isChecked ? 'تفعيل المرحلة' : 'تعطيل المرحلة';
+        lbl.className = 'form-check-label fw-bold small ms-1 ' + (isChecked ? 'text-success' : 'text-muted');
+      }
+
+      fetch('/api/branches/structure/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'phase_master', branch: branchName, phase: phaseName, enabled: isChecked })
+      }).catch(err => console.warn('Phase master toggle error:', err));
+    }
+
+    // 4. Individual Grade/Track Switch Toggle
+    function onGradeTrackSwitchToggle(key, isChecked) {
+      fetch('/api/branches/structure/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'grade_track', key: key, enabled: isChecked })
+      }).catch(err => console.warn('Grade track toggle error:', err));
+    }
+  </script>
 </body>
 </html>
