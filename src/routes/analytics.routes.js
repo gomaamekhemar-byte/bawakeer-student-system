@@ -7,6 +7,7 @@ const { getBranchNames } = require("../services/branches.service");
 const { getExternalSettings, getActiveBranches, isBranchMasterActive } = require("../services/settings.service");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, PHASE_STRUCTURE } = require("../utils/constants");
 
+// 1. Build Demographic Matrix Grid (Auto-Hiding Zero Rows & Zero Branches)
 function buildDemographicMatrixGrid(students, branches, selectedGrade) {
   const grid = [];
 
@@ -35,10 +36,26 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
         const girlsTotal = girlsGeneral + girlsTahfeez;
         const rowTotal = boysTotal + girlsTotal;
 
+        // CRITICAL REQUIREMENT 1: HIDE EMPTY ROWS WHERE COUNT IS 0
+        if (rowTotal === 0) {
+          return;
+        }
+
         totalBoysGeneral += boysGeneral;
         totalBoysTahfeez += boysTahfeez;
         totalGirlsGeneral += girlsGeneral;
         totalGirlsTahfeez += girlsTahfeez;
+
+        // Concise inline summary strings omitting 0 tracks
+        const boysParts = [];
+        if (boysGeneral > 0) boysParts.push(`عام: ${boysGeneral}`);
+        if (boysTahfeez > 0) boysParts.push(`تحفيظ: ${boysTahfeez}`);
+        const boysSummaryText = boysParts.length ? boysParts.join("، ") : "لا يوجد";
+
+        const girlsParts = [];
+        if (girlsGeneral > 0) girlsParts.push(`عام: ${girlsGeneral}`);
+        if (girlsTahfeez > 0) girlsParts.push(`تحفيظ: ${girlsTahfeez}`);
+        const girlsSummaryText = girlsParts.length ? girlsParts.join("، ") : "لا يوجد";
 
         branchRows.push({
           phase: pName,
@@ -47,30 +64,87 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
           boysGeneral,
           boysTahfeez,
           boysTotal,
+          boysSummaryText,
           girlsGeneral,
           girlsTahfeez,
           girlsTotal,
+          girlsSummaryText,
           rowTotal
         });
       });
     });
 
-    grid.push({
-      branch: bName,
-      rows: branchRows,
-      totals: {
-        boysGeneral: totalBoysGeneral,
-        boysTahfeez: totalBoysTahfeez,
-        boysTotal: totalBoysGeneral + totalBoysTahfeez,
-        girlsGeneral: totalGirlsGeneral,
-        girlsTahfeez: totalGirlsTahfeez,
-        girlsTotal: totalGirlsGeneral + totalGirlsTahfeez,
-        branchTotal: totalBoysGeneral + totalBoysTahfeez + totalGirlsGeneral + totalGirlsTahfeez
-      }
-    });
+    const branchTotal = totalBoysGeneral + totalBoysTahfeez + totalGirlsGeneral + totalGirlsTahfeez;
+
+    // Only include branch in the grid if it has at least one active grade with students
+    if (branchRows.length > 0) {
+      grid.push({
+        branch: bName,
+        rows: branchRows,
+        totals: {
+          boysGeneral: totalBoysGeneral,
+          boysTahfeez: totalBoysTahfeez,
+          boysTotal: totalBoysGeneral + totalBoysTahfeez,
+          girlsGeneral: totalGirlsGeneral,
+          girlsTahfeez: totalGirlsTahfeez,
+          girlsTotal: totalGirlsGeneral + totalGirlsTahfeez,
+          branchTotal
+        }
+      });
+    }
   });
 
   return grid;
+}
+
+// 2. Compute Dynamic Adaptive Filters based on actual active records
+function computeAdaptiveFilters(baseStudents, currentFilters) {
+  function poolExcluding(field) {
+    return baseStudents.filter(s => {
+      if (field !== 'branch' && currentFilters.branch && currentFilters.branch !== 'الكل' && s.branch !== currentFilters.branch) return false;
+      if (field !== 'phase' && currentFilters.phase && currentFilters.phase !== 'الكل' && s.phase !== currentFilters.phase) return false;
+      if (field !== 'grade' && currentFilters.grade && currentFilters.grade !== 'الكل' && s.grade !== currentFilters.grade) return false;
+      if (field !== 'type' && currentFilters.type && currentFilters.type !== 'الكل' && s.student_type !== currentFilters.type) return false;
+      if (field !== 'track' && currentFilters.track && currentFilters.track !== 'الكل' && (s.track || 'عام') !== currentFilters.track) return false;
+      if (field !== 'source' && currentFilters.source && currentFilters.source !== 'الكل' && currentFilters.source !== 'جميع المصادر') {
+        const isOnline = s.registration_source === 'رابط خارجي';
+        if (currentFilters.source === 'الرابط الخارجي' || currentFilters.source === 'رابط خارجي') {
+          if (!isOnline) return false;
+        } else {
+          if (isOnline) return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  const branchPool = poolExcluding('branch');
+  const phasePool = poolExcluding('phase');
+  const gradePool = poolExcluding('grade');
+  const typePool = poolExcluding('type');
+  const trackPool = poolExcluding('track');
+  const sourcePool = poolExcluding('source');
+
+  const branches = [...new Set(branchPool.map(s => s.branch).filter(Boolean))];
+  const phases = [...new Set(phasePool.map(s => s.phase).filter(Boolean))];
+  const grades = [...new Set(gradePool.map(s => s.grade).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b)));
+  const types = [...new Set(typePool.map(s => s.student_type).filter(Boolean))];
+  const tracks = [...new Set(trackPool.map(s => s.track || 'عام').filter(Boolean))];
+
+  const hasOnline = sourcePool.some(s => s.registration_source === 'رابط خارجي');
+  const hasInternal = sourcePool.some(s => s.registration_source !== 'رابط خارجي');
+  const sources = [];
+  if (hasOnline) sources.push('الرابط الخارجي');
+  if (hasInternal) sources.push('التسجيل الداخلي (المدرسة)');
+
+  return {
+    branches,
+    phases,
+    grades,
+    types,
+    tracks,
+    sources
+  };
 }
 
 function buildAnalytics(students, branchLabel) {
@@ -84,30 +158,56 @@ function buildAnalytics(students, branchLabel) {
   const not_registered = students.filter(s => s.followup_status !== "تم التسجيل").length;
 
   const phaseStats = {};
-  PHASES.forEach(p => phaseStats[p] = students.filter(s => s.phase === p).length);
+  PHASES.forEach(p => {
+    const c = students.filter(s => s.phase === p).length;
+    if (c > 0) phaseStats[p] = c;
+  });
   
   const gradeStats = {};
-  GRADES.forEach(g => gradeStats[g] = students.filter(s => s.grade === g).length);
+  GRADES.forEach(g => {
+    const c = students.filter(s => s.grade === g).length;
+    if (c > 0) gradeStats[g] = c;
+  });
   
   const registrationStats = {};
-  FOLLOWUP_STATUSES.forEach(st => registrationStats[st] = students.filter(s => s.followup_status === st).length);
-  registrationStats["غير محدد"] = students.filter(s => !s.followup_status).length;
+  FOLLOWUP_STATUSES.forEach(st => {
+    const c = students.filter(s => s.followup_status === st).length;
+    if (c > 0) registrationStats[st] = c;
+  });
+  const unassignedFollowup = students.filter(s => !s.followup_status).length;
+  if (unassignedFollowup > 0) registrationStats["غير محدد"] = unassignedFollowup;
   
   const acceptanceStats = {};
-  INTERVIEW_RESULTS.forEach(r => acceptanceStats[r] = students.filter(s => s.interview_result === r).length);
-  acceptanceStats["لم يقابل"] = students.filter(s => !s.interview_result).length;
+  INTERVIEW_RESULTS.forEach(r => {
+    const c = students.filter(s => s.interview_result === r).length;
+    if (c > 0) acceptanceStats[r] = c;
+  });
+  const notInterviewed = students.filter(s => !s.interview_result).length;
+  if (notInterviewed > 0) acceptanceStats["لم يقابل"] = notInterviewed;
   
   const typeStats = {};
-  STUDENT_TYPES.forEach(t => typeStats[t] = students.filter(s => s.student_type === t).length);
+  STUDENT_TYPES.forEach(t => {
+    const c = students.filter(s => s.student_type === t).length;
+    if (c > 0) typeStats[t] = c;
+  });
   
   const trackStats = {};
-  TRACKS.forEach(t => trackStats[t] = students.filter(s => s.track === t).length);
+  TRACKS.forEach(t => {
+    const c = students.filter(s => s.track === t).length;
+    if (c > 0) trackStats[t] = c;
+  });
   
   const nationalityStats = {};
-  students.forEach(s => { const n = s.nationality || "غير محدد"; nationalityStats[n] = (nationalityStats[n] || 0) + 1; });
+  students.forEach(s => {
+    const n = s.nationality || "غير محدد";
+    nationalityStats[n] = (nationalityStats[n] || 0) + 1;
+  });
   
   const branchStats = {};
-  students.forEach(s => { const b = s.branch || "غير محدد"; branchStats[b] = (branchStats[b] || 0) + 1; });
+  students.forEach(s => {
+    const b = s.branch || "غير محدد";
+    branchStats[b] = (branchStats[b] || 0) + 1;
+  });
 
   // Siblings Analysis
   const phoneGroup = {};
@@ -209,8 +309,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   let selectedTrack = (req.query.track || "الكل").trim();
   let selectedSource = (req.query.source || req.query.source_filter || "الكل").trim();
 
-  let allowedBranches = activeBranchNames.length ? activeBranchNames : allBranches;
-  let students = allStudents;
+  let userAccessibleStudents = allStudents;
 
   if (isSingleBranchUser) {
     const assignedBranch = userBranches[0];
@@ -218,42 +317,46 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
       return res.redirect("/analytics?msg=" + encodeURIComponent("عفواً، غير مصرح لك بالوصول لبيانات فرع آخر"));
     }
     selectedBranch = assignedBranch;
-    allowedBranches = [selectedBranch];
-    students = allStudents.filter(s => s.branch === selectedBranch);
+    userAccessibleStudents = allStudents.filter(s => s.branch === selectedBranch);
 
     if (userPhases.length && !userPhases.includes("الكل")) {
-      students = students.filter(s => userPhases.includes(s.phase));
-    }
-  } else {
-    if (selectedBranch && selectedBranch !== "الكل") {
-      students = allStudents.filter(s => s.branch === selectedBranch);
-    } else {
-      selectedBranch = "الكل";
-      students = allStudents;
+      userAccessibleStudents = userAccessibleStudents.filter(s => userPhases.includes(s.phase));
     }
   }
 
-  // 1. Phase Filter
+  // Compute Adaptive Filters on user-accessible data
+  const availableFilters = computeAdaptiveFilters(userAccessibleStudents, {
+    branch: selectedBranch,
+    phase: selectedPhase,
+    grade: selectedGrade,
+    type: selectedType,
+    track: selectedTrack,
+    source: selectedSource
+  });
+
+  // Apply active filters to get the current dataset
+  let students = userAccessibleStudents;
+
+  if (selectedBranch && selectedBranch !== "الكل") {
+    students = students.filter(s => s.branch === selectedBranch);
+  }
+
   if (selectedPhase && selectedPhase !== "الكل") {
     students = students.filter(s => s.phase === selectedPhase);
   }
 
-  // 2. Grade Filter
   if (selectedGrade && selectedGrade !== "الكل") {
     students = students.filter(s => s.grade === selectedGrade);
   }
 
-  // 3. Student Type Filter (بنين / بنات)
   if (selectedType && selectedType !== "الكل") {
     students = students.filter(s => s.student_type === selectedType);
   }
 
-  // 4. Track Filter (عام / تحفيظ)
   if (selectedTrack && selectedTrack !== "الكل") {
     students = students.filter(s => (s.track || "عام") === selectedTrack);
   }
 
-  // 5. Registration Source Filter (الرابط الخارجي / المدرسة)
   if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
     if (selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external") {
       students = students.filter(s => s.registration_source === "رابط خارجي");
@@ -275,14 +378,14 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
 
   const analyticsData = buildAnalytics(students, branchLabel);
 
-  // Build Demographic Matrix Data Grid
-  const targetBranches = (selectedBranch && selectedBranch !== "الكل") ? [selectedBranch] : allowedBranches;
-  const demographicMatrixGrid = buildDemographicMatrixGrid(allStudents, targetBranches, selectedGrade);
+  // Build Demographic Matrix Data Grid (Only populated rows/branches)
+  const targetBranches = (selectedBranch && selectedBranch !== "الكل") ? [selectedBranch] : (availableFilters.branches.length ? availableFilters.branches : allBranches);
+  const demographicMatrixGrid = buildDemographicMatrixGrid(userAccessibleStudents, targetBranches, selectedGrade);
 
-  // Build Phase statistics breakdown for displayed branch(es)
+  // Build Phase statistics breakdown for displayed branch(es) (Omit 0 counts)
   const detailedBranchPhaseStats = [];
   targetBranches.forEach(bName => {
-    let branchStudents = allStudents.filter(s => s.branch === bName);
+    let branchStudents = userAccessibleStudents.filter(s => s.branch === bName);
     if (selectedType && selectedType !== "الكل") branchStudents = branchStudents.filter(s => s.student_type === selectedType);
     if (selectedTrack && selectedTrack !== "الكل") branchStudents = branchStudents.filter(s => (s.track || "عام") === selectedTrack);
     if (selectedGrade && selectedGrade !== "الكل") branchStudents = branchStudents.filter(s => s.grade === selectedGrade);
@@ -291,8 +394,11 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
       branchStudents = branchStudents.filter(s => isOnline ? (s.registration_source === "رابط خارجي") : (s.registration_source !== "رابط خارجي"));
     }
 
+    if (branchStudents.length === 0) return; // Skip zero branches
+
     const phasesData = PHASES.map(pName => {
       const pStudents = branchStudents.filter(s => s.phase === pName);
+      if (pStudents.length === 0) return null; // Skip zero phases
       return {
         phase: pName,
         total: pStudents.length,
@@ -302,15 +408,17 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
         waiting_registration: pStudents.filter(s => s.followup_status === "في انتظار التسجيل").length,
         rejected: pStudents.filter(s => s.interview_result === "غير مقبول").length,
       };
-    });
+    }).filter(Boolean);
 
-    detailedBranchPhaseStats.push({
-      branch: bName,
-      total: branchStudents.length,
-      registered: branchStudents.filter(s => s.followup_status === "تم التسجيل").length,
-      accepted: branchStudents.filter(s => s.interview_result === "مقبول").length,
-      phasesData,
-    });
+    if (phasesData.length > 0) {
+      detailedBranchPhaseStats.push({
+        branch: bName,
+        total: branchStudents.length,
+        registered: branchStudents.filter(s => s.followup_status === "تم التسجيل").length,
+        accepted: branchStudents.filter(s => s.interview_result === "مقبول").length,
+        phasesData,
+      });
+    }
   });
 
   // Support JSON API response
@@ -320,6 +428,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
       analytics: analyticsData,
       demographicMatrixGrid,
       detailedBranchPhaseStats,
+      availableFilters,
       selectedBranch,
       selectedPhase,
       selectedGrade,
@@ -333,6 +442,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     analytics: analyticsData,
     demographicMatrixGrid,
     detailedBranchPhaseStats,
+    availableFilters,
     currentUser,
     selectedBranch,
     selectedPhase,
@@ -340,15 +450,15 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     selectedType,
     selectedTrack,
     selectedSource,
-    branches: allowedBranches,
+    branches: availableFilters.branches,
     isFullBranchAccess,
     isSingleBranchUser,
-    phases: PHASES,
-    grades: GRADES,
+    phases: availableFilters.phases,
+    grades: availableFilters.grades,
     interview_results: INTERVIEW_RESULTS,
     followup_statuses: FOLLOWUP_STATUSES,
-    student_types: STUDENT_TYPES,
-    tracks: TRACKS,
+    student_types: availableFilters.types,
+    tracks: availableFilters.tracks,
     nationalities: NATIONALITIES,
     phaseStructure: PHASE_STRUCTURE
   });
