@@ -64,12 +64,15 @@ async function uploadFiles(files, customTitle) {
 // PUBLIC REGISTRATION PORTAL (No Auth Required)
 // =============================================
 router.get("/apply", async (req, res) => {
-  const branches = await getBranchNames();
-  const activeYear = await getActiveYear();
+  const allBranches = await getBranchNames();
   const settings = await getExternalSettings();
+  const { getActiveBranches } = require("../services/settings.service");
+  const branches = getActiveBranches(allBranches, settings);
+  const activeYear = await getActiveYear();
   const { PHASE_STRUCTURE } = require("../utils/constants");
   res.render("apply", {
     branches,
+    allBranches,
     activeYear,
     settings,
     phaseStructure: PHASE_STRUCTURE,
@@ -81,9 +84,11 @@ router.get("/apply", async (req, res) => {
 router.get("/register", (req, res) => res.redirect("/apply"));
 
 router.post("/apply", async (req, res) => {
-  const branches = await getBranchNames();
-  const activeYear = await getActiveYear();
+  const allBranches = await getBranchNames();
   const settings = await getExternalSettings();
+  const { getActiveBranches } = require("../services/settings.service");
+  const branches = getActiveBranches(allBranches, settings);
+  const activeYear = await getActiveYear();
 
   if (settings.is_portal_open === false) {
     return res.render("apply", { branches, activeYear, settings, submitted: false, error: null });
