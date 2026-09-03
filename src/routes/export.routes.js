@@ -172,11 +172,15 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
         phase: pName,
         grade: gNum,
         gradeName: gTitle,
-        boys: 0,
-        girls: 0,
-        general: 0,
-        tahfeez: 0,
-        total: 0
+        boysGeneral: 0,
+        boysTahfeez: 0,
+        boysTotal: 0,
+        girlsGeneral: 0,
+        girlsTahfeez: 0,
+        girlsTotal: 0,
+        generalTotal: 0,
+        tahfeezTotal: 0,
+        rowTotal: 0
       };
     }
 
@@ -184,13 +188,19 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     const isBoy = s.student_type === 'بنين';
     const isTahfeez = s.track === 'تحفيظ';
 
-    if (isBoy) item.boys++;
-    else item.girls++;
+    if (isBoy) {
+      if (isTahfeez) item.boysTahfeez++;
+      else item.boysGeneral++;
+    } else {
+      if (isTahfeez) item.girlsTahfeez++;
+      else item.girlsGeneral++;
+    }
 
-    if (isTahfeez) item.tahfeez++;
-    else item.general++;
-
-    item.total++;
+    item.boysTotal = item.boysGeneral + item.boysTahfeez;
+    item.girlsTotal = item.girlsGeneral + item.girlsTahfeez;
+    item.generalTotal = item.boysGeneral + item.girlsGeneral;
+    item.tahfeezTotal = item.boysTahfeez + item.girlsTahfeez;
+    item.rowTotal = item.boysTotal + item.girlsTotal;
   });
 
   const reportDemographicRows = Object.values(reportGradeMap).sort((a, b) => {
@@ -201,11 +211,15 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   });
 
   const reportDemographicTotals = {
-    boys: reportDemographicRows.reduce((acc, r) => acc + r.boys, 0),
-    girls: reportDemographicRows.reduce((acc, r) => acc + r.girls, 0),
-    general: reportDemographicRows.reduce((acc, r) => acc + r.general, 0),
-    tahfeez: reportDemographicRows.reduce((acc, r) => acc + r.tahfeez, 0),
-    total: reportDemographicRows.reduce((acc, r) => acc + r.total, 0)
+    boysGeneral: reportDemographicRows.reduce((acc, r) => acc + r.boysGeneral, 0),
+    boysTahfeez: reportDemographicRows.reduce((acc, r) => acc + r.boysTahfeez, 0),
+    boysTotal: reportDemographicRows.reduce((acc, r) => acc + r.boysTotal, 0),
+    girlsGeneral: reportDemographicRows.reduce((acc, r) => acc + r.girlsGeneral, 0),
+    girlsTahfeez: reportDemographicRows.reduce((acc, r) => acc + r.girlsTahfeez, 0),
+    girlsTotal: reportDemographicRows.reduce((acc, r) => acc + r.girlsTotal, 0),
+    generalTotal: reportDemographicRows.reduce((acc, r) => acc + r.generalTotal, 0),
+    tahfeezTotal: reportDemographicRows.reduce((acc, r) => acc + r.tahfeezTotal, 0),
+    rowTotal: reportDemographicRows.reduce((acc, r) => acc + r.rowTotal, 0)
   };
 
   const stats = {
