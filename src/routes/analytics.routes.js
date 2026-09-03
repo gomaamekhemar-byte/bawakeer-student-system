@@ -57,6 +57,9 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
         if (girlsTahfeez > 0) girlsParts.push(`تحفيظ: ${girlsTahfeez}`);
         const girlsSummaryText = girlsParts.length ? girlsParts.join("، ") : "لا يوجد";
 
+        const rowGeneral = boysGeneral + girlsGeneral;
+        const rowTahfeez = boysTahfeez + girlsTahfeez;
+
         branchRows.push({
           phase: pName,
           gradeId: gItem.id,
@@ -69,6 +72,8 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
           girlsTahfeez,
           girlsTotal,
           girlsSummaryText,
+          generalTotal: rowGeneral,
+          tahfeezTotal: rowTahfeez,
           rowTotal
         });
       });
@@ -88,6 +93,8 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
           girlsGeneral: totalGirlsGeneral,
           girlsTahfeez: totalGirlsTahfeez,
           girlsTotal: totalGirlsGeneral + totalGirlsTahfeez,
+          generalTotal: totalBoysGeneral + totalGirlsGeneral,
+          tahfeezTotal: totalBoysTahfeez + totalGirlsTahfeez,
           branchTotal
         }
       });
