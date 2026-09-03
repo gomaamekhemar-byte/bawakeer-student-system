@@ -74,13 +74,45 @@ function buildAnalytics(students, branchLabel) {
   const registrationRate = total > 0 ? Math.round((registered / total) * 1000) / 10 : 0;
   const conversionRate = accepted > 0 ? Math.round((registered / accepted) * 1000) / 10 : 0;
 
+  // Demand tracking for unavailable grades (Waitlist)
+  const waitlist_count = students.filter(s => s.followup_status === "صف غير متاح").length;
+  const waitlist_rate = total > 0 ? Math.round((waitlist_count / total) * 1000) / 10 : 0;
+
+  // Source Stats (Online vs Internal)
+  const online_count = students.filter(s => s.registration_source === "رابط خارجي").length;
+  const internal_count = students.filter(s => s.registration_source !== "رابط خارجي").length;
+  const online_percent = total > 0 ? Math.round((online_count / total) * 1000) / 10 : 0;
+  const internal_percent = total > 0 ? Math.round((internal_count / total) * 1000) / 10 : 0;
+
+  const online_accepted = students.filter(s => s.registration_source === "رابط خارجي" && s.interview_result === "مقبول").length;
+  const online_registered = students.filter(s => s.registration_source === "رابط خارجي" && s.followup_status === "تم التسجيل").length;
+  const online_waiting = students.filter(s => s.registration_source === "رابط خارجي" && (s.followup_status === "في انتظار التسجيل" || s.followup_status === "في انتظار المقابلة")).length;
+
+  const internal_accepted = students.filter(s => s.registration_source !== "رابط خارجي" && s.interview_result === "مقبول").length;
+  const internal_registered = students.filter(s => s.registration_source !== "رابط خارجي" && s.followup_status === "تم التسجيل").length;
+  const internal_waiting = students.filter(s => s.registration_source !== "رابط خارجي" && (s.followup_status === "في انتظار التسجيل" || s.followup_status === "في انتظار المقابلة")).length;
+
+  const sourceStats = {
+    online_count,
+    internal_count,
+    online_percent,
+    internal_percent,
+    online_accepted,
+    online_registered,
+    online_waiting,
+    internal_accepted,
+    internal_registered,
+    internal_waiting
+  };
+
   return {
     branchLabel: branchLabel || "جميع الفروع",
     total, accepted, rejected, registered, waiting, not_interested,
     pending_interview, not_registered,
-    acceptanceRate, registrationRate, conversionRate,
+    acceptanceRate, registrationRate, conversionRate, waitlist_count, waitlist_rate,
     phaseStats, gradeStats, registrationStats, acceptanceStats, typeStats, trackStats, nationalityStats, branchStats,
-    siblingStats: { siblingFamiliesCount, siblingStudentsTotal, siblingFamiliesList }
+    siblingStats: { siblingFamiliesCount, siblingStudentsTotal, siblingFamiliesList },
+    sourceStats
   };
 }
 
@@ -99,19 +131,17 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   const isSingleBranchUser = (currentUser.role !== "admin") && (!userBranches.includes("الكل")) && (userBranches.length === 1);
   const isFullBranchAccess = !isSingleBranchUser;
 
-  let selectedBranch = "الكل";
+  let selectedBranch = (req.query.branch || "الكل").trim();
+  let selectedSource = (req.query.source || req.query.source_filter || "الكل").trim();
   let allowedBranches = allBranches;
   let students = allStudents;
 
-    if (isSingleBranchUser) {
-    // 1. Single-branch employee: LOCKED strictly to their assigned branch
+  if (isSingleBranchUser) {
+    // Single-branch employee: LOCKED strictly to their assigned branch
     const assignedBranch = userBranches[0];
-    
-    // URL PROTECTION: If employee attempts to access a different branch in query
     if (req.query.branch && req.query.branch.trim() && req.query.branch.trim() !== assignedBranch) {
       return res.redirect("/analytics?msg=" + encodeURIComponent("عفواً، غير مصرح لك بالوصول لبيانات فرع آخر"));
     }
-
     selectedBranch = assignedBranch;
     allowedBranches = [selectedBranch];
     students = allStudents.filter(s => s.branch === selectedBranch);
@@ -120,16 +150,8 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
       students = students.filter(s => userPhases.includes(s.phase));
     }
   } else {
-    // 2. Admin or Multi-Branch / All-Branches User: Full interactive dropdown
+    // Admin or Multi-Branch / All-Branches User
     allowedBranches = allBranches;
-    
-    // Check if user specifically requested a branch filter in the query string
-    if (req.query.branch && req.query.branch.trim()) {
-      selectedBranch = req.query.branch.trim();
-    } else {
-      selectedBranch = "الكل"; // Default to All Branches
-    }
-
     if (selectedBranch && selectedBranch !== "الكل") {
       students = allStudents.filter(s => s.branch === selectedBranch);
     } else {
@@ -138,15 +160,36 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     }
   }
 
-  const branchLabel = selectedBranch === "الكل" ? "جميع الفروع" : ("فرع " + selectedBranch);
+  // Combine with Registration Source Filter (AND condition)
+  if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
+    if (selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external") {
+      students = students.filter(s => s.registration_source === "رابط خارجي");
+    } else if (selectedSource === "التسجيل الداخلي (المدرسة)" || selectedSource === "تسجيل داخلي" || selectedSource === "التسجيل الداخلي" || selectedSource === "internal") {
+      students = students.filter(s => s.registration_source !== "رابط خارجي");
+    }
+  }
+
+  let branchLabel = selectedBranch === "الكل" ? "جميع الفروع" : ("فرع " + selectedBranch);
+  if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
+    branchLabel += ` • ${selectedSource}`;
+  }
+
   const analyticsData = buildAnalytics(students, branchLabel);
 
-  // Build Phase statistics breakdown for displayed branch(es)
+  // Build Phase statistics breakdown for displayed branch(es) considering source filter
   const detailedBranchPhaseStats = [];
   const targetBranches = (selectedBranch && selectedBranch !== "الكل") ? [selectedBranch] : allowedBranches;
 
   targetBranches.forEach(bName => {
-    const branchStudents = allStudents.filter(s => s.branch === bName);
+    let branchStudents = allStudents.filter(s => s.branch === bName);
+    if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
+      if (selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external") {
+        branchStudents = branchStudents.filter(s => s.registration_source === "رابط خارجي");
+      } else {
+        branchStudents = branchStudents.filter(s => s.registration_source !== "رابط خارجي");
+      }
+    }
+
     const phasesData = PHASES.map(pName => {
       const pStudents = branchStudents.filter(s => s.phase === pName);
       return {
@@ -169,10 +212,22 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     });
   });
 
+  // Support JSON API response
+  if (req.query.format === "json" || req.headers["x-requested-with"] === "XMLHttpRequest") {
+    return res.json({
+      success: true,
+      analytics: analyticsData,
+      selectedBranch,
+      selectedSource,
+      detailedBranchPhaseStats
+    });
+  }
+
   res.render("analytics", {
     analytics: analyticsData,
     currentUser,
     selectedBranch,
+    selectedSource,
     branches: allowedBranches,
     isFullBranchAccess,
     isSingleBranchUser,
