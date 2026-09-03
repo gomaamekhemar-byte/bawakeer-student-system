@@ -672,21 +672,90 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
   }
 });
 
-// POST /delete/:id
-router.post("/delete/:id", requireAuth, withUser, async (req, res) => {
-  const currentUser = req.currentUser;
-  if (!currentUser || !userCan(currentUser, "admin")) return res.redirect("/");
-  if (req.isReadOnlyYear) return res.redirect("/students?msg=" + encodeURIComponent("عفواً، لا يمكن حذف الطلاب في عام دراسي مؤرشف"));
+// POST /delete/:id (with safe error handling, JSON responses, and aliases)
+async function handleDeleteStudent(req, res) {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser || !userCan(currentUser, "admin")) {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(403).json({ success: false, error: "ليس لديك صلاحية لحذف الطلاب (صلاحية المدير العام فقط)" });
+      }
+      return res.redirect("/?msg=" + encodeURIComponent("ليس لديك صلاحية لحذف الطلاب"));
+    }
 
-  const studentId = parseInt(req.params.id);
-  const student = await getStudentById(studentId);
-  await deleteStudent(studentId);
-  if (student) {
-    await addStudentHistory(studentId, "student_deleted", `تم حذف الطالب ${student.name}`, currentUser.username);
+    if (req.isReadOnlyYear) {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(403).json({ success: false, error: "عفواً، لا يمكن حذف الطلاب في عام دراسي مؤرشف" });
+      }
+      return res.redirect("/students?msg=" + encodeURIComponent("عفواً، لا يمكن حذف الطلاب في عام دراسي مؤرشف"));
+    }
+
+    // 3. Variable Safety: Check all possible places for studentId
+    const rawId = req.params.id || (req.body && (req.body.student_id || req.body.id)) || req.query.id;
+    if (!rawId || String(rawId).trim() === "" || String(rawId) === "undefined") {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(400).json({ success: false, error: "لم يتم استلام معرف الطالب (ID مفقود أو غير محدد)" });
+      }
+      return res.redirect("/students?msg=" + encodeURIComponent("خطأ: معرف الطالب مفقود أو غير محدد"));
+    }
+
+    const studentId = parseInt(rawId);
+    if (isNaN(studentId) || studentId <= 0) {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(400).json({ success: false, error: "معرف الطالب غير صالح (NaN)" });
+      }
+      return res.redirect("/students?msg=" + encodeURIComponent("خطأ: معرف الطالب غير صحيح"));
+    }
+
+    // 1 & 2. Safe execution of resilient cascade delete & soft delete fallback
+    const result = await deleteStudent(studentId);
+    if (!result || !result.success) {
+      const errMsg = (result && result.error) ? result.error : "تعذر استكمال حذف الطالب في قاعدة البيانات";
+      console.error("Delete student failed for ID " + studentId + ":", errMsg);
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(500).json({ success: false, error: errMsg });
+      }
+      return res.redirect("/students?msg=" + encodeURIComponent("تعذر حذف الطالب: " + errMsg));
+    }
+
+    // Add safe global history log (no foreign key to deleted student record)
+    try {
+      await addHistory("student_deleted", `تم حذف الطالب (${result.studentName || studentId}) بواسطة ${currentUser.username}`, currentUser.username);
+    } catch (histErr) {
+      console.warn("Audit history warning:", histErr.message);
+    }
+
+    const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+    if (isJson) {
+      return res.json({ success: true, message: "تم حذف الطالب بنجاح", studentId });
+    }
+    return res.redirect("/students?msg=" + encodeURIComponent("تم حذف الطالب بنجاح ✅"));
+  } catch (fatalErr) {
+    console.error("CRITICAL EXCEPTION in handleDeleteStudent:", fatalErr);
+    const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+    if (isJson) {
+      return res.status(500).json({
+        success: false,
+        error: "حدث خطأ غير متوقع أثناء معالجة عملية الحذف",
+        details: fatalErr.message || String(fatalErr)
+      });
+    }
+    return res.status(500).render("error", {
+      error_code: 500,
+      error_message: "حدث خطأ غير متوقع أثناء محاولة حذف الطالب: " + (fatalErr.message || "")
+    });
   }
-  await addHistory("student_deleted", `تم حذف الطالب رقم ${studentId}`, currentUser.username);
-  res.redirect("/students?msg=" + encodeURIComponent("تم حذف الطالب بنجاح"));
-});
+}
+
+router.post("/delete/:id", requireAuth, withUser, handleDeleteStudent);
+router.post("/students/delete/:id", requireAuth, withUser, handleDeleteStudent);
+router.post("/api/students/delete", requireAuth, withUser, handleDeleteStudent);
+router.delete("/api/students/:id", requireAuth, withUser, handleDeleteStudent);
 
 // GET /api/lookup_parent?phone=05xxxxxxxx
 router.get("/api/lookup_parent", requireAuth, withUser, async (req, res) => {
