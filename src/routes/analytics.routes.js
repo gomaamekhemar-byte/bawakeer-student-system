@@ -4,7 +4,74 @@ const { requireAuth } = require("../middleware/auth");
 const { withUser, userHasPermission, userMatchesScope, userCan } = require("../middleware/permissions");
 const { getStudents } = require("../services/students.service");
 const { getBranchNames } = require("../services/branches.service");
-const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES } = require("../utils/constants");
+const { getExternalSettings, getActiveBranches, isBranchMasterActive } = require("../services/settings.service");
+const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, PHASE_STRUCTURE } = require("../utils/constants");
+
+function buildDemographicMatrixGrid(students, branches, selectedGrade) {
+  const grid = [];
+
+  branches.forEach(bName => {
+    const branchStudents = students.filter(s => s.branch === bName);
+    const branchRows = [];
+
+    let totalBoysGeneral = 0;
+    let totalBoysTahfeez = 0;
+    let totalGirlsGeneral = 0;
+    let totalGirlsTahfeez = 0;
+
+    Object.entries(PHASE_STRUCTURE).forEach(([pName, pInfo]) => {
+      pInfo.grades.forEach(gItem => {
+        if (selectedGrade && selectedGrade !== "الكل" && selectedGrade !== gItem.id) {
+          return;
+        }
+
+        const gradeStudents = branchStudents.filter(s => s.phase === pName && s.grade === gItem.id);
+        const boysGeneral = gradeStudents.filter(s => s.student_type === "بنين" && (s.track === "عام" || !s.track)).length;
+        const boysTahfeez = gradeStudents.filter(s => s.student_type === "بنين" && s.track === "تحفيظ").length;
+        const girlsGeneral = gradeStudents.filter(s => s.student_type === "بنات" && (s.track === "عام" || !s.track)).length;
+        const girlsTahfeez = gradeStudents.filter(s => s.student_type === "بنات" && s.track === "تحفيظ").length;
+
+        const boysTotal = boysGeneral + boysTahfeez;
+        const girlsTotal = girlsGeneral + girlsTahfeez;
+        const rowTotal = boysTotal + girlsTotal;
+
+        totalBoysGeneral += boysGeneral;
+        totalBoysTahfeez += boysTahfeez;
+        totalGirlsGeneral += girlsGeneral;
+        totalGirlsTahfeez += girlsTahfeez;
+
+        branchRows.push({
+          phase: pName,
+          gradeId: gItem.id,
+          gradeName: gItem.name,
+          boysGeneral,
+          boysTahfeez,
+          boysTotal,
+          girlsGeneral,
+          girlsTahfeez,
+          girlsTotal,
+          rowTotal
+        });
+      });
+    });
+
+    grid.push({
+      branch: bName,
+      rows: branchRows,
+      totals: {
+        boysGeneral: totalBoysGeneral,
+        boysTahfeez: totalBoysTahfeez,
+        boysTotal: totalBoysGeneral + totalBoysTahfeez,
+        girlsGeneral: totalGirlsGeneral,
+        girlsTahfeez: totalGirlsTahfeez,
+        girlsTotal: totalGirlsGeneral + totalGirlsTahfeez,
+        branchTotal: totalBoysGeneral + totalBoysTahfeez + totalGirlsGeneral + totalGirlsTahfeez
+      }
+    });
+  });
+
+  return grid;
+}
 
 function buildAnalytics(students, branchLabel) {
   const total = students.length;
@@ -122,22 +189,30 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   
   const allBranches = await getBranchNames();
   const allStudents = await getStudents();
+  const settings = await getExternalSettings();
+
+  // Active branches only (respect master switch)
+  const activeBranchNames = getActiveBranches(allBranches, settings);
 
   // Extract user branch & phase permissions
   const userBranches = Array.isArray(currentUser.branches) ? currentUser.branches : (currentUser.branch ? [currentUser.branch] : []);
   const userPhases = Array.isArray(currentUser.phases) ? currentUser.phases : (currentUser.phase ? [currentUser.phase] : []);
   
-  // Single branch user check: strictly non-admin with exactly 1 branch and not 'الكل'
   const isSingleBranchUser = (currentUser.role !== "admin") && (!userBranches.includes("الكل")) && (userBranches.length === 1);
   const isFullBranchAccess = !isSingleBranchUser;
 
+  // Filter Query Params
   let selectedBranch = (req.query.branch || "الكل").trim();
+  let selectedPhase = (req.query.phase || "الكل").trim();
+  let selectedGrade = (req.query.grade || "الكل").trim();
+  let selectedType = (req.query.type || req.query.student_type || "الكل").trim();
+  let selectedTrack = (req.query.track || "الكل").trim();
   let selectedSource = (req.query.source || req.query.source_filter || "الكل").trim();
-  let allowedBranches = allBranches;
+
+  let allowedBranches = activeBranchNames.length ? activeBranchNames : allBranches;
   let students = allStudents;
 
   if (isSingleBranchUser) {
-    // Single-branch employee: LOCKED strictly to their assigned branch
     const assignedBranch = userBranches[0];
     if (req.query.branch && req.query.branch.trim() && req.query.branch.trim() !== assignedBranch) {
       return res.redirect("/analytics?msg=" + encodeURIComponent("عفواً، غير مصرح لك بالوصول لبيانات فرع آخر"));
@@ -150,8 +225,6 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
       students = students.filter(s => userPhases.includes(s.phase));
     }
   } else {
-    // Admin or Multi-Branch / All-Branches User
-    allowedBranches = allBranches;
     if (selectedBranch && selectedBranch !== "الكل") {
       students = allStudents.filter(s => s.branch === selectedBranch);
     } else {
@@ -160,7 +233,27 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     }
   }
 
-  // Combine with Registration Source Filter (AND condition)
+  // 1. Phase Filter
+  if (selectedPhase && selectedPhase !== "الكل") {
+    students = students.filter(s => s.phase === selectedPhase);
+  }
+
+  // 2. Grade Filter
+  if (selectedGrade && selectedGrade !== "الكل") {
+    students = students.filter(s => s.grade === selectedGrade);
+  }
+
+  // 3. Student Type Filter (بنين / بنات)
+  if (selectedType && selectedType !== "الكل") {
+    students = students.filter(s => s.student_type === selectedType);
+  }
+
+  // 4. Track Filter (عام / تحفيظ)
+  if (selectedTrack && selectedTrack !== "الكل") {
+    students = students.filter(s => (s.track || "عام") === selectedTrack);
+  }
+
+  // 5. Registration Source Filter (الرابط الخارجي / المدرسة)
   if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
     if (selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external") {
       students = students.filter(s => s.registration_source === "رابط خارجي");
@@ -170,24 +263,32 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   }
 
   let branchLabel = selectedBranch === "الكل" ? "جميع الفروع" : ("فرع " + selectedBranch);
-  if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
-    branchLabel += ` • ${selectedSource}`;
+  const filterTags = [];
+  if (selectedPhase !== "الكل") filterTags.push(selectedPhase);
+  if (selectedGrade !== "الكل") filterTags.push("صف " + selectedGrade);
+  if (selectedType !== "الكل") filterTags.push(selectedType);
+  if (selectedTrack !== "الكل") filterTags.push(selectedTrack);
+  if (selectedSource !== "الكل" && selectedSource !== "جميع المصادر") filterTags.push(selectedSource);
+  if (filterTags.length > 0) {
+    branchLabel += ` • [${filterTags.join(" | ")}]`;
   }
 
   const analyticsData = buildAnalytics(students, branchLabel);
 
-  // Build Phase statistics breakdown for displayed branch(es) considering source filter
-  const detailedBranchPhaseStats = [];
+  // Build Demographic Matrix Data Grid
   const targetBranches = (selectedBranch && selectedBranch !== "الكل") ? [selectedBranch] : allowedBranches;
+  const demographicMatrixGrid = buildDemographicMatrixGrid(allStudents, targetBranches, selectedGrade);
 
+  // Build Phase statistics breakdown for displayed branch(es)
+  const detailedBranchPhaseStats = [];
   targetBranches.forEach(bName => {
     let branchStudents = allStudents.filter(s => s.branch === bName);
+    if (selectedType && selectedType !== "الكل") branchStudents = branchStudents.filter(s => s.student_type === selectedType);
+    if (selectedTrack && selectedTrack !== "الكل") branchStudents = branchStudents.filter(s => (s.track || "عام") === selectedTrack);
+    if (selectedGrade && selectedGrade !== "الكل") branchStudents = branchStudents.filter(s => s.grade === selectedGrade);
     if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
-      if (selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external") {
-        branchStudents = branchStudents.filter(s => s.registration_source === "رابط خارجي");
-      } else {
-        branchStudents = branchStudents.filter(s => s.registration_source !== "رابط خارجي");
-      }
+      const isOnline = selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external";
+      branchStudents = branchStudents.filter(s => isOnline ? (s.registration_source === "رابط خارجي") : (s.registration_source !== "رابط خارجي"));
     }
 
     const phasesData = PHASES.map(pName => {
@@ -217,16 +318,27 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     return res.json({
       success: true,
       analytics: analyticsData,
+      demographicMatrixGrid,
+      detailedBranchPhaseStats,
       selectedBranch,
-      selectedSource,
-      detailedBranchPhaseStats
+      selectedPhase,
+      selectedGrade,
+      selectedType,
+      selectedTrack,
+      selectedSource
     });
   }
 
   res.render("analytics", {
     analytics: analyticsData,
+    demographicMatrixGrid,
+    detailedBranchPhaseStats,
     currentUser,
     selectedBranch,
+    selectedPhase,
+    selectedGrade,
+    selectedType,
+    selectedTrack,
     selectedSource,
     branches: allowedBranches,
     isFullBranchAccess,
@@ -238,7 +350,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     student_types: STUDENT_TYPES,
     tracks: TRACKS,
     nationalities: NATIONALITIES,
-    detailedBranchPhaseStats,
+    phaseStructure: PHASE_STRUCTURE
   });
 });
 
