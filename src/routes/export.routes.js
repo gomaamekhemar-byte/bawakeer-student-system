@@ -31,6 +31,50 @@ function matchSourceFilter(student, sourceFilter) {
   return true;
 }
 
+function computeReportAdaptiveFilters(allStudents, currentFilters) {
+  function poolExcluding(field) {
+    return allStudents.filter(s => {
+      if (field !== 'branch' && currentFilters.branchFilter && s.branch !== currentFilters.branchFilter) return false;
+      if (field !== 'phase' && currentFilters.phaseFilter && s.phase !== currentFilters.phaseFilter) return false;
+      if (field !== 'grade' && currentFilters.gradeFilter && s.grade !== currentFilters.gradeFilter) return false;
+      if (field !== 'studentType' && currentFilters.studentTypeFilter && s.student_type !== currentFilters.studentTypeFilter) return false;
+      if (field !== 'track' && currentFilters.trackFilter && (s.track || 'عام') !== currentFilters.trackFilter) return false;
+      if (field !== 'interview' && currentFilters.interviewFilter && s.interview_result !== currentFilters.interviewFilter) return false;
+      if (field !== 'followup' && currentFilters.followupFilter && s.followup_status !== currentFilters.followupFilter) return false;
+      if (field !== 'source' && currentFilters.sourceFilter) {
+        if (!matchSourceFilter(s, currentFilters.sourceFilter)) return false;
+      }
+      return true;
+    });
+  }
+
+  const branches = [...new Set(poolExcluding('branch').map(s => s.branch).filter(Boolean))];
+  const phases = [...new Set(poolExcluding('phase').map(s => s.phase).filter(Boolean))];
+  const grades = [...new Set(poolExcluding('grade').map(s => s.grade).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b)));
+  const types = [...new Set(poolExcluding('studentType').map(s => s.student_type).filter(Boolean))];
+  const tracks = [...new Set(poolExcluding('track').map(s => s.track || 'عام').filter(Boolean))];
+  const interviewResults = [...new Set(poolExcluding('interview').map(s => s.interview_result).filter(Boolean))];
+  const followupStatuses = [...new Set(poolExcluding('followup').map(s => s.followup_status).filter(Boolean))];
+
+  const sourcePool = poolExcluding('source');
+  const hasOnline = sourcePool.some(s => s.registration_source === 'رابط خارجي');
+  const hasInternal = sourcePool.some(s => s.registration_source !== 'رابط خارجي');
+  const sources = [];
+  if (hasOnline) sources.push('التسجيل الخارجي (الرابط)');
+  if (hasInternal) sources.push('التسجيل الداخلي (المدرسة)');
+
+  return {
+    branches,
+    phases,
+    grades,
+    types,
+    tracks,
+    sources,
+    interviewResults,
+    followupStatuses
+  };
+}
+
 // GET /reports - Reports page
 router.get("/reports", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
@@ -66,6 +110,18 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   const gradeFilter = req.query.grade_filter || "";
   const branchFilter = req.query.branch_filter || "";
   const sourceFilter = req.query.source_filter || "";
+
+  // Compute adaptive available filters on accessible student base
+  const availableFilters = computeReportAdaptiveFilters(students, {
+    branchFilter,
+    phaseFilter,
+    gradeFilter,
+    studentTypeFilter,
+    trackFilter,
+    interviewFilter,
+    followupFilter,
+    sourceFilter
+  });
 
   let filtered = students.filter(s => {
     if (query) {
@@ -123,7 +179,7 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     stats,
     currentUser,
     activeBranch,
-    branches,
+    branches: availableFilters.branches.length ? availableFilters.branches : branches,
     activeYear,
     query,
     interviewFilter,
@@ -134,12 +190,13 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     gradeFilter,
     branchFilter,
     sourceFilter,
-    interview_results: INTERVIEW_RESULTS,
-    followup_statuses: FOLLOWUP_STATUSES,
-    student_types: STUDENT_TYPES,
-    phases: PHASES,
-    grades: GRADES,
-    tracks: TRACKS,
+    availableFilters,
+    interview_results: availableFilters.interviewResults.length ? availableFilters.interviewResults : INTERVIEW_RESULTS,
+    followup_statuses: availableFilters.followupStatuses.length ? availableFilters.followupStatuses : FOLLOWUP_STATUSES,
+    student_types: availableFilters.types.length ? availableFilters.types : STUDENT_TYPES,
+    phases: availableFilters.phases.length ? availableFilters.phases : PHASES,
+    grades: availableFilters.grades.length ? availableFilters.grades : GRADES,
+    tracks: availableFilters.tracks.length ? availableFilters.tracks : TRACKS,
     nationalities: NATIONALITIES,
     roles: ROLES
   });
@@ -319,10 +376,10 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
     <div class="stat-box"><div class="stat-val">${total}</div><div class="stat-lbl">إجمالي نتائج الكشف</div></div>
     <div class="stat-box"><div class="stat-val" style="color:#166534;">${accepted}</div><div class="stat-lbl">المقبولين</div></div>
     <div class="stat-box"><div class="stat-val" style="color:#2563eb;">${registered}</div><div class="stat-lbl">تم التسجيل</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:#0284c7;">${boys_general_count}</div><div class="stat-lbl">بنين (عام)</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:#0369a1;">${boys_tahfeez_count}</div><div class="stat-lbl">بنين (تحفيظ)</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:#db2777;">${girls_general_count}</div><div class="stat-lbl">بنات (عام)</div></div>
-    <div class="stat-box"><div class="stat-val" style="color:#be185d;">${girls_tahfeez_count}</div><div class="stat-lbl">بنات (تحفيظ)</div></div>
+    ${boys_general_count > 0 ? `<div class="stat-box"><div class="stat-val" style="color:#0284c7;">${boys_general_count}</div><div class="stat-lbl">بنين (عام)</div></div>` : ''}
+    ${boys_tahfeez_count > 0 ? `<div class="stat-box"><div class="stat-val" style="color:#0369a1;">${boys_tahfeez_count}</div><div class="stat-lbl">بنين (تحفيظ)</div></div>` : ''}
+    ${girls_general_count > 0 ? `<div class="stat-box"><div class="stat-val" style="color:#db2777;">${girls_general_count}</div><div class="stat-lbl">بنات (عام)</div></div>` : ''}
+    ${girls_tahfeez_count > 0 ? `<div class="stat-box"><div class="stat-val" style="color:#be185d;">${girls_tahfeez_count}</div><div class="stat-lbl">بنات (تحفيظ)</div></div>` : ''}
   </div>
 
   <table>
