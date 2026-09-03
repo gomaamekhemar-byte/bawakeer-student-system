@@ -505,7 +505,7 @@
               <!-- نوع الطالب -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small">نوع الطالب <span class="text-danger">*</span></label>
-                <select name="student_type" class="form-select" required>
+                <select name="student_type" id="internalStudentType" class="form-select" required onchange="onInternalBranchOrTypeChange()">
                   <% student_types.forEach(function(t){ %>
                     <option value="<%= t %>" <%= editingStudent && editingStudent.student_type===t ? 'selected' : '' %>><%= t %></option>
                   <% }) %>
@@ -515,7 +515,7 @@
               <!-- الفرع -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small">الفرع <span class="text-danger">*</span></label>
-                <select name="student_branch" class="form-select" required>
+                <select name="student_branch" id="internalStudentBranch" class="form-select" required onchange="onInternalBranchOrTypeChange()">
                   <% branches.forEach(function(b){ %>
                     <option value="<%= b %>" <%= editingStudent && editingStudent.branch===b ? 'selected' : '' %>><%= b %></option>
                   <% }) %>
@@ -525,7 +525,7 @@
               <!-- المرحلة الدراسية -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small">المرحلة الدراسية <span class="text-danger">*</span></label>
-                <select name="phase" class="form-select" required>
+                <select name="phase" id="internalStudentPhase" class="form-select" required onchange="onInternalPhaseChange()">
                   <option value="">اختر المرحلة...</option>
                   <% phases.forEach(function(p){ %>
                     <option value="<%= p %>" <%= editingStudent && editingStudent.phase===p ? 'selected' : '' %>><%= p %></option>
@@ -536,7 +536,7 @@
               <!-- الصف الدراسي -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small">الصف الدراسي <span class="text-danger">*</span></label>
-                <select name="grade" class="form-select" required>
+                <select name="grade" id="internalStudentGrade" class="form-select" required onchange="onInternalGradeChange()">
                   <option value="">اختر الصف...</option>
                   <% grades.forEach(function(g){ %>
                     <option value="<%= g %>" <%= editingStudent && editingStudent.grade===g ? 'selected' : '' %>>صف <%= g %></option>
@@ -547,7 +547,7 @@
               <!-- المسار التعليمي -->
               <div class="col-md-6">
                 <label class="form-label fw-bold text-dark small">المسار التعليمي <span class="text-danger">*</span></label>
-                <select name="track" class="form-select" required>
+                <select name="track" id="internalStudentTrack" class="form-select" required>
                   <% tracks.forEach(function(tr){ %>
                     <option value="<%= tr %>" <%= editingStudent && editingStudent.track===tr ? 'selected' : '' %>><%= tr %></option>
                   <% }) %>
@@ -1371,5 +1371,150 @@
 
   
 
+
+  <!-- DYNAMIC CASCADING FOR INTERNAL STUDENT FORM -->
+  <script>
+    (function() {
+      const pStruct = <%- JSON.stringify((typeof phaseStructure !== 'undefined' && phaseStructure) ? phaseStructure : {}) %>;
+      const sysSettings = <%- JSON.stringify((typeof settings !== 'undefined' && settings) ? settings : {}) %>;
+
+      function isInternalGradeOpen(branch, studentType, phase, grade, track) {
+        const matrix = sysSettings.grade_matrix || {};
+        const pSwitches = sysSettings.branch_phase_switches || {};
+        const mSwitches = sysSettings.branch_master_switches || {};
+
+        if (mSwitches[branch] === false) return false;
+        if (pSwitches[branch + '_' + phase] === false) return false;
+
+        const k = branch + '_' + studentType + '_' + phase + '_' + grade + '_' + track;
+        if (matrix[k] !== undefined) {
+          return matrix[k] === true || matrix[k] === 'true' || matrix[k] === 1;
+        }
+        return true; // default open
+      }
+
+      window.onInternalBranchOrTypeChange = function() {
+        const bEl = document.getElementById('internalStudentBranch');
+        const tEl = document.getElementById('internalStudentType');
+        const pEl = document.getElementById('internalStudentPhase');
+        if (!bEl || !tEl || !pEl) return;
+
+        const branch = bEl.value;
+        const studentType = tEl.value || 'بنين';
+        const currentPhase = pEl.value;
+
+        pEl.innerHTML = '<option value="">اختر المرحلة...</option>';
+        Object.entries(pStruct).forEach(([pName, pInfo]) => {
+          // Check if phase is open in branch
+          const pSwitches = sysSettings.branch_phase_switches || {};
+          if (pSwitches[branch + '_' + pName] === false) return;
+
+          // Check if at least one grade is open
+          let hasAnyOpen = false;
+          pInfo.grades.forEach(gItem => {
+            ['عام', 'تحفيظ'].forEach(tName => {
+              if (isInternalGradeOpen(branch, studentType, pName, gItem.id, tName)) {
+                hasAnyOpen = true;
+              }
+            });
+          });
+
+          if (hasAnyOpen) {
+            const opt = document.createElement('option');
+            opt.value = pName;
+            opt.textContent = pName;
+            if (pName === currentPhase) opt.selected = true;
+            pEl.appendChild(opt);
+          }
+        });
+
+        window.onInternalPhaseChange();
+      };
+
+      window.onInternalPhaseChange = function() {
+        const bEl = document.getElementById('internalStudentBranch');
+        const tEl = document.getElementById('internalStudentType');
+        const pEl = document.getElementById('internalStudentPhase');
+        const gEl = document.getElementById('internalStudentGrade');
+        if (!bEl || !tEl || !pEl || !gEl) return;
+
+        const branch = bEl.value;
+        const studentType = tEl.value || 'بنين';
+        const phase = pEl.value;
+        const currentGrade = gEl.value;
+
+        gEl.innerHTML = '<option value="">اختر الصف...</option>';
+        if (!phase || !pStruct[phase]) {
+          window.onInternalGradeChange();
+          return;
+        }
+
+        const grades = pStruct[phase].grades || [];
+        grades.forEach(gItem => {
+          let hasOpenTrack = false;
+          ['عام', 'تحفيظ'].forEach(tName => {
+            if (isInternalGradeOpen(branch, studentType, phase, gItem.id, tName)) {
+              hasOpenTrack = true;
+            }
+          });
+
+          if (hasOpenTrack) {
+            const opt = document.createElement('option');
+            opt.value = gItem.id;
+            opt.textContent = gItem.name;
+            if (String(gItem.id) === String(currentGrade)) opt.selected = true;
+            gEl.appendChild(opt);
+          }
+        });
+
+        window.onInternalGradeChange();
+      };
+
+      window.onInternalGradeChange = function() {
+        const bEl = document.getElementById('internalStudentBranch');
+        const tEl = document.getElementById('internalStudentType');
+        const pEl = document.getElementById('internalStudentPhase');
+        const gEl = document.getElementById('internalStudentGrade');
+        const trEl = document.getElementById('internalStudentTrack');
+        if (!bEl || !tEl || !pEl || !gEl || !trEl) return;
+
+        const branch = bEl.value;
+        const studentType = tEl.value || 'بنين';
+        const phase = pEl.value;
+        const grade = gEl.value;
+        const currentTrack = trEl.value;
+
+        trEl.innerHTML = '';
+        if (!phase || !grade || !pStruct[phase]) {
+          trEl.innerHTML = '<option value="عام">عام</option>';
+          return;
+        }
+
+        const validTracks = pStruct[phase].tracks || ['عام'];
+        validTracks.forEach(tName => {
+          if (isInternalGradeOpen(branch, studentType, phase, grade, tName)) {
+            const opt = document.createElement('option');
+            opt.value = tName;
+            opt.textContent = tName;
+            if (tName === currentTrack) opt.selected = true;
+            trEl.appendChild(opt);
+          }
+        });
+
+        if (trEl.children.length === 0) {
+          trEl.innerHTML = '<option value="عام">عام</option>';
+        }
+      };
+
+      // Run on DOM ready if modal elements exist
+      document.addEventListener('DOMContentLoaded', function() {
+        const pEl = document.getElementById('internalStudentPhase');
+        // Only run cascade if adding a new student or no phase currently selected
+        if (pEl && !pEl.value) {
+          window.onInternalBranchOrTypeChange();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
