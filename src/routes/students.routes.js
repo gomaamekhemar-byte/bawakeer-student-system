@@ -67,7 +67,15 @@ router.get("/apply", async (req, res) => {
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
   const settings = await getExternalSettings();
-  res.render("apply", { branches, activeYear, settings, submitted: false, error: null });
+  const { PHASE_STRUCTURE } = require("../utils/constants");
+  res.render("apply", {
+    branches,
+    activeYear,
+    settings,
+    phaseStructure: PHASE_STRUCTURE,
+    submitted: false,
+    error: null
+  });
 });
 
 router.get("/register", (req, res) => res.redirect("/apply"));
@@ -108,6 +116,11 @@ router.post("/apply", async (req, res) => {
     });
   }
 
+  // Check if requested grade/track combination is available in Dynamic Grade Matrix
+  const { isGradeAvailable } = require("../services/settings.service");
+  const isAvailable = isGradeAvailable(student_branch, student_type, phase, grade, track, settings);
+  const isWaitlist = !isAvailable;
+
   const newStudent = {
     name,
     phone,
@@ -123,8 +136,8 @@ router.post("/apply", async (req, res) => {
     notes: cleanNotesForDisplay(notes),
     interview_result: "في انتظار المقابلة",
     interview_reason: "",
-    followup_status: "في انتظار المقابلة",
-    registration_reason: "",
+    followup_status: isWaitlist ? "صف غير متاح" : "في انتظار المقابلة",
+    registration_reason: isWaitlist ? "تم التسجيل على قائمة الانتظار (الصف المطلوب غير متاح حالياً)" : "",
     registration_source: "رابط خارجي",
     academic_year_id: activeYear ? activeYear.id : 1,
     attachments: [],
@@ -142,7 +155,11 @@ router.post("/apply", async (req, res) => {
     });
   }
 
-  await addHistory("online_application", `طلب تسجيل جديد عبر الإنترنت للطالب ${name} بفرع ${student_branch}`, "بوابة التسجيل العامة");
+  const historyAction = isWaitlist ? "waitlist_application" : "online_application";
+  const historyText = isWaitlist
+    ? `طلب تسجيل على قائمة الانتظار لصف غير متاح للطالب ${name} بفرع ${student_branch} (${phase} - صف ${grade})`
+    : `طلب تسجيل جديد عبر الإنترنت للطالب ${name} بفرع ${student_branch}`;
+  await addHistory(historyAction, historyText, "بوابة التسجيل العامة");
 
   // 1. Send automated WhatsApp confirmation to parent
   await sendWhatsAppNotification(created, phone);
@@ -156,13 +173,17 @@ router.post("/apply", async (req, res) => {
 
   const isFemale = created.student_type === "بنات";
   const studentTypeWord = isFemale ? "ابنتنا الطالبة" : "ابننا الطالب";
-  const followupMsg = `السلام عليكم ورحمة الله وبركاته، تم إرسال طلب تسجيل ${studentTypeWord} [${created.name}] عبر الرابط الخارجي بفرع [${created.branch}] - المرحلة [${created.phase}] ${created.grade ? ('الصف ' + created.grade) : ''}. ونرغب في متابعة موعد المقابلة واستكمال الإجراءات.`;
+  const followupMsg = isWaitlist
+    ? `السلام عليكم ورحمة الله وبركاته، تم إرسال طلب تسجيل ${studentTypeWord} [${created.name}] على قائمة الانتظار بفرع [${created.branch}] - المرحلة [${created.phase}] ${created.grade ? ('الصف ' + created.grade) : ''}. ونرغب في متابعة إمكانية توفر مقعد شاغر.`
+    : `السلام عليكم ورحمة الله وبركاته، تم إرسال طلب تسجيل ${studentTypeWord} [${created.name}] عبر الرابط الخارجي بفرع [${created.branch}] - المرحلة [${created.phase}] ${created.grade ? ('الصف ' + created.grade) : ''}. ونرغب في متابعة موعد المقابلة واستكمال الإجراءات.`;
   const branchWhatsAppUrl = `https://wa.me/${formattedBranchPhone}?text=${encodeURIComponent(followupMsg)}`;
 
+  const { PHASE_STRUCTURE } = require("../utils/constants");
   return res.render("apply", {
     branches,
     activeYear,
     settings,
+    phaseStructure: PHASE_STRUCTURE,
     submitted: true,
     student: created,
     branchPhone: branchPhoneRaw,
