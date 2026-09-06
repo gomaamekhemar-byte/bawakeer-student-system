@@ -414,6 +414,10 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
         pending_interview: pStudents.filter(s => s.interview_result === "في انتظار المقابلة").length,
         waiting_registration: pStudents.filter(s => s.followup_status === "في انتظار التسجيل").length,
         rejected: pStudents.filter(s => s.interview_result === "غير مقبول").length,
+        boys: pStudents.filter(s => s.student_type === "بنين").length,
+        girls: pStudents.filter(s => s.student_type === "بنات").length,
+        general: pStudents.filter(s => (s.track || "عام") === "عام").length,
+        tahfeez: pStudents.filter(s => s.track === "تحفيظ").length,
       };
     }).filter(Boolean);
 
@@ -423,6 +427,10 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
         total: branchStudents.length,
         registered: branchStudents.filter(s => s.followup_status === "تم التسجيل").length,
         accepted: branchStudents.filter(s => s.interview_result === "مقبول").length,
+        boys: branchStudents.filter(s => s.student_type === "بنين").length,
+        girls: branchStudents.filter(s => s.student_type === "بنات").length,
+        general: branchStudents.filter(s => (s.track || "عام") === "عام").length,
+        tahfeez: branchStudents.filter(s => s.track === "تحفيظ").length,
         phasesData,
       });
     }
