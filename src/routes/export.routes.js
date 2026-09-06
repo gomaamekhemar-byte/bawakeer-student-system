@@ -5,6 +5,7 @@ const { withUser, userHasPermission, userMatchesScope } = require("../middleware
 const { getStudents } = require("../services/students.service");
 const { getBranchNames } = require("../services/branches.service");
 const { getActiveYear } = require("../services/academic_years.service");
+const { getSystemIdentity } = require("../services/settings.service");
 const { addHistory } = require("../services/history.service");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES } = require("../utils/constants");
 const XLSX = require("xlsx");
@@ -401,6 +402,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   const accepted = students.filter(s => s.interview_result === "مقبول").length;
   const registered = students.filter(s => s.followup_status === "تم التسجيل").length;
   const activeYear = await getActiveYear();
+  const systemSettings = await getSystemIdentity();
 
   let filterDesc = [];
   if (branchFilter) filterDesc.push(`الفرع: ${branchFilter}`);
@@ -414,19 +416,70 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   const filterSummary = filterDesc.length ? filterDesc.join(" | ") : "جميع الطلاب بدون فلترة";
 
   const printDate = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+  const logoHtml = systemSettings.school_logo_url 
+    ? `<img src="${systemSettings.school_logo_url}" alt="شعار المؤسسة" style="max-height: 65px; max-width: 140px; object-fit: contain;">`
+    : `<img src="/icon-192.png" alt="الشعار" style="max-height: 60px; max-width: 120px; object-fit: contain;">`;
 
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تقرير طلاب مدارس بواكير الأهلية</title>
+  <title>تقرير طلاب ${systemSettings.school_name || "مدارس بواكير الأهلية"}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
     body { font-family: 'Cairo', sans-serif; margin: 0; padding: 15px; color: #1e293b; background: #fff; font-size: 11px; }
-    .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 12px; }
-    .logo-text { font-size: 20px; font-weight: 800; color: #1e3a8a; }
-    .sub-title { font-size: 13px; color: #64748b; font-weight: 600; }
-    .filter-badge { display: inline-block; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 12px; font-size: 10px; margin-top: 6px; color: #334155; }
+    .global-print-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2.5px solid #1e3a8a;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+    .header-right { text-align: right; }
+    .ministry-title { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 3px; }
+    .school-title { font-size: 18px; font-weight: 800; color: #1e3a8a; margin: 0; line-height: 1.2; }
+    .school-slogan { font-size: 10px; color: #64748b; margin-top: 2px; }
+    .header-center { text-align: center; }
+    .report-main-title { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 3px; }
+    .year-badge { display: inline-block; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 10px; color: #334155; font-weight: 600; }
+    .header-left { text-align: left; min-width: 130px; display: flex; justify-content: flex-end; align-items: center; }
+    .filter-banner { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; font-size: 10px; margin-bottom: 12px; color: #334155; }
+    .stats-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .stat-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; text-align: center; background: #f8fafc; }
+    .stat-val { font-size: 14px; font-weight: 800; color: #1e3a8a; }
+    .stat-lbl { font-size: 9px; color: #64748b; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 10px; }
+    th { background: #1e3a8a; color: white; padding: 6px 4px; text-align: right; border: 1px solid #cbd5e1; font-weight: 700; }
+    td { padding: 5px 4px; border: 1px solid #e2e8f0; vertical-align: middle; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+    .badge-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .badge-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .badge-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .badge-info { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
+    .footer { margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; }
+    @media print { @page { size: landscape; margin: 8mm; } body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <!-- UNIFIED GLOBAL PRINT HEADER -->
+  <div class="global-print-header">
+    <div class="header-right">
+      <div class="ministry-title">${systemSettings.ministry_line || "المملكة العربية السعودية - وزارة التعليم"}</div>
+      <h1 class="school-title">${systemSettings.school_name || "مدارس بواكير الأهلية"}</h1>
+      ${systemSettings.slogan ? `<div class="school-slogan">${systemSettings.slogan}</div>` : ""}
+    </div>
+    <div class="header-center">
+      <div class="report-main-title">كشف بيانات الطلاب والتحليل الديموغرافي</div>
+      <div class="year-badge">${activeYear ? activeYear.year_name : "العام الدراسي الحالي"}</div>
+    </div>
+    <div class="header-left">
+      ${logoHtml}
+    </div>
+  </div>
+
+  <div class="filter-banner">📌 <b>معايير التصفية:</b> ${filterSummary}</div>
     .stats-bar { display: flex; gap: 8px; margin-bottom: 12px; }
     .stat-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; text-align: center; background: #f8fafc; }
     .stat-val { font-size: 14px; font-weight: 800; color: #1e3a8a; }
@@ -506,7 +559,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   </table>
 
   <div class="footer">
-    <span>نظام إدارة الطلاب — مدارس بواكير الأهلية</span>
+    <span>نظام إدارة الطلاب — ${systemSettings.school_name || "مدارس بواكير الأهلية"}</span>
     <span>تاريخ الطباعة: ${printDate}</span>
     <span>طُبع بواسطة: ${currentUser.full_name || currentUser.username}</span>
   </div>
