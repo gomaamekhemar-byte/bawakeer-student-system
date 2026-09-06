@@ -2,6 +2,10 @@ const supabase = require('../config/supabase');
 const { PHASE_STRUCTURE, PHASES, STUDENT_TYPES } = require('../utils/constants');
 
 let memorySettings = {
+  school_name: "مدارس بواكير الأهلية",
+  school_logo_url: "",
+  ministry_line: "المملكة العربية السعودية - وزارة التعليم",
+  slogan: "نحو تعليم رائد ومستقبل واعد",
   is_portal_open: true,
   portal_closed_message: "نعتذر منكم، باب التسجيل والقبول الإلكتروني مغلق حالياً. يرجى مراجعة إدارة القبول والتسجيل في مقر المدارس.",
   portal_announcement: "مرحباً بكم في بوابة التسجيل والقبول للعام الدراسي الجديد — مدارس بواكير الأهلية",
@@ -251,9 +255,33 @@ function getAvailableHierarchy(branch, student_type, settings) {
   return result;
 }
 
+async function getSystemIdentity() {
+  const settings = await getExternalSettings();
+  return {
+    school_name: settings.school_name || "مدارس بواكير الأهلية",
+    school_logo_url: settings.school_logo_url || "",
+    ministry_line: settings.ministry_line || "المملكة العربية السعودية - وزارة التعليم",
+    slogan: settings.slogan || ""
+  };
+}
+
+async function saveSystemIdentity(identityUpdates, username) {
+  const settings = await getExternalSettings();
+  const updated = {
+    ...settings,
+    school_name: (identityUpdates.school_name !== undefined ? identityUpdates.school_name : settings.school_name || "مدارس بواكير الأهلية").trim(),
+    school_logo_url: identityUpdates.school_logo_url !== undefined ? identityUpdates.school_logo_url : (settings.school_logo_url || ""),
+    ministry_line: (identityUpdates.ministry_line !== undefined ? identityUpdates.ministry_line : settings.ministry_line || "المملكة العربية السعودية - وزارة التعليم").trim(),
+    slogan: (identityUpdates.slogan !== undefined ? identityUpdates.slogan : settings.slogan || "").trim()
+  };
+  return await saveExternalSettings(updated, username);
+}
+
 module.exports = {
   getExternalSettings,
   saveExternalSettings,
+  getSystemIdentity,
+  saveSystemIdentity,
   getBranchWhatsAppPhone,
   isBranchMasterActive,
   isPhaseActiveInBranch,
