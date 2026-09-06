@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const { requireAuth } = require("../middleware/auth");
 const { withUser, userCan, userHasPermission, userMatchesScope } = require("../middleware/permissions");
-const { getStudents, getStudentById, getStudentByIdIncludingDeleted, createStudent, updateStudent, deleteStudent, softDeleteStudent, restoreStudent } = require("../services/students.service");
+const { getStudents, getStudentById, getStudentByIdIncludingDeleted, createStudent, updateStudent, deleteStudent, softDeleteStudent, restoreStudent, permanentDeleteStudent } = require("../services/students.service");
 const { getBranchNames } = require("../services/branches.service");
 const { getActiveYear, getAcademicYears } = require("../services/academic_years.service");
 const { addHistory, addStudentHistory, computeFieldChanges } = require("../services/history.service");
@@ -846,6 +846,67 @@ async function handleRestoreStudent(req, res) {
   }
 }
 
+// PERMANENT HARD DELETE CONTROLLER (Admin only + strict Arabic confirmation word)
+async function handlePermanentDeleteStudent(req, res) {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser || !userCan(currentUser, "admin")) {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(403).json({ success: false, error: "ليس لديك صلاحية للحذف النهائي (صلاحية المدير العام فقط)" });
+      }
+      return res.redirect("/history?msg=" + encodeURIComponent("ليس لديك صلاحية للحذف النهائي"));
+    }
+
+    if (req.isReadOnlyYear) {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(403).json({ success: false, error: "عفواً، لا يمكن الحذف النهائي في عام دراسي مؤرشف" });
+      }
+      return res.redirect("/history?msg=" + encodeURIComponent("عفواً، لا يمكن الحذف النهائي في عام دراسي مؤرشف"));
+    }
+
+    // Confirmation Word Check: Must be "تأكيد" or "حذف"
+    const confirmWord = ((req.body && (req.body.confirmation_word || req.body.confirm_word)) || req.query.confirm_word || "").trim();
+    if (confirmWord !== "تأكيد" && confirmWord !== "حذف") {
+      const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+      if (isJson) {
+        return res.status(400).json({ success: false, error: "كلمة التأكيد غير صحيحة. يجب كتابة كلمة 'تأكيد' أو 'حذف' يدوياً لإتمام الحذف النهائي." });
+      }
+      return res.redirect("/history?msg=" + encodeURIComponent("كلمة التأكيد غير صحيحة"));
+    }
+
+    const rawId = req.params.id || (req.body && (req.body.student_id || req.body.id)) || req.query.id;
+    if (!rawId) {
+      return res.status(400).json({ success: false, error: "معرف الطالب مفقود أو غير محدد" });
+    }
+
+    const studentId = parseInt(rawId);
+    if (isNaN(studentId) || studentId <= 0) {
+      return res.status(400).json({ success: false, error: "معرف الطالب غير صالح" });
+    }
+
+    const result = await permanentDeleteStudent(studentId, currentUser.username);
+    if (!result || !result.success) {
+      return res.status(500).json({ success: false, error: result ? result.error : "فشل الحذف النهائي للطالب" });
+    }
+
+    const isJson = req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || req.query.format === "json";
+    if (isJson) {
+      return res.json({
+        success: true,
+        message: `تم الحذف النهائي للطالب (${result.studentName}) من قاعدة البيانات بنجاح`,
+        studentId: result.studentId
+      });
+    }
+
+    return res.redirect("/history?msg=" + encodeURIComponent(`تم الحذف النهائي للطالب (${result.studentName}) بنجاح من قاعدة البيانات`));
+  } catch (err) {
+    console.error("CRITICAL EXCEPTION in handlePermanentDeleteStudent:", err);
+    return res.status(500).json({ success: false, error: "حدث خطأ غير متوقع أثناء الحذف النهائي", details: err.message });
+  }
+}
+
 router.post("/delete/:id", requireAuth, withUser, handleDeleteStudent);
 router.post("/students/delete/:id", requireAuth, withUser, handleDeleteStudent);
 router.post("/api/students/delete", requireAuth, withUser, handleDeleteStudent);
@@ -854,6 +915,10 @@ router.delete("/api/students/:id", requireAuth, withUser, handleDeleteStudent);
 router.post("/api/students/:id/restore", requireAuth, withUser, handleRestoreStudent);
 router.put("/api/students/:id/restore", requireAuth, withUser, handleRestoreStudent);
 router.post("/students/restore/:id", requireAuth, withUser, handleRestoreStudent);
+
+router.post("/api/students/:id/permanent", requireAuth, withUser, handlePermanentDeleteStudent);
+router.delete("/api/students/:id/permanent", requireAuth, withUser, handlePermanentDeleteStudent);
+router.post("/students/permanent/:id", requireAuth, withUser, handlePermanentDeleteStudent);
 
 // GET /api/lookup_parent?phone=05xxxxxxxx
 router.get("/api/lookup_parent", requireAuth, withUser, async (req, res) => {
