@@ -1,10 +1,14 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const supabase = require("../config/supabase");
 const { requireAuth } = require("../middleware/auth");
 const { withUser } = require("../middleware/permissions");
 const {
   getExternalSettings,
   saveExternalSettings,
+  getSystemIdentity,
+  saveSystemIdentity,
   isGradeAvailable,
   isBranchMasterActive,
   getActiveBranches,
@@ -14,6 +18,41 @@ const {
 const { getBranches } = require("../services/branches.service");
 const { addHistory } = require("../services/history.service");
 const { PHASE_STRUCTURE, PHASES, STUDENT_TYPES } = require("../utils/constants");
+
+// Multer in-memory storage for logo upload
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+async function processLogoUpload(file) {
+  if (!file || !file.buffer) return null;
+  const timestamp = Date.now();
+  const safeName = (file.originalname || "logo.png").replace(/[/\\]/g, "_");
+  const fileName = `logo_${timestamp}_${safeName}`;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from("student-attachments")
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true
+      });
+    if (!error) {
+      const { data: publicUrlData } = supabase.storage
+        .from("student-attachments")
+        .getPublicUrl(fileName);
+      if (publicUrlData && publicUrlData.publicUrl) {
+        return publicUrlData.publicUrl;
+      }
+    }
+  } catch (e) {
+    console.error("Storage upload failed, fallback to base64:", e.message);
+  }
+
+  // Fallback to Base64 Data URL (Ultra reliable across all serverless & local environments)
+  return `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+}
 
 // GET /external_settings - Exclusive to Admin (General Manager)
 router.get("/external_settings", requireAuth, withUser, async (req, res) => {
@@ -172,6 +211,133 @@ router.get("/api/matrix/hierarchy", async (req, res) => {
     active_branches: activeBranchList,
     ...hierarchy
   });
+});
+
+// =============================================================
+// SYSTEM IDENTITY & WHITE-LABELING (General Settings)
+// =============================================================
+
+// GET /general_settings - Dedicated identity settings view (Admin only)
+router.get("/general_settings", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser || currentUser.role !== "admin") {
+    return res.redirect("/");
+  }
+
+  const identity = await getSystemIdentity();
+  res.render("general_settings", {
+    currentUser,
+    identity,
+    message: req.query.msg || null,
+    error: req.query.err || null
+  });
+});
+
+// Alias for convenience
+router.get("/settings/identity", requireAuth, withUser, (req, res) => res.redirect("/general_settings"));
+
+// POST /general_settings - Save system identity with logo upload
+router.post("/general_settings", requireAuth, withUser, upload.single("logo"), async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser || currentUser.role !== "admin") {
+    return res.redirect("/");
+  }
+
+  try {
+    const school_name = (req.body.school_name || "مدارس بواكير الأهلية").trim();
+    const ministry_line = (req.body.ministry_line || "المملكة العربية السعودية - وزارة التعليم").trim();
+    const slogan = (req.body.slogan || "").trim();
+    const action = req.body.action || "save";
+
+    const currentIdentity = await getSystemIdentity();
+    let school_logo_url = currentIdentity.school_logo_url || "";
+
+    if (action === "reset_logo") {
+      school_logo_url = "";
+    } else if (req.file) {
+      const uploadedUrl = await processLogoUpload(req.file);
+      if (uploadedUrl) {
+        school_logo_url = uploadedUrl;
+      }
+    } else if (req.body.logo_url && req.body.logo_url.trim()) {
+      school_logo_url = req.body.logo_url.trim();
+    }
+
+    await saveSystemIdentity({
+      school_name,
+      school_logo_url,
+      ministry_line,
+      slogan
+    }, currentUser.username);
+
+    await addHistory("system_identity_updated", `تم تحديث هوية المؤسسة (${school_name})`, currentUser.username);
+
+    return res.redirect("/general_settings?msg=" + encodeURIComponent("تم حفظ وتحديث هوية النظام بنجاح ✅"));
+  } catch (err) {
+    console.error("Error updating system identity:", err);
+    return res.redirect("/general_settings?err=" + encodeURIComponent("حدث خطأ أثناء حفظ هوية النظام: " + err.message));
+  }
+});
+
+// GET /api/settings/identity - JSON API for Client-Side Global State
+router.get("/api/settings/identity", async (req, res) => {
+  try {
+    const identity = await getSystemIdentity();
+    res.json({
+      success: true,
+      identity
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/settings/identity - AJAX/REST API for updating identity
+router.post("/api/settings/identity", requireAuth, withUser, upload.single("logo"), async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser || currentUser.role !== "admin") {
+    return res.status(403).json({ success: false, error: "صلاحية المدير العام مطلوبة" });
+  }
+
+  try {
+    const school_name = (req.body.school_name || "مدارس بواكير الأهلية").trim();
+    const ministry_line = (req.body.ministry_line || "المملكة العربية السعودية - وزارة التعليم").trim();
+    const slogan = (req.body.slogan || "").trim();
+    const action = req.body.action || "save";
+
+    const currentIdentity = await getSystemIdentity();
+    let school_logo_url = currentIdentity.school_logo_url || "";
+
+    if (action === "reset_logo") {
+      school_logo_url = "";
+    } else if (req.file) {
+      const uploadedUrl = await processLogoUpload(req.file);
+      if (uploadedUrl) school_logo_url = uploadedUrl;
+    } else if (req.body.logo_url && req.body.logo_url.trim()) {
+      school_logo_url = req.body.logo_url.trim();
+    }
+
+    const saved = await saveSystemIdentity({
+      school_name,
+      school_logo_url,
+      ministry_line,
+      slogan
+    }, currentUser.username);
+
+    await addHistory("system_identity_updated", `تم تحديث هوية المؤسسة (${school_name})`, currentUser.username);
+
+    res.json({
+      success: true,
+      identity: {
+        school_name: saved.school_name,
+        school_logo_url: saved.school_logo_url,
+        ministry_line: saved.ministry_line,
+        slogan: saved.slogan
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 module.exports = router;
