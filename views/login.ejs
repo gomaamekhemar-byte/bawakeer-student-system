@@ -48,11 +48,17 @@
 
   <div class="card card-login border-0 p-4 p-md-5">
     <div class="text-center mb-4">
-      <div class="login-icon-box mb-3">
-        <i class="fa-solid fa-graduation-cap"></i>
+      <div class="mb-3">
+        <% if (typeof systemSettings !== 'undefined' && systemSettings.school_logo_url) { %>
+          <img src="<%= systemSettings.school_logo_url %>" alt="Logo" style="max-height: 75px; max-width: 160px; object-fit: contain;">
+        <% } else { %>
+          <div class="login-icon-box">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+        <% } %>
       </div>
-      <h4 class="fw-bold text-dark mb-1">مدارس بواكير الأهلية</h4>
-      <p class="text-muted small mb-0">نظام متابعة تسجيل وقبول الطلاب</p>
+      <h4 class="fw-bold text-dark mb-1"><%= (typeof systemSettings !== 'undefined' && systemSettings.school_name) ? systemSettings.school_name : 'مدارس بواكير الأهلية' %></h4>
+      <p class="text-muted small mb-0"><%= (typeof systemSettings !== 'undefined' && systemSettings.slogan) ? systemSettings.slogan : 'نظام متابعة تسجيل وقبول الطلاب' %></p>
     </div>
 
     <% if(typeof error !== 'undefined' && error){ %>
