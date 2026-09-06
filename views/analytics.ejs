@@ -282,7 +282,7 @@
       <div class="col-xl-2 col-md-4 col-6">
         <div class="stat-card-custom stat-card-blue h-100 d-flex align-items-center justify-content-between">
           <div>
-            <div class="stat-number text-primary"><%= analytics.total %></div>
+            <div class="stat-number text-primary" id="statTotal"><%= analytics.total %></div>
             <div class="stat-title">إجمالي المتقدمين</div>
           </div>
           <div class="stat-icon bg-primary-subtle text-primary">
@@ -294,7 +294,7 @@
       <div class="col-xl-2 col-md-4 col-6">
         <div class="stat-card-custom stat-card-green h-100 d-flex align-items-center justify-content-between">
           <div>
-            <div class="stat-number text-success"><%= analytics.accepted %></div>
+            <div class="stat-number text-success" id="statAccepted"><%= analytics.accepted %></div>
             <div class="stat-title">المقبولين</div>
           </div>
           <div class="stat-icon bg-success-subtle text-success">
@@ -306,7 +306,7 @@
       <div class="col-xl-2 col-md-4 col-6">
         <div class="stat-card-custom stat-card-red h-100 d-flex align-items-center justify-content-between">
           <div>
-            <div class="stat-number text-danger"><%= analytics.rejected %></div>
+            <div class="stat-number text-danger" id="statRejected"><%= analytics.rejected %></div>
             <div class="stat-title">غير مقبول</div>
           </div>
           <div class="stat-icon bg-danger-subtle text-danger">
@@ -318,7 +318,7 @@
       <div class="col-xl-2 col-md-4 col-6">
         <div class="stat-card-custom stat-card-cyan h-100 d-flex align-items-center justify-content-between">
           <div>
-            <div class="stat-number text-info"><%= analytics.registered %></div>
+            <div class="stat-number text-info" id="statRegistered"><%= analytics.registered %></div>
             <div class="stat-title">تم التسجيل</div>
           </div>
           <div class="stat-icon bg-info-subtle text-info">
@@ -330,7 +330,7 @@
       <div class="col-xl-2 col-md-4 col-6">
         <div class="stat-card-custom stat-card-amber h-100 d-flex align-items-center justify-content-between">
           <div>
-            <div class="stat-number text-warning"><%= analytics.waiting %></div>
+            <div class="stat-number text-warning" id="statWaiting"><%= analytics.waiting %></div>
             <div class="stat-title">في انتظار التسجيل</div>
           </div>
           <div class="stat-icon bg-warning-subtle text-warning">
@@ -342,7 +342,7 @@
       <div class="col-xl-2 col-md-4 col-6">
         <div class="stat-card-custom stat-card-purple h-100 d-flex align-items-center justify-content-between">
           <div>
-            <div class="stat-number" style="color:#8b5cf6;"><%= analytics.pending_interview %></div>
+            <div class="stat-number" style="color:#8b5cf6;" id="statPendingInterview"><%= analytics.pending_interview %></div>
             <div class="stat-title">في انتظار المقابلة</div>
           </div>
           <div class="stat-icon bg-secondary-subtle text-secondary">
@@ -356,7 +356,7 @@
     <div class="row g-3 mb-4">
       <div class="col-lg-3 col-md-6">
         <div class="rate-card h-100">
-          <div class="rate-circle-badge bg-success-subtle text-success border border-success">
+          <div class="rate-circle-badge bg-success-subtle text-success border border-success" id="statAcceptanceRate">
             <%= analytics.acceptanceRate %>%
           </div>
           <h6 class="fw-bold text-dark mb-1">معدل القبول</h6>
@@ -366,7 +366,7 @@
 
       <div class="col-lg-3 col-md-6">
         <div class="rate-card h-100">
-          <div class="rate-circle-badge bg-primary-subtle text-primary border border-primary">
+          <div class="rate-circle-badge bg-primary-subtle text-primary border border-primary" id="statRegistrationRate">
             <%= analytics.registrationRate %>%
           </div>
           <h6 class="fw-bold text-dark mb-1">معدل التسجيل الإجمالي</h6>
@@ -376,7 +376,7 @@
 
       <div class="col-lg-3 col-md-6">
         <div class="rate-card h-100">
-          <div class="rate-circle-badge bg-info-subtle text-info border border-info">
+          <div class="rate-circle-badge bg-info-subtle text-info border border-info" id="statConversionRate">
             <%= analytics.conversionRate %>%
           </div>
           <h6 class="fw-bold text-dark mb-1">معدل التحويل (Conversion)</h6>
@@ -1085,6 +1085,108 @@
       });
     }
 
+    // Client-side dataset for instant reactive updates (Derived State)
+    window.allAnalyticsStudents = <%- JSON.stringify(typeof clientStudents !== 'undefined' ? clientStudents : []) %>;
+
+    function updateClientSideAggregations(branch, phase, grade, type, track, source) {
+      const normBranch = (branch || 'الكل').trim();
+      const normPhase = (phase || 'الكل').trim();
+      const normGrade = (grade || 'الكل').trim();
+      const normType = (type || 'الكل').trim();
+      const normTrack = (track || 'الكل').trim();
+      const normSource = (source || 'الكل').trim();
+
+      const filtered = (window.allAnalyticsStudents || []).filter(s => {
+        const sBranch = (s.branch || '').trim();
+        const sPhase = (s.phase || '').trim();
+        const sGrade = String(s.grade || '').trim();
+        const sType = (s.student_type || 'بنين').trim();
+        const sTrack = (s.track || 'عام').trim();
+        const sSource = (s.registration_source || '').trim();
+
+        if (normBranch !== 'الكل' && sBranch !== normBranch) return false;
+        if (normPhase !== 'الكل' && sPhase !== normPhase) return false;
+        if (normGrade !== 'الكل' && sGrade !== normGrade) return false;
+        if (normType !== 'الكل' && sType !== normType) return false;
+        if (normTrack !== 'الكل' && sTrack !== normTrack) return false;
+        if (normSource !== 'الكل' && normSource !== 'جميع المصادر') {
+          const isOnline = sSource === 'رابط خارجي';
+          if (normSource === 'الرابط الخارجي' || normSource === 'رابط خارجي' || normSource === 'external') {
+            if (!isOnline) return false;
+          } else {
+            if (isOnline) return false;
+          }
+        }
+        return true;
+      });
+
+      const total = filtered.length;
+      const accepted = filtered.filter(s => (s.interview_result || '').trim() === 'مقبول').length;
+      const rejected = filtered.filter(s => (s.interview_result || '').trim() === 'غير مقبول').length;
+      const registered = filtered.filter(s => (s.followup_status || '').trim() === 'تم التسجيل').length;
+      const waiting = filtered.filter(s => (s.followup_status || '').trim() === 'في انتظار التسجيل').length;
+      const pending_interview = filtered.filter(s => (s.interview_result || '').trim() === 'في انتظار المقابلة').length;
+
+      // Update Top Stat Cards
+      const elTotal = document.getElementById('statTotal');
+      const elAccepted = document.getElementById('statAccepted');
+      const elRejected = document.getElementById('statRejected');
+      const elRegistered = document.getElementById('statRegistered');
+      const elWaiting = document.getElementById('statWaiting');
+      const elPending = document.getElementById('statPendingInterview');
+
+      if (elTotal) elTotal.textContent = total;
+      if (elAccepted) elAccepted.textContent = accepted;
+      if (elRejected) elRejected.textContent = rejected;
+      if (elRegistered) elRegistered.textContent = registered;
+      if (elWaiting) elWaiting.textContent = waiting;
+      if (elPending) elPending.textContent = pending_interview;
+
+      // Update Rates
+      const acceptRate = total > 0 ? Math.round((accepted / total) * 1000) / 10 : 0;
+      const regRate = total > 0 ? Math.round((registered / total) * 1000) / 10 : 0;
+      const convRate = accepted > 0 ? Math.round((registered / accepted) * 1000) / 10 : 0;
+
+      const elAcceptRate = document.getElementById('statAcceptanceRate');
+      const elRegRate = document.getElementById('statRegistrationRate');
+      const elConvRate = document.getElementById('statConversionRate');
+      if (elAcceptRate) elAcceptRate.textContent = acceptRate + '%';
+      if (elRegRate) elRegRate.textContent = regRate + '%';
+      if (elConvRate) elConvRate.textContent = convRate + '%';
+
+      // Update Gender Distribution
+      const boys = filtered.filter(s => (s.student_type || '').trim() === 'بنين').length;
+      const girls = filtered.filter(s => (s.student_type || '').trim() === 'بنات').length;
+      const genderSum = boys + girls;
+      const boysPct = genderSum > 0 ? Math.round((boys / genderSum) * 100) : 0;
+      const girlsPct = genderSum > 0 ? Math.round((girls / genderSum) * 100) : 0;
+
+      const barBoys = document.getElementById('cfBarBoys');
+      const barGirls = document.getElementById('cfBarGirls');
+      const badgeBoys = document.getElementById('cfBadgeBoys');
+      const badgeGirls = document.getElementById('cfBadgeGirls');
+      if (barBoys) { barBoys.style.width = boysPct + '%'; barBoys.setAttribute('data-default-percent', boysPct); }
+      if (barGirls) { barGirls.style.width = girlsPct + '%'; barGirls.setAttribute('data-default-percent', girlsPct); }
+      if (badgeBoys) { badgeBoys.textContent = `${boys} طالب (${boysPct}%)`; badgeBoys.setAttribute('data-default-count', boys); badgeBoys.setAttribute('data-default-percent', boysPct); }
+      if (badgeGirls) { badgeGirls.textContent = `${girls} طالبة (${girlsPct}%)`; badgeGirls.setAttribute('data-default-count', girls); badgeGirls.setAttribute('data-default-percent', girlsPct); }
+
+      // Update Track Distribution
+      const general = filtered.filter(s => ((s.track || 'عام')).trim() === 'عام').length;
+      const tahfeez = filtered.filter(s => (s.track || '').trim() === 'تحفيظ').length;
+      const trackSum = general + tahfeez;
+      const genPct = trackSum > 0 ? Math.round((general / trackSum) * 100) : 0;
+      const tahPct = trackSum > 0 ? Math.round((tahfeez / trackSum) * 100) : 0;
+
+      const barGen = document.getElementById('cfBarGeneral');
+      const barTah = document.getElementById('cfBarTahfeez');
+      const badgeGen = document.getElementById('cfBadgeGeneral');
+      const badgeTah = document.getElementById('cfBadgeTahfeez');
+      if (barGen) { barGen.style.width = genPct + '%'; barGen.setAttribute('data-default-percent', genPct); }
+      if (barTah) { barTah.style.width = tahPct + '%'; barTah.setAttribute('data-default-percent', tahPct); }
+      if (badgeGen) { badgeGen.textContent = `${general} طالب (${genPct}%)`; badgeGen.setAttribute('data-default-count', general); badgeGen.setAttribute('data-default-percent', genPct); }
+      if (badgeTah) { badgeTah.textContent = `${tahfeez} طالب (${tahPct}%)`; badgeTah.setAttribute('data-default-count', tahfeez); badgeTah.setAttribute('data-default-percent', tahPct); }
+    }
+
     function refreshAnalytics() {
       const branchSel = document.getElementById('branchFilterSelect');
       const phaseSel = document.getElementById('phaseFilterSelect');
@@ -1094,6 +1196,7 @@
       const sourceSel = document.getElementById('sourceFilterSelect');
 
       const branch = branchSel ? branchSel.value : 'الكل';
+      const phase = phaseSel ? phaseSel.value : 'الكل';
       const grade = gradeSel ? gradeSel.value : 'الكل';
       const type = typeSel ? typeSel.value : 'الكل';
       const track = trackSel ? trackSel.value : 'الكل';
@@ -1102,8 +1205,12 @@
 
       if (spinner) spinner.classList.remove('d-none');
 
+      // 1. Instant client-side derived state calculation
+      if (window.allAnalyticsStudents && window.allAnalyticsStudents.length > 0) {
+        updateClientSideAggregations(branch, phase, grade, type, track, source);
+      }
+
       const params = new URLSearchParams();
-      const phase = phaseSel ? phaseSel.value : 'الكل';
       if (branch) params.set('branch', branch);
       if (phase) params.set('phase', phase);
       if (grade) params.set('grade', grade);
@@ -1112,11 +1219,11 @@
       if (source) params.set('source', source);
 
       const url = '/analytics?' + params.toString();
-      window.history.pushState({ branch, grade, type, track, source }, '', url);
+      window.history.pushState({ branch, phase, grade, type, track, source }, '', url);
 
       const container = document.getElementById('analyticsMainContent');
       if (container) {
-        container.style.opacity = '0.5';
+        container.style.opacity = '0.6';
       }
 
       fetch(url)
@@ -1124,6 +1231,14 @@
         .then(html => {
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, 'text/html');
+
+          // Update filter form options if present
+          const newForm = doc.getElementById('analyticsFilterForm');
+          const currentForm = document.getElementById('analyticsFilterForm');
+          if (newForm && currentForm) {
+            currentForm.innerHTML = newForm.innerHTML;
+          }
+
           const newContent = doc.getElementById('analyticsMainContent');
           if (newContent && container) {
             container.innerHTML = newContent.innerHTML;
@@ -1145,8 +1260,16 @@
     window.addEventListener('popstate', function(e) {
       if (e.state) {
         const branchSel = document.getElementById('branchFilterSelect');
+        const phaseSel = document.getElementById('phaseFilterSelect');
+        const gradeSel = document.getElementById('gradeFilterSelect');
+        const typeSel = document.getElementById('typeFilterSelect');
+        const trackSel = document.getElementById('trackFilterSelect');
         const sourceSel = document.getElementById('sourceFilterSelect');
         if (branchSel && e.state.branch) branchSel.value = e.state.branch;
+        if (phaseSel && e.state.phase) phaseSel.value = e.state.phase;
+        if (gradeSel && e.state.grade) gradeSel.value = e.state.grade;
+        if (typeSel && e.state.type) typeSel.value = e.state.type;
+        if (trackSel && e.state.track) trackSel.value = e.state.track;
         if (sourceSel && e.state.source) sourceSel.value = e.state.source;
       }
       refreshAnalytics();
