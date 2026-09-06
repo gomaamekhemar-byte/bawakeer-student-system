@@ -278,7 +278,8 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     grades: availableFilters.grades.length ? availableFilters.grades : GRADES,
     tracks: availableFilters.tracks.length ? availableFilters.tracks : TRACKS,
     nationalities: NATIONALITIES,
-    roles: ROLES
+    roles: ROLES,
+    cleanNotesForDisplay
   });
 });
 
@@ -480,29 +481,6 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   </div>
 
   <div class="filter-banner">📌 <b>معايير التصفية:</b> ${filterSummary}</div>
-    .stats-bar { display: flex; gap: 8px; margin-bottom: 12px; }
-    .stat-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; text-align: center; background: #f8fafc; }
-    .stat-val { font-size: 14px; font-weight: 800; color: #1e3a8a; }
-    .stat-lbl { font-size: 9px; color: #64748b; font-weight: 600; }
-    table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 10px; }
-    th { background: #1e3a8a; color: white; padding: 6px 4px; text-align: right; border: 1px solid #cbd5e1; font-weight: 700; }
-    td { padding: 5px 4px; border: 1px solid #e2e8f0; vertical-align: middle; }
-    tr:nth-child(even) { background: #f8fafc; }
-    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; }
-    .badge-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-    .badge-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-    .badge-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
-    .badge-info { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
-    .footer { margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8; }
-    @media print { @page { size: landscape; margin: 8mm; } body { padding: 0; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="logo-text">مدارس بواكير الأهلية</div>
-    <div class="sub-title">كشف بيانات الطلاب والتحليل الديموغرافي | ${activeYear ? activeYear.year_name : "العام الدراسي الحالي"}</div>
-    <div class="filter-badge">📌 معايير التصفية: ${filterSummary}</div>
-  </div>
 
   <div class="stats-bar">
     <div class="stat-box"><div class="stat-val">${total}</div><div class="stat-lbl">إجمالي نتائج الكشف</div></div>
