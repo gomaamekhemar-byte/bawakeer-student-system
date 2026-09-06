@@ -199,13 +199,60 @@
           <!-- Populated by JavaScript -->
         </div>
 
-        <div class="modal-footer bg-light py-2 d-flex justify-content-between">
-          <button type="button" class="btn btn-secondary fw-bold px-3" data-bs-dismiss="modal">إغلاق</button>
+        <div class="modal-footer bg-light py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-secondary fw-bold px-3" data-bs-dismiss="modal">إغلاق</button>
+            <% if(currentUser && currentUser.role === 'admin'){ %>
+              <div id="modalPermanentDeleteContainer">
+                <!-- Populated with permanent delete button if applicable -->
+              </div>
+            <% } %>
+          </div>
           <div id="modalRestoreContainer">
             <!-- Populated with restore button if applicable -->
           </div>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- STRICT CONFIRMATION MODAL: PERMANENT HARD DELETE -->
+  <div class="modal fade" id="permanentDeleteConfirmModal" tabindex="-1" aria-labelledby="permanentDeleteConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-danger shadow-lg rounded-4">
+        <div class="modal-header bg-danger text-white py-3">
+          <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="permanentDeleteConfirmModalLabel">
+            <i class="fa-solid fa-triangle-exclamation fs-5"></i>
+            <span>تأكيد الحذف النهائي الجذري من قاعدة البيانات</span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="alert alert-danger d-flex align-items-start gap-2 mb-3">
+            <i class="fa-solid fa-circle-radiation fs-4 mt-1"></i>
+            <div>
+              <strong class="d-block">تحذير شديد الأهمية (إجراء لا يمكن التراجع عنه):</strong>
+              سيتم حذف سجل الطالب <span id="permStudentNameDisplay" class="fw-bold text-dark text-decoration-underline"></span> نهائياً وبشكل جذري، بما في ذلك ملفاته المرفقة وسجله الأكاديمي، ولن يمكن استرجاعه مستقبلاً إطلاقاً!
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold small text-dark">
+              لتأكيد الحذف النهائي، يرجى كتابة كلمة <span class="badge bg-danger fs-6">تأكيد</span> أو <span class="badge bg-danger fs-6">حذف</span> في الحقل أدناه:
+            </label>
+            <input type="text" id="permanentConfirmInput" class="form-control form-control-lg text-center font-monospace border-danger" placeholder="اكتب تأكيد أو حذف هنا" autocomplete="off" oninput="validatePermanentConfirmInput()">
+            <div id="permConfirmHelpText" class="form-text text-muted small mt-1">
+              الزر أدناه سيتفعل تلقائياً فقط عند كتابة الكلمة الصحيحة بدقة.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light py-2 d-flex justify-content-between">
+          <button type="button" class="btn btn-secondary fw-bold px-3" data-bs-dismiss="modal">إلغاء التراجع</button>
+          <button type="button" id="btnExecutePermanentDelete" class="btn btn-danger fw-bold px-4 shadow-sm" disabled onclick="executePermanentDelete()">
+            <i class="fa-solid fa-fire me-1"></i> نعم، حذف نهائي الآن
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -267,11 +314,16 @@
     }
 
     // Modal Snapshot Viewer
+    let currentActiveSnapshot = null;
+    let currentActiveIdx = null;
+
     function openSnapshotModal(idx) {
+      currentActiveIdx = idx;
       const dataScript = document.getElementById('snapshot_data_' + idx);
       if (!dataScript) return;
       let s = {};
       try { s = JSON.parse(dataScript.textContent); } catch(e) { return; }
+      currentActiveSnapshot = s;
 
       const body = document.getElementById('snapshotModalBody');
       const timeLbl = document.getElementById('snapshotMetaTime');
@@ -346,6 +398,20 @@
         }
       }
 
+      const permCont = document.getElementById('modalPermanentDeleteContainer');
+      if (permCont) {
+        if (s.id) {
+          permCont.innerHTML = `
+            <button type="button" class="btn btn-outline-danger fw-bold px-3 d-inline-flex align-items-center gap-1" onclick="openPermanentConfirm('${s.id}', '${(s.name || '').replace(/'/g, "\\'")}')">
+              <i class="fa-solid fa-fire"></i>
+              <span>حذف نهائي من قاعدة البيانات</span>
+            </button>
+          `;
+        } else {
+          permCont.innerHTML = '';
+        }
+      }
+
       const modal = new bootstrap.Modal(document.getElementById('snapshotDetailsModal'));
       modal.show();
     }
@@ -396,6 +462,101 @@
       })
       .catch(err => {
         alert('حدث خطأ في الاتصال أثناء استرجاع الطالب: ' + err.message);
+      });
+    }
+
+    // Open Strict Confirmation Modal for Permanent Delete
+    let pendingPermanentDeleteId = null;
+    let pendingPermanentDeleteName = null;
+
+    function openPermanentConfirm(studentId, studentName) {
+      pendingPermanentDeleteId = studentId;
+      pendingPermanentDeleteName = studentName;
+
+      document.getElementById('permStudentNameDisplay').textContent = studentName || ('رقم ' + studentId);
+      const inputEl = document.getElementById('permanentConfirmInput');
+      inputEl.value = '';
+      document.getElementById('btnExecutePermanentDelete').disabled = true;
+
+      // Hide snapshot details modal first
+      const snapshotModalEl = document.getElementById('snapshotDetailsModal');
+      const snapshotModalInstance = bootstrap.Modal.getInstance(snapshotModalEl);
+      if (snapshotModalInstance) snapshotModalInstance.hide();
+
+      // Show confirmation modal
+      const confirmModal = new bootstrap.Modal(document.getElementById('permanentDeleteConfirmModal'));
+      confirmModal.show();
+      setTimeout(() => inputEl.focus(), 500);
+    }
+
+    function validatePermanentConfirmInput() {
+      const val = (document.getElementById('permanentConfirmInput').value || '').trim();
+      const btn = document.getElementById('btnExecutePermanentDelete');
+      if (val === 'تأكيد' || val === 'حذف') {
+        btn.disabled = false;
+        btn.classList.add('pulse-anim');
+      } else {
+        btn.disabled = true;
+        btn.classList.remove('pulse-anim');
+      }
+    }
+
+    function executePermanentDelete() {
+      if (!pendingPermanentDeleteId) return;
+      const confirmWord = (document.getElementById('permanentConfirmInput').value || '').trim();
+      if (confirmWord !== 'تأكيد' && confirmWord !== 'حذف') {
+        alert('يرجى كتابة كلمة "تأكيد" أو "حذف" بالحروف العربية تماماً');
+        return;
+      }
+
+      const execBtn = document.getElementById('btnExecutePermanentDelete');
+      execBtn.disabled = true;
+      execBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> جاري الحذف النهائي...';
+
+      fetch('/api/students/' + pendingPermanentDeleteId + '/permanent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ confirmation_word: confirmWord })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          // Close confirmation modal
+          const confirmModalEl = document.getElementById('permanentDeleteConfirmModal');
+          const confirmModalInstance = bootstrap.Modal.getInstance(confirmModalEl);
+          if (confirmModalInstance) confirmModalInstance.hide();
+
+          // Disable action buttons in table row
+          if (currentActiveIdx !== null) {
+            const actBox = document.getElementById('actions_box_' + currentActiveIdx);
+            if (actBox) {
+              actBox.innerHTML = '<span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="fa-solid fa-fire me-1"></i> محذوف نهائياً</span>';
+            }
+          }
+
+          // Show alert
+          const alertHolder = document.getElementById('liveAlertPlaceholder');
+          if (alertHolder) {
+            alertHolder.innerHTML = `
+              <div class="alert alert-danger alert-dismissible fade show shadow-sm fw-bold mb-4" role="alert">
+                <i class="fa-solid fa-circle-check me-2"></i> ${data.message || 'تم حذف الطالب نهائياً من قاعدة البيانات'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            `;
+          }
+        } else {
+          alert('تعذر الحذف النهائي: ' + (data.error || 'خطأ في السيرفر'));
+          execBtn.disabled = false;
+          execBtn.innerHTML = '<i class="fa-solid fa-fire me-1"></i> نعم، حذف نهائي الآن';
+        }
+      })
+      .catch(err => {
+        alert('حدث خطأ في الاتصال: ' + err.message);
+        execBtn.disabled = false;
+        execBtn.innerHTML = '<i class="fa-solid fa-fire me-1"></i> نعم، حذف نهائي الآن';
       });
     }
   </script>
