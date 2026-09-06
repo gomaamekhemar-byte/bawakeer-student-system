@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const path = require("path");
+const fs = require("fs");
 const querystring = require("querystring");
 
 const app = express();
@@ -83,6 +84,23 @@ function getViewsDir() {
 app.engine("ejs", require("ejs").renderFile);
 app.set("view engine", "ejs");
 app.set("views", getViewsDir());
+
+// Global System Identity & Settings Middleware (White-labeling)
+app.use(async (req, res, next) => {
+  try {
+    const { getSystemIdentity } = require("./services/settings.service");
+    const identity = await getSystemIdentity();
+    res.locals.systemSettings = identity;
+  } catch (e) {
+    res.locals.systemSettings = {
+      school_name: "مدارس بواكير الأهلية",
+      school_logo_url: "",
+      ministry_line: "المملكة العربية السعودية - وزارة التعليم",
+      slogan: "نحو تعليم رائد ومستقبل واعد"
+    };
+  }
+  next();
+});
 
 // =============================================
 // Routes
