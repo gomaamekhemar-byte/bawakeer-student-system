@@ -267,6 +267,110 @@ async function restoreStudent(id, username) {
   }
 }
 
+// Permanent Hard Delete Student (Admin only with strict confirmation)
+async function permanentDeleteStudent(id, username) {
+  if (!id) return { success: false, error: 'معرف الطالب غير محدد' };
+  const studentId = parseInt(id);
+  if (isNaN(studentId) || studentId <= 0) return { success: false, error: 'معرف الطالب غير صالح' };
+
+  try {
+    // 1. Fetch complete student data snapshot before permanent removal
+    const student = await getStudentByIdIncludingDeleted(studentId);
+    if (!student) {
+      return { success: false, error: 'الطالب غير موجود مسبقاً في قاعدة البيانات' };
+    }
+
+    const recordSnapshot = {
+      id: student.id,
+      name: student.name,
+      phone: student.phone,
+      mother_phone: student.mother_phone || '',
+      date_of_birth: student.date_of_birth || '',
+      nationality: student.nationality || 'سعودي',
+      neighborhood: student.neighborhood || '',
+      branch: student.branch || '',
+      phase: student.phase || '',
+      grade: student.grade || '',
+      track: student.track || 'عام',
+      student_type: student.student_type || 'بنين',
+      registration_source: student.registration_source || 'تسجيل داخلي',
+      interview_result: student.interview_result || 'لم يقابل',
+      interview_reason: student.interview_reason || '',
+      interview_date: student.interview_date || '',
+      followup_status: student.followup_status || 'غير محدد',
+      registration_reason: student.registration_reason || '',
+      notes: student.notes || '',
+      attachments_count: (student.attachments || []).length,
+      created_at: student.created_at || '',
+      permanently_deleted_at: new Date().toISOString(),
+      permanently_deleted_by: username || 'admin'
+    };
+
+    // 2. Cascade cleanup: Delete storage attachments if any
+    try {
+      const attachments = Array.isArray(student.attachments) ? student.attachments : [];
+      const filePathsToDelete = [];
+      attachments.forEach(att => {
+        if (att && att.filename) {
+          filePathsToDelete.push(att.filename);
+        }
+      });
+      if (filePathsToDelete.length > 0) {
+        // Attempt removal from 'uploads' bucket and 'student-attachments' bucket safely
+        await Promise.allSettled([
+          supabase.storage.from('uploads').remove(filePathsToDelete),
+          supabase.storage.from('student-attachments').remove(filePathsToDelete)
+        ]);
+      }
+    } catch (storageErr) {
+      console.warn('Storage cleanup warning for student ID ' + studentId + ':', storageErr.message);
+    }
+
+    // 3. Foreign Key cascade cleanup: Delete student_history rows first to prevent FK violation error
+    try {
+      const { deleteStudentHistory } = require('./history.service');
+      await deleteStudentHistory(studentId);
+    } catch (fkErr) {
+      console.warn('deleteStudentHistory warning for student ID ' + studentId + ':', fkErr.message);
+    }
+
+    // 4. Hard DELETE from students table
+    const { error: dbError } = await supabase
+      .from('students')
+      .delete()
+      .eq('id', studentId);
+
+    if (dbError) {
+      console.error('Hard DELETE error on students table:', dbError);
+      return { success: false, error: 'فشل الحذف من قاعدة البيانات: ' + dbError.message };
+    }
+
+    // 5. Add permanent deletion log to history table
+    try {
+      const { addHistory } = require('./history.service');
+      await addHistory(
+        'student_permanently_deleted',
+        `تم الحذف النهائي والكامل للطالب (${student.name} - فرع ${student.branch}) من قاعدة البيانات نهائياً بواسطة ${username || 'admin'}`,
+        username || 'admin',
+        recordSnapshot
+      );
+    } catch (auditErr) {
+      console.warn('Permanent delete audit log warning:', auditErr.message);
+    }
+
+    return {
+      success: true,
+      message: `تم حذف سجل الطالب (${student.name}) نهائياً من قاعدة البيانات`,
+      studentName: student.name,
+      studentId: student.id,
+      snapshot: recordSnapshot
+    };
+  } catch (err) {
+    console.error('CRITICAL permanentDeleteStudent exception:', err);
+    return { success: false, error: err.message || 'خطأ داخلي أثناء تنفيذ الحذف النهائي' };
+  }
+}
+
 async function deleteStudent(id, username) {
   return await softDeleteStudent(id, username);
 }
@@ -280,5 +384,7 @@ module.exports = {
   deleteStudent,
   softDeleteStudent,
   restoreStudent,
+  permanentDeleteStudent,
   normalizeStudent
 };
+
