@@ -25,8 +25,12 @@
   <nav class="navbar navbar-expand-lg navbar-erp py-2">
     <div class="container-fluid px-4">
       <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="/">
-        <i class="fa-solid fa-graduation-cap fs-4"></i>
-        <span>مدارس بواكير الأهلية</span>
+        <% if (typeof systemSettings !== 'undefined' && systemSettings.school_logo_url) { %>
+          <img src="<%= systemSettings.school_logo_url %>" alt="Logo" style="height: 34px; width: 34px; object-fit: contain;">
+        <% } else { %>
+          <i class="fa-solid fa-graduation-cap fs-4"></i>
+        <% } %>
+        <span><%= (typeof systemSettings !== 'undefined' && systemSettings.school_name) ? systemSettings.school_name : 'مدارس بواكير الأهلية' %></span>
       </a>
 
       <div class="d-flex align-items-center gap-3">
@@ -39,6 +43,11 @@
         <a href="/branches" class="btn btn-outline-info text-dark btn-sm fw-bold">
           <i class="fa-solid fa-building me-1"></i> الفروع
         </a>
+        <% if (currentUser && currentUser.role === 'admin') { %>
+          <a href="/general_settings" class="btn btn-outline-primary btn-sm fw-bold" title="هوية النظام والإعدادات العامة">
+            <i class="fa-solid fa-palette me-1"></i> هوية النظام
+          </a>
+        <% } %>
       </div>
 
       <div class="d-flex align-items-center gap-3">
