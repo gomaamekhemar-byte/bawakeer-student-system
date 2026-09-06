@@ -124,42 +124,50 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   });
 
   let filtered = students.filter(s => {
+    const sBranch = (s.branch || "").trim();
+    const sPhase = (s.phase || "").trim();
+    const sGrade = String(s.grade || "").trim();
+    const sType = (s.student_type || "").trim();
+    const sTrack = (s.track || "عام").trim();
+    const sInterview = (s.interview_result || "").trim();
+    const sFollowup = (s.followup_status || "").trim();
+
     if (query) {
-      const q = query;
+      const q = query.toLowerCase();
       const n = (s.name || "").toLowerCase();
       const p = (s.phone || "");
       if (!n.includes(q) && !p.includes(q)) return false;
     }
-    if (interviewFilter && s.interview_result !== interviewFilter) return false;
-    if (followupFilter && s.followup_status !== followupFilter) return false;
-    if (studentTypeFilter && s.student_type !== studentTypeFilter) return false;
-    if (trackFilter && (s.track || "عام") !== trackFilter) return false;
-    if (phaseFilter && s.phase !== phaseFilter) return false;
-    if (gradeFilter && s.grade !== gradeFilter) return false;
-    if (branchFilter && s.branch !== branchFilter) return false;
+    if (interviewFilter && sInterview !== interviewFilter.trim()) return false;
+    if (followupFilter && sFollowup !== followupFilter.trim()) return false;
+    if (studentTypeFilter && sType !== studentTypeFilter.trim()) return false;
+    if (trackFilter && sTrack !== trackFilter.trim()) return false;
+    if (phaseFilter && sPhase !== phaseFilter.trim()) return false;
+    if (gradeFilter && sGrade !== gradeFilter.trim()) return false;
+    if (branchFilter && sBranch !== branchFilter.trim()) return false;
     if (!matchSourceFilter(s, sourceFilter)) return false;
     return true;
   });
 
-  const filtered_online_count = filtered.filter(s => s.registration_source === "رابط خارجي").length;
-  const filtered_internal_count = filtered.filter(s => s.registration_source !== "رابط خارجي").length;
+  const filtered_online_count = filtered.filter(s => (s.registration_source || "").trim() === "رابط خارجي").length;
+  const filtered_internal_count = filtered.filter(s => (s.registration_source || "").trim() !== "رابط خارجي").length;
   const filtered_total = filtered.length;
   const filtered_online_percent = filtered_total > 0 ? Math.round((filtered_online_count / filtered_total) * 1000) / 10 : 0;
   const filtered_internal_percent = filtered_total > 0 ? Math.round((filtered_internal_count / filtered_total) * 1000) / 10 : 0;
 
   // Demographic metrics on filtered dataset
-  const boys_general_count = filtered.filter(s => s.student_type === "بنين" && (s.track === "عام" || !s.track)).length;
-  const boys_tahfeez_count = filtered.filter(s => s.student_type === "بنين" && s.track === "تحفيظ").length;
-  const girls_general_count = filtered.filter(s => s.student_type === "بنات" && (s.track === "عام" || !s.track)).length;
-  const girls_tahfeez_count = filtered.filter(s => s.student_type === "بنات" && s.track === "تحفيظ").length;
+  const boys_general_count = filtered.filter(s => (s.student_type || "").trim() === "بنين" && ((s.track || "عام").trim() === "عام")).length;
+  const boys_tahfeez_count = filtered.filter(s => (s.student_type || "").trim() === "بنين" && (s.track || "").trim() === "تحفيظ").length;
+  const girls_general_count = filtered.filter(s => (s.student_type || "").trim() === "بنات" && ((s.track || "عام").trim() === "عام")).length;
+  const girls_tahfeez_count = filtered.filter(s => (s.student_type || "").trim() === "بنات" && (s.track || "").trim() === "تحفيظ").length;
 
   // Build demographic data table for reports based on filtered students
   const reportGradeMap = {};
   filtered.forEach(s => {
-    const key = `${s.phase || ''}_${s.grade || ''}`;
+    const key = `${(s.phase || "").trim()}_${String(s.grade || "").trim()}`;
     if (!reportGradeMap[key]) {
-      const gNum = s.grade || '';
-      const pName = s.phase || '';
+      const gNum = String(s.grade || "").trim();
+      const pName = (s.phase || "").trim();
       let gTitle = '';
       if (pName === 'روضة') {
         gTitle = gNum === '1' ? 'روضة أولى (KG1)' : (gNum === '2' ? 'روضة ثانية (KG2)' : 'تمهيدي (KG3)');
@@ -185,8 +193,8 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     }
 
     const item = reportGradeMap[key];
-    const isBoy = s.student_type === 'بنين';
-    const isTahfeez = s.track === 'تحفيظ';
+    const isBoy = (s.student_type || "").trim() === 'بنين';
+    const isTahfeez = (s.track || "").trim() === 'تحفيظ';
 
     if (isBoy) {
       if (isTahfeez) item.boysTahfeez++;
@@ -223,16 +231,16 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   };
 
   const stats = {
-    total: students.length,
-    accepted: students.filter(s => s.interview_result === "مقبول").length,
-    rejected: students.filter(s => s.interview_result === "غير مقبول").length,
-    registered: students.filter(s => s.followup_status === "تم التسجيل").length,
-    waiting: students.filter(s => s.followup_status === "في انتظار التسجيل").length,
-    not_interested: students.filter(s => s.followup_status === "لا يرغب في التسجيل").length,
-    not_registered: students.filter(s => s.followup_status !== "تم التسجيل").length,
-    pending_interview: students.filter(s => s.interview_result === "في انتظار المقابلة").length,
-    online_count: students.filter(s => s.registration_source === "رابط خارجي").length,
-    internal_count: students.filter(s => s.registration_source !== "رابط خارجي").length,
+    total: filtered.length,
+    accepted: filtered.filter(s => (s.interview_result || "").trim() === "مقبول").length,
+    rejected: filtered.filter(s => (s.interview_result || "").trim() === "غير مقبول").length,
+    registered: filtered.filter(s => (s.followup_status || "").trim() === "تم التسجيل").length,
+    waiting: filtered.filter(s => (s.followup_status || "").trim() === "في انتظار التسجيل").length,
+    not_interested: filtered.filter(s => (s.followup_status || "").trim() === "لا يرغب في التسجيل").length,
+    not_registered: filtered.filter(s => (s.followup_status || "").trim() !== "تم التسجيل").length,
+    pending_interview: filtered.filter(s => (s.interview_result || "").trim() === "في انتظار المقابلة").length,
+    online_count: filtered_online_count,
+    internal_count: filtered_internal_count,
     filtered_online_count,
     filtered_internal_count,
     filtered_online_percent,
