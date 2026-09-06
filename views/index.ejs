@@ -66,12 +66,16 @@
     </div>
   </div>
 
-  <!-- MAIN TOP NAVBAR (DYNAMIC PAGE INDICATOR & REFRESH BRAND) -->
+  <!-- TOP NAVBAR -->
   <nav class="navbar navbar-expand-lg navbar-erp py-2">
     <div class="container-fluid px-4">
       <a class="navbar-brand fw-bold text-primary d-flex align-items-center gap-2" href="javascript:location.reload()" title="اضغط لتحديث الصفحة">
-        <i class="fa-solid fa-graduation-cap fs-4"></i>
-        <span>مدارس بواكير الأهلية</span>
+        <% if (typeof systemSettings !== 'undefined' && systemSettings.school_logo_url) { %>
+          <img src="<%= systemSettings.school_logo_url %>" alt="Logo" style="height: 34px; width: 34px; object-fit: contain;">
+        <% } else { %>
+          <i class="fa-solid fa-graduation-cap fs-4"></i>
+        <% } %>
+        <span><%= (typeof systemSettings !== 'undefined' && systemSettings.school_name) ? systemSettings.school_name : 'مدارس بواكير الأهلية' %></span>
       </a>
       
       <!-- DYNAMIC CURRENT SCREEN BADGE & NAVIGATION -->
@@ -100,6 +104,11 @@
         <% } %>
         <% if(canViewAnalytics){ %>
           <a href="/analytics" class="btn btn-outline-success btn-sm fw-bold"><i class="fa-solid fa-chart-pie me-1"></i> الداش بورد</a>
+        <% } %>
+        <% if(currentUser && currentUser.role === 'admin'){ %>
+          <a href="/general_settings" class="btn btn-outline-primary btn-sm fw-bold" title="هوية النظام والإعدادات العامة">
+            <i class="fa-solid fa-palette me-1"></i> هوية النظام
+          </a>
         <% } %>
       </div>
 
@@ -135,7 +144,7 @@
     <div class="container-fluid px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
       <div class="fw-bold fs-5 d-flex align-items-center gap-2">
         <i class="fa-solid fa-users-line"></i>
-        <span>متابعة وتسجيل الطلاب | مدارس بواكير الأهلية</span>
+        <span>متابعة وتسجيل الطلاب | <%= (typeof systemSettings !== 'undefined' && systemSettings.school_name) ? systemSettings.school_name : 'مدارس بواكير الأهلية' %></span>
       </div>
       <div class="badge bg-white text-primary fs-6 px-3 py-2 fw-bold shadow-sm">
         <i class="fa-regular fa-calendar-check me-1"></i>
