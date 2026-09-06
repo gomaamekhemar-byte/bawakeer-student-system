@@ -7,12 +7,17 @@ const { getBranchNames } = require("../services/branches.service");
 const { getExternalSettings, getActiveBranches, isBranchMasterActive } = require("../services/settings.service");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, PHASE_STRUCTURE } = require("../utils/constants");
 
-// 1. Build Demographic Matrix Grid (Auto-Hiding Zero Rows & Zero Branches)
-function buildDemographicMatrixGrid(students, branches, selectedGrade) {
+// 1. Build Demographic Matrix Grid (Strict Multi-Filter Intersection & Auto-Hiding Zero Rows)
+function buildDemographicMatrixGrid(filteredStudents, branches, filters = {}) {
   const grid = [];
+  const selectedPhase = (filters.phase || "الكل").trim();
+  const selectedGrade = (filters.grade || "الكل").trim();
+  const selectedType = (filters.type || "الكل").trim();
+  const selectedTrack = (filters.track || "الكل").trim();
 
   branches.forEach(bName => {
-    const branchStudents = students.filter(s => s.branch === bName);
+    const normBranch = (bName || "").trim();
+    const branchStudents = filteredStudents.filter(s => (s.branch || "").trim() === normBranch);
     const branchRows = [];
 
     let totalBoysGeneral = 0;
@@ -21,16 +26,41 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
     let totalGirlsTahfeez = 0;
 
     Object.entries(PHASE_STRUCTURE).forEach(([pName, pInfo]) => {
+      const normPhase = pName.trim();
+      if (selectedPhase && selectedPhase !== "الكل" && selectedPhase !== normPhase) {
+        return;
+      }
+
       pInfo.grades.forEach(gItem => {
-        if (selectedGrade && selectedGrade !== "الكل" && selectedGrade !== gItem.id) {
+        const normGradeId = String(gItem.id).trim();
+        if (selectedGrade && selectedGrade !== "الكل" && selectedGrade !== normGradeId) {
           return;
         }
 
-        const gradeStudents = branchStudents.filter(s => s.phase === pName && s.grade === gItem.id);
-        const boysGeneral = gradeStudents.filter(s => s.student_type === "بنين" && (s.track === "عام" || !s.track)).length;
-        const boysTahfeez = gradeStudents.filter(s => s.student_type === "بنين" && s.track === "تحفيظ").length;
-        const girlsGeneral = gradeStudents.filter(s => s.student_type === "بنات" && (s.track === "عام" || !s.track)).length;
-        const girlsTahfeez = gradeStudents.filter(s => s.student_type === "بنات" && s.track === "تحفيظ").length;
+        const gradeStudents = branchStudents.filter(s => (s.phase || "").trim() === normPhase && String(s.grade || "").trim() === normGradeId);
+        
+        let boysGeneral = 0;
+        let boysTahfeez = 0;
+        let girlsGeneral = 0;
+        let girlsTahfeez = 0;
+
+        if (!selectedType || selectedType === "الكل" || selectedType === "بنين") {
+          if (!selectedTrack || selectedTrack === "الكل" || selectedTrack === "عام") {
+            boysGeneral = gradeStudents.filter(s => (s.student_type || "").trim() === "بنين" && ((s.track || "عام").trim() === "عام")).length;
+          }
+          if (!selectedTrack || selectedTrack === "الكل" || selectedTrack === "تحفيظ") {
+            boysTahfeez = gradeStudents.filter(s => (s.student_type || "").trim() === "بنين" && (s.track || "").trim() === "تحفيظ").length;
+          }
+        }
+
+        if (!selectedType || selectedType === "الكل" || selectedType === "بنات") {
+          if (!selectedTrack || selectedTrack === "الكل" || selectedTrack === "عام") {
+            girlsGeneral = gradeStudents.filter(s => (s.student_type || "").trim() === "بنات" && ((s.track || "عام").trim() === "عام")).length;
+          }
+          if (!selectedTrack || selectedTrack === "الكل" || selectedTrack === "تحفيظ") {
+            girlsTahfeez = gradeStudents.filter(s => (s.student_type || "").trim() === "بنات" && (s.track || "").trim() === "تحفيظ").length;
+          }
+        }
 
         const boysTotal = boysGeneral + boysTahfeez;
         const girlsTotal = girlsGeneral + girlsTahfeez;
@@ -61,8 +91,8 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
         const rowTahfeez = boysTahfeez + girlsTahfeez;
 
         branchRows.push({
-          phase: pName,
-          gradeId: gItem.id,
+          phase: normPhase,
+          gradeId: normGradeId,
           gradeName: gItem.name,
           boysGeneral,
           boysTahfeez,
@@ -84,7 +114,7 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
     // Only include branch in the grid if it has at least one active grade with students
     if (branchRows.length > 0) {
       grid.push({
-        branch: bName,
+        branch: normBranch,
         rows: branchRows,
         totals: {
           boysGeneral: totalBoysGeneral,
@@ -104,18 +134,25 @@ function buildDemographicMatrixGrid(students, branches, selectedGrade) {
   return grid;
 }
 
-// 2. Compute Dynamic Adaptive Filters based on actual active records
+// 2. Compute Dynamic Adaptive Filters based on actual active records with strict trimming
 function computeAdaptiveFilters(baseStudents, currentFilters) {
   function poolExcluding(field) {
     return baseStudents.filter(s => {
-      if (field !== 'branch' && currentFilters.branch && currentFilters.branch !== 'الكل' && s.branch !== currentFilters.branch) return false;
-      if (field !== 'phase' && currentFilters.phase && currentFilters.phase !== 'الكل' && s.phase !== currentFilters.phase) return false;
-      if (field !== 'grade' && currentFilters.grade && currentFilters.grade !== 'الكل' && s.grade !== currentFilters.grade) return false;
-      if (field !== 'type' && currentFilters.type && currentFilters.type !== 'الكل' && s.student_type !== currentFilters.type) return false;
-      if (field !== 'track' && currentFilters.track && currentFilters.track !== 'الكل' && (s.track || 'عام') !== currentFilters.track) return false;
+      const sBranch = (s.branch || "").trim();
+      const sPhase = (s.phase || "").trim();
+      const sGrade = String(s.grade || "").trim();
+      const sType = (s.student_type || "").trim();
+      const sTrack = (s.track || "عام").trim();
+      const sSource = (s.registration_source || "").trim();
+
+      if (field !== 'branch' && currentFilters.branch && currentFilters.branch !== 'الكل' && sBranch !== currentFilters.branch.trim()) return false;
+      if (field !== 'phase' && currentFilters.phase && currentFilters.phase !== 'الكل' && sPhase !== currentFilters.phase.trim()) return false;
+      if (field !== 'grade' && currentFilters.grade && currentFilters.grade !== 'الكل' && sGrade !== String(currentFilters.grade).trim()) return false;
+      if (field !== 'type' && currentFilters.type && currentFilters.type !== 'الكل' && sType !== currentFilters.type.trim()) return false;
+      if (field !== 'track' && currentFilters.track && currentFilters.track !== 'الكل' && sTrack !== currentFilters.track.trim()) return false;
       if (field !== 'source' && currentFilters.source && currentFilters.source !== 'الكل' && currentFilters.source !== 'جميع المصادر') {
-        const isOnline = s.registration_source === 'رابط خارجي';
-        if (currentFilters.source === 'الرابط الخارجي' || currentFilters.source === 'رابط خارجي') {
+        const isOnline = sSource === 'رابط خارجي';
+        if (currentFilters.source === 'الرابط الخارجي' || currentFilters.source === 'رابط خارجي' || currentFilters.source === 'external') {
           if (!isOnline) return false;
         } else {
           if (isOnline) return false;
@@ -132,14 +169,14 @@ function computeAdaptiveFilters(baseStudents, currentFilters) {
   const trackPool = poolExcluding('track');
   const sourcePool = poolExcluding('source');
 
-  const branches = [...new Set(branchPool.map(s => s.branch).filter(Boolean))];
-  const phases = [...new Set(phasePool.map(s => s.phase).filter(Boolean))];
-  const grades = [...new Set(gradePool.map(s => s.grade).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b)));
-  const types = [...new Set(typePool.map(s => s.student_type).filter(Boolean))];
-  const tracks = [...new Set(trackPool.map(s => s.track || 'عام').filter(Boolean))];
+  const branches = [...new Set(branchPool.map(s => (s.branch || "").trim()).filter(Boolean))];
+  const phases = [...new Set(phasePool.map(s => (s.phase || "").trim()).filter(Boolean))];
+  const grades = [...new Set(gradePool.map(s => String(s.grade || "").trim()).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+  const types = [...new Set(typePool.map(s => (s.student_type || "").trim()).filter(Boolean))];
+  const tracks = [...new Set(trackPool.map(s => (s.track || 'عام').trim()).filter(Boolean))];
 
-  const hasOnline = sourcePool.some(s => s.registration_source === 'رابط خارجي');
-  const hasInternal = sourcePool.some(s => s.registration_source !== 'رابط خارجي');
+  const hasOnline = sourcePool.some(s => (s.registration_source || "").trim() === 'رابط خارجي');
+  const hasInternal = sourcePool.some(s => (s.registration_source || "").trim() !== 'رابط خارجي');
   const sources = [];
   if (hasOnline) sources.push('الرابط الخارجي');
   if (hasInternal) sources.push('التسجيل الداخلي (المدرسة)');
@@ -341,36 +378,30 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     source: selectedSource
   });
 
-  // Apply active filters to get the current dataset
-  let students = userAccessibleStudents;
+  // Apply active filters to get the current dataset with strict AND logic and trimming
+  let students = userAccessibleStudents.filter(s => {
+    const sBranch = (s.branch || "").trim();
+    const sPhase = (s.phase || "").trim();
+    const sGrade = String(s.grade || "").trim();
+    const sType = (s.student_type || "بنين").trim();
+    const sTrack = (s.track || "عام").trim();
+    const sSource = (s.registration_source || "").trim();
 
-  if (selectedBranch && selectedBranch !== "الكل") {
-    students = students.filter(s => s.branch === selectedBranch);
-  }
-
-  if (selectedPhase && selectedPhase !== "الكل") {
-    students = students.filter(s => s.phase === selectedPhase);
-  }
-
-  if (selectedGrade && selectedGrade !== "الكل") {
-    students = students.filter(s => s.grade === selectedGrade);
-  }
-
-  if (selectedType && selectedType !== "الكل") {
-    students = students.filter(s => s.student_type === selectedType);
-  }
-
-  if (selectedTrack && selectedTrack !== "الكل") {
-    students = students.filter(s => (s.track || "عام") === selectedTrack);
-  }
-
-  if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
-    if (selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external") {
-      students = students.filter(s => s.registration_source === "رابط خارجي");
-    } else if (selectedSource === "التسجيل الداخلي (المدرسة)" || selectedSource === "تسجيل داخلي" || selectedSource === "التسجيل الداخلي" || selectedSource === "internal") {
-      students = students.filter(s => s.registration_source !== "رابط خارجي");
+    if (selectedBranch && selectedBranch !== "الكل" && sBranch !== selectedBranch.trim()) return false;
+    if (selectedPhase && selectedPhase !== "الكل" && sPhase !== selectedPhase.trim()) return false;
+    if (selectedGrade && selectedGrade !== "الكل" && sGrade !== selectedGrade.trim()) return false;
+    if (selectedType && selectedType !== "الكل" && sType !== selectedType.trim()) return false;
+    if (selectedTrack && selectedTrack !== "الكل" && sTrack !== selectedTrack.trim()) return false;
+    if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
+      const isOnline = sSource === "رابط خارجي";
+      if (selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external") {
+        if (!isOnline) return false;
+      } else {
+        if (isOnline) return false;
+      }
     }
-  }
+    return true;
+  });
 
   let branchLabel = selectedBranch === "الكل" ? "جميع الفروع" : ("فرع " + selectedBranch);
   const filterTags = [];
@@ -385,56 +416,73 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
 
   const analyticsData = buildAnalytics(students, branchLabel);
 
-  // Build Demographic Matrix Data Grid (Only populated rows/branches)
-  const targetBranches = (selectedBranch && selectedBranch !== "الكل") ? [selectedBranch] : (availableFilters.branches.length ? availableFilters.branches : allBranches);
-  const demographicMatrixGrid = buildDemographicMatrixGrid(userAccessibleStudents, targetBranches, selectedGrade);
+  // Build Demographic Matrix Data Grid (Only populated rows/branches matching active filters)
+  const targetBranches = (selectedBranch && selectedBranch !== "الكل") 
+    ? [selectedBranch.trim()] 
+    : (availableFilters.branches.length ? availableFilters.branches : allBranches);
 
-  // Build Phase statistics breakdown for displayed branch(es) (Omit 0 counts)
+  const demographicMatrixGrid = buildDemographicMatrixGrid(students, targetBranches, {
+    phase: selectedPhase,
+    grade: selectedGrade,
+    type: selectedType,
+    track: selectedTrack
+  });
+
+  // Build Phase statistics breakdown for displayed branch(es) (Strictly from filtered students)
   const detailedBranchPhaseStats = [];
   targetBranches.forEach(bName => {
-    let branchStudents = userAccessibleStudents.filter(s => s.branch === bName);
-    if (selectedType && selectedType !== "الكل") branchStudents = branchStudents.filter(s => s.student_type === selectedType);
-    if (selectedTrack && selectedTrack !== "الكل") branchStudents = branchStudents.filter(s => (s.track || "عام") === selectedTrack);
-    if (selectedGrade && selectedGrade !== "الكل") branchStudents = branchStudents.filter(s => s.grade === selectedGrade);
-    if (selectedSource && selectedSource !== "الكل" && selectedSource !== "جميع المصادر") {
-      const isOnline = selectedSource === "الرابط الخارجي" || selectedSource === "رابط خارجي" || selectedSource === "external";
-      branchStudents = branchStudents.filter(s => isOnline ? (s.registration_source === "رابط خارجي") : (s.registration_source !== "رابط خارجي"));
-    }
-
+    const normBranch = (bName || "").trim();
+    const branchStudents = students.filter(s => (s.branch || "").trim() === normBranch);
     if (branchStudents.length === 0) return; // Skip zero branches
 
     const phasesData = PHASES.map(pName => {
-      const pStudents = branchStudents.filter(s => s.phase === pName);
+      const normPhase = pName.trim();
+      if (selectedPhase && selectedPhase !== "الكل" && selectedPhase.trim() !== normPhase) return null;
+      const pStudents = branchStudents.filter(s => (s.phase || "").trim() === normPhase);
       if (pStudents.length === 0) return null; // Skip zero phases
+
       return {
-        phase: pName,
+        phase: normPhase,
         total: pStudents.length,
-        registered: pStudents.filter(s => s.followup_status === "تم التسجيل").length,
-        accepted: pStudents.filter(s => s.interview_result === "مقبول").length,
-        pending_interview: pStudents.filter(s => s.interview_result === "في انتظار المقابلة").length,
-        waiting_registration: pStudents.filter(s => s.followup_status === "في انتظار التسجيل").length,
-        rejected: pStudents.filter(s => s.interview_result === "غير مقبول").length,
-        boys: pStudents.filter(s => s.student_type === "بنين").length,
-        girls: pStudents.filter(s => s.student_type === "بنات").length,
-        general: pStudents.filter(s => (s.track || "عام") === "عام").length,
-        tahfeez: pStudents.filter(s => s.track === "تحفيظ").length,
+        registered: pStudents.filter(s => (s.followup_status || "").trim() === "تم التسجيل").length,
+        accepted: pStudents.filter(s => (s.interview_result || "").trim() === "مقبول").length,
+        pending_interview: pStudents.filter(s => (s.interview_result || "").trim() === "في انتظار المقابلة").length,
+        waiting_registration: pStudents.filter(s => (s.followup_status || "").trim() === "في انتظار التسجيل").length,
+        rejected: pStudents.filter(s => (s.interview_result || "").trim() === "غير مقبول").length,
+        boys: pStudents.filter(s => (s.student_type || "").trim() === "بنين").length,
+        girls: pStudents.filter(s => (s.student_type || "").trim() === "بنات").length,
+        general: pStudents.filter(s => ((s.track || "عام")).trim() === "عام").length,
+        tahfeez: pStudents.filter(s => (s.track || "").trim() === "تحفيظ").length,
       };
     }).filter(Boolean);
 
     if (phasesData.length > 0) {
       detailedBranchPhaseStats.push({
-        branch: bName,
+        branch: normBranch,
         total: branchStudents.length,
-        registered: branchStudents.filter(s => s.followup_status === "تم التسجيل").length,
-        accepted: branchStudents.filter(s => s.interview_result === "مقبول").length,
-        boys: branchStudents.filter(s => s.student_type === "بنين").length,
-        girls: branchStudents.filter(s => s.student_type === "بنات").length,
-        general: branchStudents.filter(s => (s.track || "عام") === "عام").length,
-        tahfeez: branchStudents.filter(s => s.track === "تحفيظ").length,
+        registered: branchStudents.filter(s => (s.followup_status || "").trim() === "تم التسجيل").length,
+        accepted: branchStudents.filter(s => (s.interview_result || "").trim() === "مقبول").length,
+        boys: branchStudents.filter(s => (s.student_type || "").trim() === "بنين").length,
+        girls: branchStudents.filter(s => (s.student_type || "").trim() === "بنات").length,
+        general: branchStudents.filter(s => ((s.track || "عام")).trim() === "عام").length,
+        tahfeez: branchStudents.filter(s => (s.track || "").trim() === "تحفيظ").length,
         phasesData,
       });
     }
   });
+
+  // Client-accessible dataset for instant frontend recalculation
+  const clientStudents = userAccessibleStudents.map(s => ({
+    id: s.id,
+    branch: (s.branch || "").trim(),
+    phase: (s.phase || "").trim(),
+    grade: String(s.grade || "").trim(),
+    student_type: (s.student_type || "بنين").trim(),
+    track: (s.track || "عام").trim(),
+    interview_result: (s.interview_result || "").trim(),
+    followup_status: (s.followup_status || "").trim(),
+    registration_source: (s.registration_source || "").trim()
+  }));
 
   // Support JSON API response
   if (req.query.format === "json" || req.headers["x-requested-with"] === "XMLHttpRequest") {
@@ -444,6 +492,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
       demographicMatrixGrid,
       detailedBranchPhaseStats,
       availableFilters,
+      clientStudents,
       selectedBranch,
       selectedPhase,
       selectedGrade,
@@ -458,6 +507,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     demographicMatrixGrid,
     detailedBranchPhaseStats,
     availableFilters,
+    clientStudents,
     currentUser,
     selectedBranch,
     selectedPhase,
