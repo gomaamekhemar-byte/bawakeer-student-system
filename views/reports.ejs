@@ -636,7 +636,7 @@
                       <span class="badge-status bg-light text-muted border"><%= s.followup_status || 'لم يسجل' %></span>
                     <% } %>
                   </td>
-                  <td class="text-truncate" style="max-width: 200px;"><small class="text-muted"><%= s.notes || '—' %></small></td>
+                  <td class="text-truncate" style="max-width: 200px;"><small class="text-muted"><%= (typeof cleanNotesForDisplay === 'function') ? (cleanNotesForDisplay(s.notes || '') || '—') : (s.notes || '—') %></small></td>
                 </tr>
               <% }) %>
             <% } else { %>
