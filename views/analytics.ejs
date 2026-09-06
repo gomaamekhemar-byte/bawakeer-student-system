@@ -90,6 +90,35 @@
       vertical-align: middle;
       font-size: 13.5px;
     }
+
+    /* Interactive Cross-Filtering Styles */
+    .interactive-data-row {
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+    .interactive-data-row:hover {
+      background-color: #f1f5f9 !important;
+      transform: scale(1.002);
+      box-shadow: inset 0 0 0 1.5px #3b82f6;
+    }
+    .interactive-data-row.active-row-filtered {
+      background-color: #e0f2fe !important;
+      box-shadow: inset 4px 0 0 0 #0284c7, 0 0 8px rgba(2, 132, 199, 0.15) !important;
+    }
+    .interactive-data-row.active-row-filtered td {
+      font-weight: 700;
+    }
+    .animated-progress-bar {
+      transition: width 0.65s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .pulse-badge {
+      animation: pulseAnim 1.8s infinite;
+    }
+    @keyframes pulseAnim {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -585,7 +614,18 @@
 
                         <tbody class="table-group-divider">
                           <% bData.rows.forEach(function(r, rIdx){ %>
-                            <tr class="<%= rIdx % 2 === 0 ? 'bg-white' : 'bg-light' %>">
+                            <tr class="interactive-data-row <%= rIdx % 2 === 0 ? 'bg-white' : 'bg-light' %>"
+                                data-cf-branch="<%= bData.branch %>"
+                                data-cf-phase="<%= r.phase %>"
+                                data-cf-grade="<%= r.gradeName %>"
+                                data-cf-label="فرع <%= bData.branch %> - <%= r.phase %> (<%= r.gradeName %>)"
+                                data-cf-boys="<%= r.boysTotal %>"
+                                data-cf-girls="<%= r.girlsTotal %>"
+                                data-cf-general="<%= r.generalTotal %>"
+                                data-cf-tahfeez="<%= r.tahfeezTotal %>"
+                                data-cf-total="<%= r.rowTotal %>"
+                                onclick="applyRowCrossFilter(this)"
+                                title="اضغط لتركيز تحليلات النوع والمسار السفلية على هذا الصف">
                               <!-- 1. Grade Name -->
                               <td class="text-end py-2 px-3 fw-bold text-dark" style="border-left: 2px solid #cbd5e1;">
                                 <span class="badge bg-secondary-subtle text-secondary me-1 small"><%= r.phase %></span>
@@ -732,7 +772,18 @@
                 <% branchGroup.phasesData.forEach(function(pData, pIdx){ 
                   const completionRate = pData.total > 0 ? Math.round(pData.registered / pData.total * 100) : 0;
                 %>
-                  <tr>
+                  <tr class="interactive-data-row"
+                      data-cf-branch="<%= branchGroup.branch %>"
+                      data-cf-phase="<%= pData.phase %>"
+                      data-cf-grade=""
+                      data-cf-label="فرع <%= branchGroup.branch %> - <%= pData.phase %>"
+                      data-cf-boys="<%= pData.boys || 0 %>"
+                      data-cf-girls="<%= pData.girls || 0 %>"
+                      data-cf-general="<%= pData.general || 0 %>"
+                      data-cf-tahfeez="<%= pData.tahfeez || 0 %>"
+                      data-cf-total="<%= pData.total || 0 %>"
+                      onclick="applyRowCrossFilter(this)"
+                      title="اضغط لتركيز تحليلات النوع والمسار السفلية على هذه المرحلة">
                     <% if(pIdx === 0){ %>
                       <td class="text-end fw-bold text-dark bg-light border-end" rowspan="<%= branchGroup.phasesData.length %>" style="vertical-align: middle;">
                         <i class="fa-solid fa-school text-primary me-1"></i>
@@ -767,15 +818,32 @@
       </div>
     </div>
 
+    <!-- ACTIVE CROSS-FILTER BANNER (DYNAMIC FOCUS) -->
+    <div id="activeCrossFilterBanner" class="alert alert-primary border-primary d-none align-items-center justify-content-between mb-4 rounded-3 py-2 px-3 shadow-sm" role="alert">
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary fs-6 p-2 rounded-circle"><i class="fa-solid fa-filter"></i></span>
+        <div>
+          <span class="fw-bold text-dark">تركيز التحليل اللحظي (Interactive Focus):</span>
+          <span id="activeCrossFilterLabel" class="badge bg-white text-primary border border-primary fs-7 ms-2 px-3 py-1 fw-bold"></span>
+          <span id="activeCrossFilterCount" class="badge bg-primary text-white fs-7 ms-1 px-2 py-1"></span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 d-inline-flex align-items-center gap-1 shadow-xs" onclick="clearRowCrossFilter()">
+        <i class="fa-solid fa-xmark"></i>
+        <span>إلغاء التحديد والعودة للعرض الشامل</span>
+      </button>
+    </div>
+
     <!-- 4. GENDER & TRACK CATEGORY ANALYSIS (FEATURE 4) -->
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-4" id="distributionCardsContainer">
       <!-- GENDER ANALYSIS (بنين / بنات) -->
       <div class="col-md-6">
         <div class="card border-0 shadow-sm rounded-3 h-100">
-          <div class="card-header bg-white py-3 border-0">
+          <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
             <h6 class="fw-bold mb-0 text-dark">
               <i class="fa-solid fa-venus-mars text-primary me-2"></i> توزيع الطلاب حسب النوع (بنين / بنات)
             </h6>
+            <span id="genderScopeBadge" class="badge bg-light text-secondary border px-2 py-1 small">حسب الفلترة الحالية</span>
           </div>
           <div class="card-body p-4 pt-2">
             <% 
@@ -789,20 +857,26 @@
             <div class="mb-4">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="fw-bold text-primary"><i class="fa-solid fa-mars me-1"></i> بنين</span>
-                <span class="badge bg-primary-subtle text-primary fs-7 fw-bold"><%= boysCount %> طالب (<%= boysPercent %>%)</span>
+                <span id="cfBadgeBoys" class="badge bg-primary-subtle text-primary fs-7 fw-bold"
+                      data-default-count="<%= boysCount %>"
+                      data-default-percent="<%= boysPercent %>"><%= boysCount %> طالب (<%= boysPercent %>%)</span>
               </div>
               <div class="progress" style="height: 14px;">
-                <div class="progress-bar bg-primary" role="progressbar" style="width: <%= boysPercent %>%"></div>
+                <div id="cfBarBoys" class="progress-bar bg-primary animated-progress-bar" role="progressbar" style="width: <%= boysPercent %>%;"
+                     data-default-percent="<%= boysPercent %>"></div>
               </div>
             </div>
 
             <div>
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="fw-bold" style="color: #ec4899;"><i class="fa-solid fa-venus me-1"></i> بنات</span>
-                <span class="badge fs-7 fw-bold" style="background: #fdf2f8; color: #ec4899; border: 1px solid #fbcfe8;"><%= girlsCount %> طالبة (<%= girlsPercent %>%)</span>
+                <span id="cfBadgeGirls" class="badge fs-7 fw-bold" style="background: #fdf2f8; color: #ec4899; border: 1px solid #fbcfe8;"
+                      data-default-count="<%= girlsCount %>"
+                      data-default-percent="<%= girlsPercent %>"><%= girlsCount %> طالبة (<%= girlsPercent %>%)</span>
               </div>
               <div class="progress" style="height: 14px;">
-                <div class="progress-bar" role="progressbar" style="width: <%= girlsPercent %>%; background-color: #ec4899;"></div>
+                <div id="cfBarGirls" class="progress-bar animated-progress-bar" role="progressbar" style="width: <%= girlsPercent %>%; background-color: #ec4899;"
+                     data-default-percent="<%= girlsPercent %>"></div>
               </div>
             </div>
 
@@ -813,10 +887,11 @@
       <!-- TRACK ANALYSIS (عام / تحفيظ) -->
       <div class="col-md-6">
         <div class="card border-0 shadow-sm rounded-3 h-100">
-          <div class="card-header bg-white py-3 border-0">
+          <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
             <h6 class="fw-bold mb-0 text-dark">
               <i class="fa-solid fa-book-bookmark text-success me-2"></i> توزيع الطلاب حسب المسار التعليمي (عام / تحفيظ)
             </h6>
+            <span id="trackScopeBadge" class="badge bg-light text-secondary border px-2 py-1 small">حسب الفلترة الحالية</span>
           </div>
           <div class="card-body p-4 pt-2">
             <% 
@@ -830,20 +905,26 @@
             <div class="mb-4">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="fw-bold text-dark"><i class="fa-solid fa-graduation-cap me-1 text-secondary"></i> مسار عام</span>
-                <span class="badge bg-secondary-subtle text-dark fs-7 fw-bold"><%= generalCount %> طالب (<%= generalPercent %>%)</span>
+                <span id="cfBadgeGeneral" class="badge bg-secondary-subtle text-dark fs-7 fw-bold"
+                      data-default-count="<%= generalCount %>"
+                      data-default-percent="<%= generalPercent %>"><%= generalCount %> طالب (<%= generalPercent %>%)</span>
               </div>
               <div class="progress" style="height: 14px;">
-                <div class="progress-bar bg-secondary" role="progressbar" style="width: <%= generalPercent %>%"></div>
+                <div id="cfBarGeneral" class="progress-bar bg-secondary animated-progress-bar" role="progressbar" style="width: <%= generalPercent %>%;"
+                     data-default-percent="<%= generalPercent %>"></div>
               </div>
             </div>
 
             <div>
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="fw-bold text-success"><i class="fa-solid fa-quran me-1"></i> مسار تحفيظ القرآن</span>
-                <span class="badge bg-success-subtle text-success fs-7 fw-bold"><%= tahfeezCount %> طالب (<%= tahfeezPercent %>%)</span>
+                <span id="cfBadgeTahfeez" class="badge bg-success-subtle text-success fs-7 fw-bold"
+                      data-default-count="<%= tahfeezCount %>"
+                      data-default-percent="<%= tahfeezPercent %>"><%= tahfeezCount %> طالب (<%= tahfeezPercent %>%)</span>
               </div>
               <div class="progress" style="height: 14px;">
-                <div class="progress-bar bg-success" role="progressbar" style="width: <%= tahfeezPercent %>%"></div>
+                <div id="cfBarTahfeez" class="progress-bar bg-success animated-progress-bar" role="progressbar" style="width: <%= tahfeezPercent %>%;"
+                     data-default-percent="<%= tahfeezPercent %>"></div>
               </div>
             </div>
 
@@ -1070,6 +1151,163 @@
       }
       refreshAnalytics();
     });
+
+    // -------------------------------------------------------------
+    // INTERACTIVE CROSS-FILTERING (Click-to-Filter on Tables)
+    // -------------------------------------------------------------
+    let currentSelectedCrossFilterRow = null;
+
+    function applyRowCrossFilter(rowEl) {
+      if (!rowEl) return;
+
+      // If already selected, clicking again acts as toggle to clear
+      if (rowEl.classList.contains('active-row-filtered')) {
+        clearRowCrossFilter();
+        return;
+      }
+
+      // Remove active class from any previous rows
+      document.querySelectorAll('.interactive-data-row.active-row-filtered').forEach(el => {
+        el.classList.remove('active-row-filtered');
+      });
+
+      // Highlight this row
+      rowEl.classList.add('active-row-filtered');
+      currentSelectedCrossFilterRow = rowEl;
+
+      // Extract row data attributes
+      const label = rowEl.getAttribute('data-cf-label') || 'العنصر المختار';
+      const boys = parseInt(rowEl.getAttribute('data-cf-boys') || 0);
+      const girls = parseInt(rowEl.getAttribute('data-cf-girls') || 0);
+      const general = parseInt(rowEl.getAttribute('data-cf-general') || 0);
+      const tahfeez = parseInt(rowEl.getAttribute('data-cf-tahfeez') || 0);
+      const total = parseInt(rowEl.getAttribute('data-cf-total') || (boys + girls));
+
+      // Calculate localized percentages
+      const genderSum = boys + girls;
+      const boysPct = genderSum > 0 ? Math.round((boys / genderSum) * 100) : 0;
+      const girlsPct = genderSum > 0 ? Math.round((girls / genderSum) * 100) : 0;
+
+      const trackSum = general + tahfeez;
+      const generalPct = trackSum > 0 ? Math.round((general / trackSum) * 100) : 0;
+      const tahfeezPct = trackSum > 0 ? Math.round((tahfeez / trackSum) * 100) : 0;
+
+      // Update Active Filter Banner
+      const banner = document.getElementById('activeCrossFilterBanner');
+      const bannerLabel = document.getElementById('activeCrossFilterLabel');
+      const bannerCount = document.getElementById('activeCrossFilterCount');
+      if (banner && bannerLabel && bannerCount) {
+        bannerLabel.textContent = label;
+        bannerCount.textContent = total + ' طالب مسجل';
+        banner.classList.remove('d-none');
+        banner.classList.add('d-flex');
+      }
+
+      // Update Gender Distribution Bars with smooth transitions
+      const barBoys = document.getElementById('cfBarBoys');
+      const barGirls = document.getElementById('cfBarGirls');
+      const badgeBoys = document.getElementById('cfBadgeBoys');
+      const badgeGirls = document.getElementById('cfBadgeGirls');
+      const genderScope = document.getElementById('genderScopeBadge');
+
+      if (barBoys) barBoys.style.width = boysPct + '%';
+      if (barGirls) barGirls.style.width = girlsPct + '%';
+      if (badgeBoys) badgeBoys.textContent = `${boys} طالب (${boysPct}%)`;
+      if (badgeGirls) badgeGirls.textContent = `${girls} طالبة (${girlsPct}%)`;
+      if (genderScope) {
+        genderScope.textContent = 'تركيز: ' + label;
+        genderScope.className = 'badge bg-primary text-white border border-primary px-2 py-1 small pulse-badge';
+      }
+
+      // Update Track Distribution Bars with smooth transitions
+      const barGeneral = document.getElementById('cfBarGeneral');
+      const barTahfeez = document.getElementById('cfBarTahfeez');
+      const badgeGeneral = document.getElementById('cfBadgeGeneral');
+      const badgeTahfeez = document.getElementById('cfBadgeTahfeez');
+      const trackScope = document.getElementById('trackScopeBadge');
+
+      if (barGeneral) barGeneral.style.width = generalPct + '%';
+      if (barTahfeez) barTahfeez.style.width = tahfeezPct + '%';
+      if (badgeGeneral) badgeGeneral.textContent = `${general} طالب (${generalPct}%)`;
+      if (badgeTahfeez) badgeTahfeez.textContent = `${tahfeez} طالب (${tahfeezPct}%)`;
+      if (trackScope) {
+        trackScope.textContent = 'تركيز: ' + label;
+        trackScope.className = 'badge bg-success text-white border border-success px-2 py-1 small pulse-badge';
+      }
+
+      // Scroll smoothly to distribution cards if not in view
+      const targetSection = document.getElementById('distributionCardsContainer');
+      if (targetSection) {
+        targetSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function clearRowCrossFilter() {
+      // Remove highlighting from all rows
+      document.querySelectorAll('.interactive-data-row.active-row-filtered').forEach(el => {
+        el.classList.remove('active-row-filtered');
+      });
+      currentSelectedCrossFilterRow = null;
+
+      // Hide active banner
+      const banner = document.getElementById('activeCrossFilterBanner');
+      if (banner) {
+        banner.classList.add('d-none');
+        banner.classList.remove('d-flex');
+      }
+
+      // Reset Gender Bars to default
+      const barBoys = document.getElementById('cfBarBoys');
+      const barGirls = document.getElementById('cfBarGirls');
+      const badgeBoys = document.getElementById('cfBadgeBoys');
+      const badgeGirls = document.getElementById('cfBadgeGirls');
+      const genderScope = document.getElementById('genderScopeBadge');
+
+      if (barBoys && barBoys.hasAttribute('data-default-percent')) {
+        const defBoysPct = barBoys.getAttribute('data-default-percent');
+        barBoys.style.width = defBoysPct + '%';
+      }
+      if (barGirls && barGirls.hasAttribute('data-default-percent')) {
+        const defGirlsPct = barGirls.getAttribute('data-default-percent');
+        barGirls.style.width = defGirlsPct + '%';
+      }
+      if (badgeBoys && badgeBoys.hasAttribute('data-default-count')) {
+        badgeBoys.textContent = `${badgeBoys.getAttribute('data-default-count')} طالب (${badgeBoys.getAttribute('data-default-percent')}%)`;
+      }
+      if (badgeGirls && badgeGirls.hasAttribute('data-default-count')) {
+        badgeGirls.textContent = `${badgeGirls.getAttribute('data-default-count')} طالبة (${badgeGirls.getAttribute('data-default-percent')}%)`;
+      }
+      if (genderScope) {
+        genderScope.textContent = 'حسب الفلترة الحالية';
+        genderScope.className = 'badge bg-light text-secondary border px-2 py-1 small';
+      }
+
+      // Reset Track Bars to default
+      const barGeneral = document.getElementById('cfBarGeneral');
+      const barTahfeez = document.getElementById('cfBarTahfeez');
+      const badgeGeneral = document.getElementById('cfBadgeGeneral');
+      const badgeTahfeez = document.getElementById('cfBadgeTahfeez');
+      const trackScope = document.getElementById('trackScopeBadge');
+
+      if (barGeneral && barGeneral.hasAttribute('data-default-percent')) {
+        const defGenPct = barGeneral.getAttribute('data-default-percent');
+        barGeneral.style.width = defGenPct + '%';
+      }
+      if (barTahfeez && barTahfeez.hasAttribute('data-default-percent')) {
+        const defTahPct = barTahfeez.getAttribute('data-default-percent');
+        barTahfeez.style.width = defTahPct + '%';
+      }
+      if (badgeGeneral && badgeGeneral.hasAttribute('data-default-count')) {
+        badgeGeneral.textContent = `${badgeGeneral.getAttribute('data-default-count')} طالب (${badgeGeneral.getAttribute('data-default-percent')}%)`;
+      }
+      if (badgeTahfeez && badgeTahfeez.hasAttribute('data-default-count')) {
+        badgeTahfeez.textContent = `${badgeTahfeez.getAttribute('data-default-count')} طالب (${badgeTahfeez.getAttribute('data-default-percent')}%)`;
+      }
+      if (trackScope) {
+        trackScope.textContent = 'حسب الفلترة الحالية';
+        trackScope.className = 'badge bg-light text-secondary border px-2 py-1 small';
+      }
+    }
   </script>
 </body>
 </html>
