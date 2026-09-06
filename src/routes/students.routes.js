@@ -327,19 +327,19 @@ async function handleGetStudents(req, res) {
     return true;
   });
 
-  const onlineApplicantsCount = students.filter(s => s.registration_source === "رابط خارجي" && s.followup_status === "في انتظار المقابلة").length;
+  const onlineApplicantsCount = filtered.filter(s => (s.registration_source || "").trim() === "رابط خارجي" && (s.followup_status || "").trim() === "في انتظار المقابلة").length;
 
   const stats = {
-    total: students.length,
-    accepted: students.filter(s => s.interview_result === "مقبول").length,
-    rejected: students.filter(s => s.interview_result === "غير مقبول").length,
-    registered: students.filter(s => s.followup_status === "تم التسجيل").length,
-    waiting: students.filter(s => s.followup_status === "في انتظار التسجيل").length,
-    not_interested: students.filter(s => s.followup_status === "لا يرغب في التسجيل").length,
-    not_registered: students.filter(s => s.followup_status !== "تم التسجيل").length,
-    pending_interview: students.filter(s => s.interview_result === "في انتظار المقابلة").length,
-    online_total: students.filter(s => s.registration_source === "رابط خارجي").length,
-    internal_total: students.filter(s => s.registration_source !== "رابط خارجي").length,
+    total: filtered.length,
+    accepted: filtered.filter(s => (s.interview_result || "").trim() === "مقبول").length,
+    rejected: filtered.filter(s => (s.interview_result || "").trim() === "غير مقبول").length,
+    registered: filtered.filter(s => (s.followup_status || "").trim() === "تم التسجيل").length,
+    waiting: filtered.filter(s => (s.followup_status || "").trim() === "في انتظار التسجيل").length,
+    not_interested: filtered.filter(s => (s.followup_status || "").trim() === "لا يرغب في التسجيل").length,
+    not_registered: filtered.filter(s => (s.followup_status || "").trim() !== "تم التسجيل").length,
+    pending_interview: filtered.filter(s => (s.interview_result || "").trim() === "في انتظار المقابلة").length,
+    online_total: filtered.filter(s => (s.registration_source || "").trim() === "رابط خارجي").length,
+    internal_total: filtered.filter(s => (s.registration_source || "").trim() !== "رابط خارجي").length,
   };
 
   const allPhonesMap = {};
