@@ -14,9 +14,28 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-hijri-datepicker@1.0.12/dist/css/bootstrap-datetimepicker.min.css">
   
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/moment-hijri@2.1.2/moment-hijri.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap-hijri-datepicker@1.0.12/dist/js/bootstrap-hijri-datetimepicker.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap-hijri-datepicker@1.0.12/dist/js/bootstrap-hijri-datepicker.min.js"></script>
+  <script>
+    window.toast = {
+      success: function(msg) {
+        if (typeof showToast === 'function') {
+          showToast(msg, 'success');
+        } else {
+          alert('✅ ' + msg);
+        }
+      },
+      error: function(msg) {
+        if (typeof showToast === 'function') {
+          showToast(msg, 'danger');
+        } else {
+          alert('❌ ' + msg);
+        }
+      }
+    };
+  </script>
 
   <style>
     body { font-family: 'Cairo', system-ui, sans-serif; background-color: #f4f6f9; color: #212529; min-height: 100vh; }
@@ -360,7 +379,11 @@
                   <% if(s.phone && typeof getWhatsAppDirectUrl === 'function'){ %>
                   <a href="<%= getWhatsAppDirectUrl(s.phone, 'أهلاً بك ولي أمر الطالب ' + s.name + ' في مدارس بواكير الأهلية') %>" target="_blank" class="btn btn-outline-success" title="محادثة واتساب سريعة"><i class="fa-brands fa-whatsapp"></i></a>
                   <% } %>
-                  <% if(canManageStudents){ %><a href="/students?edit_id=<%= s.id %>" class="btn btn-outline-primary" title="تعديل"><i class="fa-solid fa-pen-to-square"></i></a><% } %>
+                  <% if(canManageStudents){ %>
+                    <button type="button" class="btn btn-outline-primary btn-edit-student" title="تعديل بيانات الطالب" data-student-json='<%- JSON.stringify(s).replace(/'/g, "&#39;") %>' onclick="openEditStudentModalFromBtn(this, event)">
+                      <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                  <% } %>
                   
                   <!-- ATTACHMENTS BUTTON WITH COUNT BADGE -->
                   <button type="button" class="btn btn-outline-info" id="attBtn_<%= s.id %>" title="المرفقات (عرض، تنزيل، حذف)" onclick='showStudentAttachments(<%= s.id %>, <%= JSON.stringify(s.attachments || []) %>, "<%= (s.name || "").replace(/"/g, "") %>")'>
@@ -641,10 +664,10 @@
                 <small class="text-muted">يمكنك اختيار أكثر من ملف دفعة واحدة، وكتابة اسم واضح للمرفق للرجوع إليه لاحقاً.</small>
 
                 <!-- Existing Attachments in Edit Mode with 3 Actions -->
-                <% if(editingStudent && editingStudent.attachments && editingStudent.attachments.length > 0){ %>
-                  <div class="mt-3 p-3 bg-light rounded border" id="editModalAttachmentsBox">
-                    <div class="fw-bold small text-secondary mb-2"><i class="fa-solid fa-folder-open me-1"></i> المرفقات الحالية المسجلة للطالب:</div>
-                    <div class="d-flex flex-column gap-2" id="editModalAttachmentsList">
+                <div class="mt-3 p-3 bg-light rounded border <%= (editingStudent && editingStudent.attachments && editingStudent.attachments.length > 0) ? '' : 'd-none' %>" id="editModalAttachmentsBox">
+                  <div class="fw-bold small text-secondary mb-2"><i class="fa-solid fa-folder-open me-1"></i> المرفقات الحالية المسجلة للطالب:</div>
+                  <div class="d-flex flex-column gap-2" id="editModalAttachmentsList">
+                    <% if(editingStudent && editingStudent.attachments && editingStudent.attachments.length > 0){ %>
                       <% editingStudent.attachments.forEach(function(att, idx){ %>
                         <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded border" id="editAttItem_<%= idx %>">
                           <div class="d-flex align-items-center gap-2 text-truncate">
@@ -658,9 +681,9 @@
                           </div>
                         </div>
                       <% }) %>
-                    </div>
+                    <% } %>
                   </div>
-                <% } %>
+                </div>
               </div>
             </div>
           </div>
@@ -1076,12 +1099,306 @@
         return false;
       }
 
-      // If completely valid, show spinner and allow submission
+      // Check if updating existing student (has student_id)
+      const studentIdHidden = document.getElementById('studentIdHidden');
+      const studentId = studentIdHidden ? studentIdHidden.value.trim() : '';
+
+      if (studentId) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleUpdateStudent(studentId, this);
+        return false;
+      }
+
+      // If creating new student, show spinner and allow normal submission
       const btn = document.getElementById('saveStudentBtn');
       btn.querySelector('.save-text').classList.add('d-none');
       btn.querySelector('.spinner-border').classList.remove('d-none');
       btn.style.pointerEvents = 'none';
     });
+
+    // =============================================
+    // EDIT STUDENT MODAL & AJAX SUBMIT (NO RELOAD)
+    // =============================================
+    function openEditStudentModalFromBtn(btn, e) {
+      if (e) e.preventDefault();
+      try {
+        const raw = btn.getAttribute('data-student-json');
+        const s = JSON.parse(raw);
+        openEditStudentModal(s, e);
+      } catch (err) {
+        console.error('Failed to parse student data from button:', err);
+      }
+    }
+
+    function openEditStudentModal(s, e) {
+      if (e) e.preventDefault();
+      hideValidationAlert();
+
+      const form = document.getElementById('studentForm');
+      if (!form) return;
+      form.reset();
+
+      // Set ID
+      const idInp = document.getElementById('studentIdHidden');
+      if (idInp) idInp.value = s.id;
+
+      // Set Title
+      const title = document.getElementById('studentModalLabel');
+      if (title) title.innerHTML = '<i class="fa-solid fa-user-graduate text-primary me-2"></i> تعديل بيانات الطالب: ' + (s.name || '');
+
+      // Fill basic inputs
+      const nameInp = form.querySelector('input[name="name"]');
+      if (nameInp) nameInp.value = s.name || '';
+
+      const natSel = form.querySelector('select[name="nationality"]');
+      if (natSel) natSel.value = s.nationality || 'سعودي';
+
+      const phoneInp = document.getElementById('phoneInput');
+      if (phoneInp) phoneInp.value = s.phone || '';
+
+      const mPhoneInp = document.getElementById('motherPhoneInput');
+      if (mPhoneInp) mPhoneInp.value = s.mother_phone || '';
+
+      const neighInp = form.querySelector('input[name="neighborhood"]');
+      if (neighInp) neighInp.value = s.neighborhood || '';
+
+      // Date of birth
+      const dobG = document.getElementById('dobGregorian');
+      if (dobG) {
+        dobG.value = s.date_of_birth || '';
+        if (s.date_of_birth) {
+          onGregorianChange(s.date_of_birth);
+        } else {
+          const ageDisp = document.getElementById('studentAgeDisplay');
+          if (ageDisp) {
+            ageDisp.textContent = 'يرجى إدخال تاريخ الميلاد';
+            ageDisp.className = 'badge bg-secondary fs-6 px-3 py-1';
+          }
+        }
+      }
+
+      // Branch & Type
+      const typeSel = document.getElementById('internalStudentType');
+      if (typeSel) typeSel.value = s.student_type || 'بنين';
+
+      const branchSel = document.getElementById('internalStudentBranch');
+      if (branchSel) branchSel.value = s.branch || 'الندى';
+
+      // Cascading Phase, Grade, Track
+      if (typeof window.onInternalBranchOrTypeChange === 'function') {
+        window.onInternalBranchOrTypeChange();
+      }
+
+      const phaseSel = document.getElementById('internalStudentPhase');
+      if (phaseSel) {
+        phaseSel.value = s.phase || 'ابتدائي';
+        if (typeof window.onInternalPhaseChange === 'function') {
+          window.onInternalPhaseChange();
+        }
+      }
+
+      const gradeSel = document.getElementById('internalStudentGrade');
+      if (gradeSel) {
+        gradeSel.value = s.grade || '1';
+        if (typeof window.onInternalGradeChange === 'function') {
+          window.onInternalGradeChange();
+        }
+      }
+
+      const trackSel = document.getElementById('internalStudentTrack');
+      if (trackSel) trackSel.value = s.track || 'عام';
+
+      // Interview & Followup
+      const interviewSel = document.getElementById('interviewResultSelect');
+      if (interviewSel) interviewSel.value = s.interview_result || 'في انتظار المقابلة';
+
+      const followupSel = document.getElementById('followupStatusSelect');
+      if (followupSel) followupSel.value = s.followup_status || 'في انتظار المقابلة';
+
+      const interviewReasonInp = document.getElementById('interviewReasonInput');
+      if (interviewReasonInp) interviewReasonInp.value = s.interview_reason || '';
+
+      const regReasonInp = form.querySelector('input[name="registration_reason"]');
+      if (regReasonInp) regReasonInp.value = s.registration_reason || '';
+
+      const notesInp = form.querySelector('textarea[name="notes"]');
+      if (notesInp) notesInp.value = s.display_notes || s.notes || '';
+
+      toggleInterviewReason();
+
+      // Dynamic Attachments box
+      const attBox = document.getElementById('editModalAttachmentsBox');
+      const attList = document.getElementById('editModalAttachmentsList');
+      if (attBox && attList) {
+        if (s.attachments && s.attachments.length > 0) {
+          attBox.classList.remove('d-none');
+          attList.innerHTML = s.attachments.map((att, idx) => `
+            <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded border" id="editAttItem_${idx}">
+              <div class="d-flex align-items-center gap-2 text-truncate">
+                <i class="fa-solid fa-file text-primary"></i>
+                <span class="fw-bold small text-dark">${att.name || att.original_name || ('مرفق ' + (idx + 1))}</span>
+              </div>
+              <div class="d-flex gap-1">
+                <a href="${att.url}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold"><i class="fa-solid fa-eye me-1"></i> معاينة</a>
+                <a href="${att.url}" download="${att.name || 'attachment'}" target="_blank" class="btn btn-sm btn-outline-success fw-bold"><i class="fa-solid fa-download me-1"></i> تنزيل</a>
+                <button type="button" class="btn btn-sm btn-outline-danger fw-bold" onclick="confirmDeleteAttachment(${s.id}, ${idx}, '${att.url}', '${(att.name || att.original_name || 'ملف').replace(/'/g, "\\'")}', this, 'editModal')"><i class="fa-solid fa-trash me-1"></i> حذف</button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          attBox.classList.add('d-none');
+          attList.innerHTML = '';
+        }
+      }
+
+      // Show Modal
+      const modalEl = document.getElementById('studentModal');
+      if (modalEl) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      }
+    }
+
+    async function handleUpdateStudent(studentId, formEl) {
+      const btn = document.getElementById('saveStudentBtn');
+      const saveText = btn ? btn.querySelector('.save-text') : null;
+      const spinner = btn ? btn.querySelector('.spinner-border') : null;
+
+      if (btn) btn.disabled = true;
+      if (saveText) saveText.classList.add('d-none');
+      if (spinner) spinner.classList.remove('d-none');
+
+      try {
+        const formData = new FormData(formEl);
+        const res = await axios.put('/api/students/' + encodeURIComponent(studentId), formData);
+
+        if (res.status === 200 && res.data && res.data.success) {
+          // 1. Close Modal
+          const modalEl = document.getElementById('studentModal');
+          if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+            if (modal) modal.hide();
+          }
+
+          // 2. Toast success
+          const successMsg = res.data.message || 'تم تحديث بيانات الطالب بنجاح';
+          if (window.toast && window.toast.success) {
+            window.toast.success(successMsg);
+          } else {
+            showToast('✅ ' + successMsg, 'success');
+          }
+
+          // 3. Local State Synchronize (No Reload)
+          if (res.data.student) {
+            updateLocalStudentRow(res.data.student);
+          }
+        } else {
+          const errMsg = (res.data && res.data.message) || 'تعذر تحديث بيانات الطالب';
+          throw new Error(errMsg);
+        }
+      } catch (error) {
+        console.error('Update student exception:', error);
+        const serverMsg = (error.response && error.response.data && error.response.data.message) 
+          || (error.response && error.response.data && error.response.data.error)
+          || error.message 
+          || 'حدث خطأ أثناء حفظ التعديلات في الخادم';
+
+        // Show Toast Error
+        if (window.toast && window.toast.error) {
+          window.toast.error(serverMsg);
+        } else {
+          showToast('❌ ' + serverMsg, 'danger');
+        }
+
+        // KEEP MODAL OPEN! Display warning banner
+        showValidationAlert(serverMsg);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.style.pointerEvents = 'auto';
+        }
+        if (saveText) saveText.classList.remove('d-none');
+        if (spinner) spinner.classList.add('d-none');
+      }
+    }
+
+    function updateLocalStudentRow(s) {
+      if (!s || !s.id) return;
+      const row = document.querySelector(`tr[data-student-id="${s.id}"]`);
+      if (!row) return;
+
+      // Check branch filter condition
+      const activeBranchVal = "<%= (typeof activeBranch !== 'undefined' && activeBranch) ? activeBranch : '' %>";
+      const branchFilterVal = "<%= (typeof branchFilter !== 'undefined' && branchFilter) ? branchFilter : '' %>";
+      const currentBranchFilter = branchFilterVal || (activeBranchVal !== 'الكل' ? activeBranchVal : '');
+
+      if (currentBranchFilter && currentBranchFilter !== 'الكل' && s.branch && s.branch !== currentBranchFilter) {
+        row.style.transition = 'all 0.5s ease';
+        row.style.backgroundColor = '#fee2e2';
+        row.style.opacity = '0';
+        setTimeout(() => {
+          row.remove();
+          const pgTotal = document.getElementById('pgTotal');
+          if (pgTotal) {
+            const cur = parseInt(pgTotal.textContent) || 0;
+            if (cur > 0) pgTotal.textContent = cur - 1;
+          }
+        }, 500);
+        return;
+      }
+
+      // In-place Row Update
+      const cells = row.children;
+      if (cells.length >= 8) {
+        // Name & Type
+        const nameDiv = cells[1].querySelector('.fs-6');
+        if (nameDiv) nameDiv.textContent = s.name;
+        const typeSmall = cells[1].querySelector('small.text-muted');
+        if (typeSmall) typeSmall.textContent = (s.nationality || 'سعودي') + (s.student_type ? ' • ' + s.student_type : '');
+
+        // Phone & WhatsApp
+        const waLink = cells[2].querySelector('a');
+        if (waLink && s.phone) {
+          const cleanPhone = s.phone.replace(/[^0-9]/g, '');
+          waLink.href = 'https://wa.me/' + cleanPhone;
+          waLink.innerHTML = '<i class="fa-brands fa-whatsapp me-1"></i>' + s.phone;
+        }
+
+        // Phase & Grade
+        const phaseGradeBadge = cells[3].querySelector('.badge');
+        if (phaseGradeBadge) {
+          phaseGradeBadge.textContent = (s.phase || '') + (s.grade ? ' - صف ' + s.grade : '');
+        }
+
+        // Branch
+        const branchBadge = cells[4].querySelector('.badge');
+        if (branchBadge) {
+          branchBadge.textContent = s.branch || 'الندى';
+        }
+
+        // Notes
+        const notesCell = cells[8];
+        if (notesCell) {
+          const noteText = s.display_notes || s.notes || '';
+          notesCell.setAttribute('title', noteText);
+          const small = notesCell.querySelector('small');
+          if (small) small.textContent = noteText.trim() || '—';
+        }
+
+        // Update Edit Button's data-student-json attribute
+        const editBtn = row.querySelector('.btn-edit-student');
+        if (editBtn) {
+          editBtn.setAttribute('data-student-json', JSON.stringify(s));
+        }
+
+        // Visual flash highlight
+        row.style.transition = 'background-color 0.4s ease';
+        row.style.backgroundColor = '#dcfce7';
+        setTimeout(() => {
+          row.style.backgroundColor = '';
+        }, 1800);
+      }
+    }
 
     // Remove is-invalid on live user input/change
     document.querySelectorAll('#studentForm input, #studentForm select, #studentForm textarea').forEach(el => {
@@ -1384,71 +1701,36 @@
   <!-- DYNAMIC CASCADING FOR INTERNAL STUDENT FORM -->
   <script>
     (function() {
-      const pStruct = <%- JSON.stringify((typeof phaseStructure !== 'undefined' && phaseStructure) ? phaseStructure : {}) %>;
-      const sysSettings = <%- JSON.stringify((typeof settings !== 'undefined' && settings) ? settings : {}) %>;
-
-      function isInternalGradeOpen(branch, studentType, phase, grade, track) {
-        const matrix = sysSettings.grade_matrix || {};
-        const pSwitches = sysSettings.branch_phase_switches || {};
-        const mSwitches = sysSettings.branch_master_switches || {};
-
-        if (mSwitches[branch] === false) return false;
-        if (pSwitches[branch + '_' + phase] === false) return false;
-
-        const k = branch + '_' + studentType + '_' + phase + '_' + grade + '_' + track;
-        if (matrix[k] !== undefined) {
-          return matrix[k] === true || matrix[k] === 'true' || matrix[k] === 1;
-        }
-        return true; // default open
-      }
+      const fallbackStruct = {
+        'روضة': { grades: [{id:'1', name:'روضة أولى (KG1)'}, {id:'2', name:'روضة ثانية (KG2)'}, {id:'3', name:'تمهيدي (KG3)'}], tracks: ['عام'] },
+        'ابتدائي': { grades: [{id:'1', name:'الصف الأول الابتدائي'}, {id:'2', name:'الصف الثاني الابتدائي'}, {id:'3', name:'الصف الثالث الابتدائي'}, {id:'4', name:'الصف الرابع الابتدائي'}, {id:'5', name:'الصف الخامس الابتدائي'}, {id:'6', name:'الصف السادس الابتدائي'}], tracks: ['عام', 'تحفيظ'] },
+        'متوسط': { grades: [{id:'1', name:'الصف الأول المتوسط'}, {id:'2', name:'الصف الثاني المتوسط'}, {id:'3', name:'الصف الثالث المتوسط'}], tracks: ['عام', 'تحفيظ'] },
+        'ثانوي': { grades: [{id:'1', name:'الصف الأول الثانوي'}, {id:'2', name:'الصف الثاني الثانوي'}, {id:'3', name:'الصف الثالث الثانوي'}], tracks: ['عام'] }
+      };
+      const pStruct = (typeof phaseStructure !== 'undefined' && phaseStructure && Object.keys(phaseStructure).length > 0) ? phaseStructure : fallbackStruct;
 
       window.onInternalBranchOrTypeChange = function() {
-        const bEl = document.getElementById('internalStudentBranch');
-        const tEl = document.getElementById('internalStudentType');
         const pEl = document.getElementById('internalStudentPhase');
-        if (!bEl || !tEl || !pEl) return;
+        if (!pEl) return;
 
-        const branch = bEl.value;
-        const studentType = tEl.value || 'بنين';
         const currentPhase = pEl.value;
-
         pEl.innerHTML = '<option value="">اختر المرحلة...</option>';
         Object.entries(pStruct).forEach(([pName, pInfo]) => {
-          // Check if phase is open in branch
-          const pSwitches = sysSettings.branch_phase_switches || {};
-          if (pSwitches[branch + '_' + pName] === false) return;
-
-          // Check if at least one grade is open
-          let hasAnyOpen = false;
-          pInfo.grades.forEach(gItem => {
-            ['عام', 'تحفيظ'].forEach(tName => {
-              if (isInternalGradeOpen(branch, studentType, pName, gItem.id, tName)) {
-                hasAnyOpen = true;
-              }
-            });
-          });
-
-          if (hasAnyOpen) {
-            const opt = document.createElement('option');
-            opt.value = pName;
-            opt.textContent = pName;
-            if (pName === currentPhase) opt.selected = true;
-            pEl.appendChild(opt);
-          }
+          const opt = document.createElement('option');
+          opt.value = pName;
+          opt.textContent = pName;
+          if (pName === currentPhase) opt.selected = true;
+          pEl.appendChild(opt);
         });
 
         window.onInternalPhaseChange();
       };
 
       window.onInternalPhaseChange = function() {
-        const bEl = document.getElementById('internalStudentBranch');
-        const tEl = document.getElementById('internalStudentType');
         const pEl = document.getElementById('internalStudentPhase');
         const gEl = document.getElementById('internalStudentGrade');
-        if (!bEl || !tEl || !pEl || !gEl) return;
+        if (!pEl || !gEl) return;
 
-        const branch = bEl.value;
-        const studentType = tEl.value || 'بنين';
         const phase = pEl.value;
         const currentGrade = gEl.value;
 
@@ -1460,54 +1742,37 @@
 
         const grades = pStruct[phase].grades || [];
         grades.forEach(gItem => {
-          let hasOpenTrack = false;
-          ['عام', 'تحفيظ'].forEach(tName => {
-            if (isInternalGradeOpen(branch, studentType, phase, gItem.id, tName)) {
-              hasOpenTrack = true;
-            }
-          });
-
-          if (hasOpenTrack) {
-            const opt = document.createElement('option');
-            opt.value = gItem.id;
-            opt.textContent = gItem.name;
-            if (String(gItem.id) === String(currentGrade)) opt.selected = true;
-            gEl.appendChild(opt);
-          }
+          const opt = document.createElement('option');
+          opt.value = gItem.id;
+          opt.textContent = gItem.name;
+          if (String(gItem.id) === String(currentGrade)) opt.selected = true;
+          gEl.appendChild(opt);
         });
 
         window.onInternalGradeChange();
       };
 
       window.onInternalGradeChange = function() {
-        const bEl = document.getElementById('internalStudentBranch');
-        const tEl = document.getElementById('internalStudentType');
         const pEl = document.getElementById('internalStudentPhase');
-        const gEl = document.getElementById('internalStudentGrade');
         const trEl = document.getElementById('internalStudentTrack');
-        if (!bEl || !tEl || !pEl || !gEl || !trEl) return;
+        if (!pEl || !trEl) return;
 
-        const branch = bEl.value;
-        const studentType = tEl.value || 'بنين';
         const phase = pEl.value;
-        const grade = gEl.value;
         const currentTrack = trEl.value;
 
         trEl.innerHTML = '';
-        if (!phase || !grade || !pStruct[phase]) {
+        if (!phase || !pStruct[phase]) {
           trEl.innerHTML = '<option value="عام">عام</option>';
           return;
         }
 
         const validTracks = pStruct[phase].tracks || ['عام'];
         validTracks.forEach(tName => {
-          if (isInternalGradeOpen(branch, studentType, phase, grade, tName)) {
-            const opt = document.createElement('option');
-            opt.value = tName;
-            opt.textContent = tName;
-            if (tName === currentTrack) opt.selected = true;
-            trEl.appendChild(opt);
-          }
+          const opt = document.createElement('option');
+          opt.value = tName;
+          opt.textContent = tName;
+          if (tName === currentTrack) opt.selected = true;
+          trEl.appendChild(opt);
         });
 
         if (trEl.children.length === 0) {
