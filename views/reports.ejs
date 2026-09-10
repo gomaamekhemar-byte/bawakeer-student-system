@@ -238,6 +238,7 @@
     <div class="text-center">
       <div style="font-size: 15px; font-weight: 800; color: #0f172a;">كشف بيانات الطلاب والتحليل الديموغرافي</div>
       <div style="font-size: 11px; color: #475569; font-weight: 600;">العام الدراسي: <%= activeYear ? activeYear.year_name : '1448هـ' %></div>
+      <div style="font-size: 11px; color: #1e3a8a; font-weight: 700; margin-top: 3px;">كشف الطلاب للفترة من <%= typeof startDate !== 'undefined' ? startDate : '' %> إلى <%= typeof endDate !== 'undefined' ? endDate : '' %></div>
     </div>
     <div class="text-start">
       <% if (typeof systemSettings !== 'undefined' && systemSettings.school_logo_url) { %>
@@ -306,18 +307,25 @@
               <i class="fa-solid fa-print fs-5"></i>
               <span>طباعة فورية</span>
             </button>
-            <a href="/export/excel?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&grade_filter=<%= typeof gradeFilter !== 'undefined' ? gradeFilter : '' %>&student_type_filter=<%= typeof studentTypeFilter !== 'undefined' ? studentTypeFilter : '' %>&track_filter=<%= typeof trackFilter !== 'undefined' ? trackFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>" class="btn btn-success px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <a href="/export/excel?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&grade_filter=<%= typeof gradeFilter !== 'undefined' ? gradeFilter : '' %>&student_type_filter=<%= typeof studentTypeFilter !== 'undefined' ? studentTypeFilter : '' %>&track_filter=<%= typeof trackFilter !== 'undefined' ? trackFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>&startDate=<%= typeof startDate !== 'undefined' ? startDate : '' %>&endDate=<%= typeof endDate !== 'undefined' ? endDate : '' %>" class="btn btn-success px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-excel fs-5"></i>
               <span>تصدير Excel</span>
             </a>
-            <a href="/export/pdf?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&grade_filter=<%= typeof gradeFilter !== 'undefined' ? gradeFilter : '' %>&student_type_filter=<%= typeof studentTypeFilter !== 'undefined' ? studentTypeFilter : '' %>&track_filter=<%= typeof trackFilter !== 'undefined' ? trackFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>" target="_blank" class="btn btn-danger px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+            <a href="/export/pdf?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&grade_filter=<%= typeof gradeFilter !== 'undefined' ? gradeFilter : '' %>&student_type_filter=<%= typeof studentTypeFilter !== 'undefined' ? studentTypeFilter : '' %>&track_filter=<%= typeof trackFilter !== 'undefined' ? trackFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>&startDate=<%= typeof startDate !== 'undefined' ? startDate : '' %>&endDate=<%= typeof endDate !== 'undefined' ? endDate : '' %>" target="_blank" class="btn btn-danger px-3 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
               <i class="fa-solid fa-file-pdf fs-5"></i>
               <span>كشف PDF</span>
             </a>
           </div>
         </div>
 
+        <!-- REUSABLE GLOBAL DATE FILTER -->
+        <div class="mb-3">
+          <%- include('partials/date_filter') %>
+        </div>
+
         <form method="get" action="/reports">
+          <input type="hidden" name="startDate" value="<%= typeof startDate !== 'undefined' ? startDate : '' %>">
+          <input type="hidden" name="endDate" value="<%= typeof endDate !== 'undefined' ? endDate : '' %>">
           <div class="row g-3 align-items-end">
             <!-- 1. Branch -->
             <div class="col-xl-3 col-md-4 col-6">
