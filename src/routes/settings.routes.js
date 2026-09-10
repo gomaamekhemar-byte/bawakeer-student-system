@@ -9,6 +9,7 @@ const {
   saveExternalSettings,
   getSystemIdentity,
   saveSystemIdentity,
+  updateBranchWhatsAppNumber,
   isGradeAvailable,
   isBranchMasterActive,
   getActiveBranches,
@@ -99,10 +100,13 @@ router.post("/external_settings", requireAuth, withUser, async (req, res) => {
   const show_notes = req.body.show_notes === "1";
 
   // 1. Build branch_phones map keyed by branch ID and branch Name
-  const branch_phones = {};
+  const branch_phones = { ...(currentSettings.branch_phones || {}) };
   branches.forEach(b => {
-    const val = (req.body[`branch_phone_${b.id}`] || req.body[`branch_phone_${b.name}`] || "").trim();
-    if (val) {
+    const rawVal = req.body[`branch_phone_${b.id}`] !== undefined
+      ? req.body[`branch_phone_${b.id}`]
+      : req.body[`branch_phone_${b.name}`];
+    if (rawVal !== undefined) {
+      const val = String(rawVal).trim();
       branch_phones[String(b.id)] = val;
       branch_phones[b.name] = val;
     }
@@ -337,6 +341,93 @@ router.post("/api/settings/identity", requireAuth, withUser, upload.single("logo
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// =========================================================================
+// Branch Contact & WhatsApp Endpoints (REST API)
+// =========================================================================
+async function handleUpdateBranchWhatsApp(req, res) {
+  try {
+    const branchId = req.params.id;
+    const whatsapp_number = req.body.whatsapp_number !== undefined
+      ? req.body.whatsapp_number
+      : (req.body.branch_phone !== undefined
+        ? req.body.branch_phone
+        : (req.body.phone !== undefined
+          ? req.body.phone
+          : (req.body.contact_phone !== undefined ? req.body.contact_phone : "")));
+
+    const username = (req.currentUser && req.currentUser.username) || "admin";
+    const updatedBranch = await updateBranchWhatsAppNumber(branchId, whatsapp_number, username);
+
+    await addHistory("branch_whatsapp_updated", `تم تحديث رقم واتساب فرع ${updatedBranch.name} إلى ${updatedBranch.whatsapp_number}`, username);
+
+    return res.status(200).json({
+      success: true,
+      message: `تم تحديث رقم واتساب فرع ${updatedBranch.name} بنجاح ✅`,
+      branch: updatedBranch
+    });
+  } catch (err) {
+    console.error("Error in handleUpdateBranchWhatsApp:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || "حدث خطأ أثناء تحديث رقم واتساب الفرع"
+    });
+  }
+}
+
+// Support PUT, PATCH, POST for branch update
+router.put("/api/branches/:id", withUser, handleUpdateBranchWhatsApp);
+router.patch("/api/branches/:id", withUser, handleUpdateBranchWhatsApp);
+router.post("/api/branches/:id", withUser, handleUpdateBranchWhatsApp);
+router.put("/api/branches/:id/whatsapp", withUser, handleUpdateBranchWhatsApp);
+router.post("/api/branches/:id/whatsapp", withUser, handleUpdateBranchWhatsApp);
+
+// GET /api/branches - List all branches with their WhatsApp routing number
+router.get("/api/branches", async (req, res) => {
+  try {
+    const branches = await getBranches(false);
+    const settings = await getExternalSettings();
+    const phones = settings.branch_phones || {};
+    const result = branches.map(b => {
+      const p = phones[b.id] || phones[b.name] || "0553620441";
+      return {
+        ...b,
+        whatsapp_number: p,
+        contact_phone: p,
+        phone: p
+      };
+    });
+    return res.status(200).json({ success: true, branches: result });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/branches/:id - Get specific branch with WhatsApp number
+router.get("/api/branches/:id", async (req, res) => {
+  try {
+    const branches = await getBranches(false);
+    const idStr = String(req.params.id);
+    const branch = branches.find(b => String(b.id) === idStr || b.name === idStr);
+    if (!branch) {
+      return res.status(404).json({ success: false, error: "الفرع غير موجود" });
+    }
+    const settings = await getExternalSettings();
+    const phones = settings.branch_phones || {};
+    const p = phones[branch.id] || phones[branch.name] || "0553620441";
+    return res.status(200).json({
+      success: true,
+      branch: {
+        ...branch,
+        whatsapp_number: p,
+        contact_phone: p,
+        phone: p
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 
