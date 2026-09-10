@@ -11,7 +11,9 @@ const VALID_STUDENT_COLUMNS = [
 ];
 
 function sanitizeStudentData(data) {
-  if (data.status && !data.followup_status) {
+  if (data.status === 'unavailable_grade' || data.followup_status === 'unavailable_grade' || data.status === 'صف غير متاح' || data.followup_status === 'صف غير متاح') {
+    data.followup_status = 'unavailable_grade';
+  } else if (data.status && !data.followup_status) {
     data.followup_status = data.status;
   }
   const clean = {};
@@ -35,12 +37,23 @@ function normalizeStudent(student) {
   student.track = student.track || 'عام';
   student.interview_result = student.interview_result || 'لم يقابل';
   student.followup_status = student.followup_status || 'في انتظار التسجيل';
-  student.status = student.followup_status;
   
   // Extract metadata safely from JSONB attachments
   const rawAtts = Array.isArray(student.attachments) ? student.attachments : [];
   const metaObj = rawAtts.find(a => a && a.__meta);
   const meta = metaObj ? metaObj.__meta : {};
+
+  // Check if student belongs to an unavailable grade (Waitlist)
+  const isUnavailable = student.followup_status === 'unavailable_grade' || 
+                        student.followup_status === 'صف غير متاح' ||
+                        (meta && meta.status === 'unavailable_grade') ||
+                        (student.registration_reason && student.registration_reason.includes('غير متاح'));
+  if (isUnavailable) {
+    student.status = 'unavailable_grade';
+    student.followup_status = 'unavailable_grade';
+  } else {
+    student.status = student.followup_status;
+  }
 
   student.registration_source = meta.registration_source || 'تسجيل داخلي';
   student.mother_phone = meta.mother_phone || '';
@@ -111,6 +124,37 @@ async function getStudentByIdIncludingDeleted(id) {
 }
 
 async function createStudent(studentData) {
+  // Pre-insert Validation: Check grade availability from academic structure
+  try {
+    const { isGradeAvailable, getExternalSettings } = require('./settings.service');
+    const settings = await getExternalSettings();
+    let branchName = studentData.branch || '';
+    if (branchName && !isNaN(branchName)) {
+      const { getBranches } = require('./branches.service');
+      const branches = await getBranches(false);
+      const matched = branches.find(b => String(b.id) === String(branchName));
+      if (matched) branchName = matched.name;
+    }
+    const isAvail = isGradeAvailable(
+      branchName,
+      studentData.student_type,
+      studentData.phase,
+      studentData.grade,
+      studentData.track,
+      settings
+    );
+
+    if (!isAvail || studentData.status === 'unavailable_grade' || studentData.followup_status === 'unavailable_grade' || (studentData.registration_reason || '').includes('غير متاح')) {
+      studentData.status = 'unavailable_grade';
+      studentData.followup_status = 'unavailable_grade';
+      if (!studentData.registration_reason) {
+        studentData.registration_reason = 'تم التسجيل على قائمة الانتظار (الصف المطلوب غير متاح حالياً)';
+      }
+    }
+  } catch (err) {
+    console.warn('Grade availability check warning in createStudent:', err.message);
+  }
+
   const sanitized = sanitizeStudentData(studentData);
   sanitized.updated_at = new Date().toISOString();
 
