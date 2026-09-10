@@ -1253,12 +1253,9 @@
       if (badgeGen) { badgeGen.textContent = `${general} طالب (${genPct}%)`; badgeGen.setAttribute('data-default-count', general); badgeGen.setAttribute('data-default-percent', genPct); }
       if (badgeTah) { badgeTah.textContent = `${tahfeez} طالب (${tahPct}%)`; badgeTah.setAttribute('data-default-count', tahfeez); badgeTah.setAttribute('data-default-percent', tahPct); }
 
-      // Update Waitlist Demand (Checking followup_status, status, and registration_reason)
-      const waitlist = filtered.filter(s => {
-        const st = (s.followup_status || '').trim();
-        const stat = (s.status || '').trim();
-        return st === 'صف غير متاح' || st === 'unavailable_grade' || stat === 'unavailable_grade' || stat === 'صف غير متاح' || (s.registration_reason || '').includes('غير متاح');
-      }).length;
+      // Update Waitlist Demand (Demand for unavailable grades)
+      const unavailableCount = filtered.filter(student => student.status === 'unavailable_grade').length;
+      const waitlist = unavailableCount;
       const waitlistRate = total > 0 ? Math.round((waitlist / total) * 1000) / 10 : 0;
       const elWaitlist = document.getElementById('statWaitlistCount');
       const elWaitlistRate = document.getElementById('statWaitlistRate');
