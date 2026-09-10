@@ -141,6 +141,28 @@ async function createStudent(studentData) {
 }
 
 async function updateStudent(id, studentData) {
+  try {
+    const { data: rawData } = await supabase.from('students').select('attachments').eq('id', id).single();
+    let rawAtts = Array.isArray(rawData && rawData.attachments) ? rawData.attachments : [];
+    let metaIndex = rawAtts.findIndex(a => a && a.__meta);
+    let meta = metaIndex !== -1 ? { ...rawAtts[metaIndex].__meta } : {};
+
+    if (studentData.mother_phone !== undefined) {
+      meta.mother_phone = studentData.mother_phone;
+    }
+    if (studentData.registration_source !== undefined) {
+      meta.registration_source = studentData.registration_source;
+    }
+
+    let attsToSave = studentData.attachments !== undefined ? studentData.attachments : rawAtts.filter(a => a && !a.__meta);
+    if (!Array.isArray(attsToSave)) attsToSave = [];
+    attsToSave = attsToSave.filter(a => a && !a.__meta);
+    attsToSave.push({ __meta: meta });
+    studentData.attachments = attsToSave;
+  } catch (e) {
+    console.error('Error preserving metadata in updateStudent:', e);
+  }
+
   const sanitized = sanitizeStudentData(studentData);
   sanitized.updated_at = new Date().toISOString();
 
