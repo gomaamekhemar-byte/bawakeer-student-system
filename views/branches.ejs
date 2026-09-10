@@ -359,7 +359,7 @@
           </div>
 
           <!-- 2. FORM WRAPPER -->
-          <form method="post" action="/branches" class="structure-form">
+          <form method="post" action="/branches" class="structure-form" onsubmit="handleSave(event, this)">
             <input type="hidden" name="action" value="edit_structure">
             <input type="hidden" name="target_branch_name" value="<%= branch.name %>">
 
@@ -520,8 +520,15 @@
   <% })} %>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   
   <script>
+    // Global Toast Interface for strict user feedback
+    window.toast = {
+      success: function(msg) { showStructureToast('success', msg); },
+      error: function(msg) { showStructureToast('danger', msg); }
+    };
+
     // 1. Wizard helpers
     function toggleCreatePhaseContainer(phaseName, isChecked) {
       const box = document.getElementById('create_phase_container_' + phaseName);
@@ -613,13 +620,13 @@
         })
       }).then(r => r.json()).then(data => {
         if (data.success) {
-          showStructureToast('success', `تم ${isChecked ? 'تفعيل' : 'تعطيل'} مرحلة ${phaseName} (${gender}) بنجاح`);
+          toast.success(`تم ${isChecked ? 'تفعيل' : 'تعطيل'} مرحلة ${phaseName} (${gender}) بنجاح`);
         } else {
-          showStructureToast('danger', 'تعذر تحديث المفتاح في السيرفر');
+          toast.error('تعذر تحديث المفتاح في السيرفر');
         }
       }).catch(err => {
         console.warn('Phase gender master toggle error:', err);
-        showStructureToast('danger', 'خطأ في الاتصال بالسيرفر');
+        toast.error('خطأ في الاتصال بالسيرفر');
       });
     }
 
@@ -631,11 +638,11 @@
         body: JSON.stringify({ type: 'grade_track', key: key, enabled: isChecked })
       }).then(r => r.json()).then(data => {
         if (!data.success) {
-          showStructureToast('danger', 'تعذر تحديث الصف في السيرفر');
+          toast.error('تعذر تحديث الصف في السيرفر');
         }
       }).catch(err => {
         console.warn('Grade track toggle error:', err);
-        showStructureToast('danger', 'خطأ في الاتصال بالسيرفر');
+        toast.error('خطأ في الاتصال بالسيرفر');
       });
     }
 
@@ -646,7 +653,6 @@
         alert(message);
         return;
       }
-      const toastHeader = document.getElementById('structureToastHeader');
       const toastBody = document.getElementById('structureToastBody');
       
       toastEl.className = 'toast align-items-center text-white border-0 shadow-lg ' + (type === 'success' ? 'bg-success' : 'bg-danger');
@@ -654,81 +660,97 @@
         const icon = type === 'success' ? '<i class="fa-solid fa-circle-check fs-5 me-2"></i>' : '<i class="fa-solid fa-triangle-exclamation fs-5 me-2"></i>';
         toastBody.innerHTML = `<div class="d-flex align-items-center">${icon}<span class="fw-bold">${message}</span></div>`;
       }
-      const toast = new bootstrap.Toast(toastEl, { delay: 4500 });
-      toast.show();
+      const toastInstance = new bootstrap.Toast(toastEl, { delay: 4500 });
+      toastInstance.show();
     }
 
-    // 7. Academic Structure Save Handler with try/catch & Status 200 Verification
+    // 7. Academic Structure Save Handler (handleSave) using await axios.post inside try/catch
+    async function handleSave(event, formElement) {
+      if (event && event.preventDefault) event.preventDefault();
+      const form = formElement || (event && event.target && event.target.closest('form')) || document.querySelector('.structure-form');
+      if (!form) return;
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+      
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> جاري الحفظ والتثبيت...';
+      }
+
+      try {
+        const branchNameInp = form.querySelector('input[name="target_branch_name"]');
+        const targetBranch = branchNameInp ? branchNameInp.value : '';
+        const grade_matrix = {};
+        const branch_phase_switches = {};
+
+        form.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+          if (chk.name && chk.name.startsWith('edit_matrix_')) {
+            const key = chk.name.replace('edit_matrix_', '');
+            grade_matrix[key] = chk.checked;
+          } else if (chk.name && chk.name.startsWith('edit_phase_boys_')) {
+            const pName = chk.name.split('_').pop();
+            const key = `${targetBranch}_بنين_${pName}`;
+            branch_phase_switches[key] = chk.checked;
+          } else if (chk.name && chk.name.startsWith('edit_phase_girls_')) {
+            const pName = chk.name.split('_').pop();
+            const key = `${targetBranch}_بنات_${pName}`;
+            branch_phase_switches[key] = chk.checked;
+          }
+        });
+
+        // Overall phase switches: active if either boys or girls is active
+        form.querySelectorAll('input[name^="edit_phase_boys_"]').forEach(boysChk => {
+          const pName = boysChk.name.split('_').pop();
+          const girlsChk = form.querySelector(`input[name="edit_phase_girls_${targetBranch}_${pName}"]`);
+          const phaseKey = `${targetBranch}_${pName}`;
+          branch_phase_switches[phaseKey] = boysChk.checked || (girlsChk && girlsChk.checked);
+        });
+
+        const payload = {
+          target_branch_name: targetBranch,
+          branch: targetBranch,
+          grade_matrix,
+          branch_phase_switches
+        };
+
+        const apiClient = window.axios || {
+          post: async (url, data) => {
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify(data)
+            });
+            const d = await res.json().catch(() => ({}));
+            return { status: res.status, data: d };
+          }
+        };
+
+        const response = await apiClient.post('/api/branches/structure/save', payload);
+
+        // Strict condition: only show success if status === 200 or 201
+        if (response.status === 200 || response.status === 201) {
+          toast.success(response.data?.message || `تم حفظ وتثبيت هيكل فرع ${targetBranch} بنجاح ✅`);
+        } else {
+          toast.error(response.data?.error || `فشل الحفظ (رمز الاستجابة: ${response.status})`);
+        }
+      } catch (error) {
+        console.error('Save error in handleSave:', error);
+        const errMsg = error.response?.data?.error || error.message || 'فشل حفظ الهيكل الأكاديمي في السيرفر';
+        toast.error(errMsg);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+        }
+      }
+    }
+    window.handleSave = handleSave;
+
     document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('.structure-form').forEach(form => {
-        form.addEventListener('submit', async function(e) {
-          e.preventDefault();
-          const submitBtn = form.querySelector('button[type="submit"]');
-          const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
-          
-          if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> جاري الحفظ والتثبيت...';
-          }
-
-          try {
-            const branchNameInp = form.querySelector('input[name="target_branch_name"]');
-            const targetBranch = branchNameInp ? branchNameInp.value : '';
-            const grade_matrix = {};
-            const branch_phase_switches = {};
-
-            form.querySelectorAll('input[type="checkbox"]').forEach(chk => {
-              if (chk.name && chk.name.startsWith('edit_matrix_')) {
-                const key = chk.name.replace('edit_matrix_', '');
-                grade_matrix[key] = chk.checked;
-              } else if (chk.name && chk.name.startsWith('edit_phase_boys_')) {
-                const pName = chk.name.split('_').pop();
-                const key = `${targetBranch}_بنين_${pName}`;
-                branch_phase_switches[key] = chk.checked;
-              } else if (chk.name && chk.name.startsWith('edit_phase_girls_')) {
-                const pName = chk.name.split('_').pop();
-                const key = `${targetBranch}_بنات_${pName}`;
-                branch_phase_switches[key] = chk.checked;
-              }
-            });
-
-            // Overall phase switches: active if either boys or girls is active
-            form.querySelectorAll('input[name^="edit_phase_boys_"]').forEach(boysChk => {
-              const pName = boysChk.name.split('_').pop();
-              const girlsChk = form.querySelector(`input[name="edit_phase_girls_${targetBranch}_${pName}"]`);
-              const phaseKey = `${targetBranch}_${pName}`;
-              branch_phase_switches[phaseKey] = boysChk.checked || (girlsChk && girlsChk.checked);
-            });
-
-            const response = await fetch('/api/branches/structure/save', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              },
-              body: JSON.stringify({
-                target_branch_name: targetBranch,
-                grade_matrix,
-                branch_phase_switches
-              })
-            });
-
-            if (response.ok && response.status === 200) {
-              const data = await response.json();
-              showStructureToast('success', data.message || `تم حفظ جميع تعديلات الهيكل لفرع ${targetBranch} بنجاح ✅`);
-            } else {
-              const errData = await response.json().catch(() => ({}));
-              throw new Error(errData.error || `تعذر حفظ الهيكل (كود الخطأ: ${response.status})`);
-            }
-          } catch (err) {
-            console.error('Error in structure save:', err);
-            showStructureToast('danger', `فشل حفظ الهيكل الأكاديمي: ${err.message}. تم الحفاظ على تعديلاتك بالنموذج`);
-          } finally {
-            if (submitBtn) {
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = originalBtnHtml;
-            }
-          }
+        form.addEventListener('submit', function(e) {
+          handleSave(e, form);
         });
       });
     });
