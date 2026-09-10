@@ -374,32 +374,57 @@
               <div class="d-flex flex-column gap-3">
                 <% Object.entries(phaseStructure).forEach(function([pName, pInfo]){ %>
                   <% 
-                    const isPhaseActive = isPhaseActiveInBranch(branch.name, pName, settings);
+                    const isBoysPhaseActive = typeof isPhaseGenderActiveInBranch === 'function' 
+                      ? isPhaseGenderActiveInBranch(branch.name, 'بنين', pName, settings)
+                      : isPhaseActiveInBranch(branch.name, pName, settings);
+                    const isGirlsPhaseActive = typeof isPhaseGenderActiveInBranch === 'function' 
+                      ? isPhaseGenderActiveInBranch(branch.name, 'بنات', pName, settings)
+                      : isPhaseActiveInBranch(branch.name, pName, settings);
+                    const isPhaseActive = isBoysPhaseActive || isGirlsPhaseActive;
                   %>
                   <div class="border rounded-3 p-3 bg-white shadow-xs">
                     
-                    <!-- PHASE MASTER SWITCH -->
-                    <div class="d-flex align-items-center justify-content-between p-2 px-3 bg-light rounded-2 mb-3 border">
+                    <!-- DUAL GENDER PHASE MASTER SWITCHES -->
+                    <div class="d-flex align-items-center justify-content-between p-2 px-3 bg-light rounded-2 mb-3 border flex-wrap gap-2">
                       <div class="d-flex align-items-center gap-2">
                         <i class="fa-solid fa-layer-group text-primary fs-5"></i>
-                        <strong class="fs-6 text-dark">مرحلة <%= pName %> بالكامل</strong>
+                        <strong class="fs-6 text-dark">مرحلة <%= pName %></strong>
                         <span class="badge <%= isPhaseActive ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger' %> ms-2 small" id="badge_phase_<%= branch.id %>_<%= pName %>">
                           <%= isPhaseActive ? 'مفتوحة بالفرع' : 'مغلقة بالكامل' %>
                         </span>
                       </div>
 
-                      <div class="d-flex align-items-center gap-3">
-                        <div class="form-check form-switch m-0">
-                          <input class="form-check-input" type="checkbox" name="edit_phase_<%= branch.name %>_<%= pName %>" id="sw_phase_<%= branch.id %>_<%= pName %>" value="1" <%= isPhaseActive ? 'checked' : '' %> onchange="onPhaseMasterSwitchToggle('<%= branch.name %>', '<%= pName %>', this.checked, '<%= branch.id %>')">
-                          <label class="form-check-label fw-bold small ms-1 <%= isPhaseActive ? 'text-success' : 'text-muted' %>" id="lbl_phase_<%= branch.id %>_<%= pName %>">
-                            <%= isPhaseActive ? 'تفعيل المرحلة' : 'تعطيل المرحلة' %>
-                          </label>
+                      <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <!-- 1. مفتاح تفعيل المرحلة - بنين -->
+                        <div class="d-flex align-items-center gap-2 px-2 py-1 bg-white border rounded shadow-xs">
+                          <span class="badge <%= isBoysPhaseActive ? 'bg-primary-subtle text-primary border border-primary' : 'bg-light text-muted border' %> small fw-bold" id="badge_phase_boys_<%= branch.id %>_<%= pName %>">
+                            👦 بنين
+                          </span>
+                          <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" name="edit_phase_boys_<%= branch.name %>_<%= pName %>" id="sw_phase_boys_<%= branch.id %>_<%= pName %>" value="1" <%= isBoysPhaseActive ? 'checked' : '' %> onchange="onPhaseGenderMasterSwitchToggle('<%= branch.name %>', '<%= pName %>', 'بنين', this.checked, '<%= branch.id %>')">
+                            <label class="form-check-label fw-bold small ms-1 <%= isBoysPhaseActive ? 'text-primary' : 'text-muted' %>" id="lbl_phase_boys_<%= branch.id %>_<%= pName %>" for="sw_phase_boys_<%= branch.id %>_<%= pName %>">
+                              تفعيل المرحلة - بنين
+                            </label>
+                          </div>
+                        </div>
+
+                        <!-- 2. مفتاح تفعيل المرحلة - بنات -->
+                        <div class="d-flex align-items-center gap-2 px-2 py-1 bg-white border rounded shadow-xs">
+                          <span class="badge <%= isGirlsPhaseActive ? 'bg-danger-subtle text-danger border border-danger' : 'bg-light text-muted border' %> small fw-bold" id="badge_phase_girls_<%= branch.id %>_<%= pName %>">
+                            👧 بنات
+                          </span>
+                          <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" name="edit_phase_girls_<%= branch.name %>_<%= pName %>" id="sw_phase_girls_<%= branch.id %>_<%= pName %>" value="1" <%= isGirlsPhaseActive ? 'checked' : '' %> onchange="onPhaseGenderMasterSwitchToggle('<%= branch.name %>', '<%= pName %>', 'بنات', this.checked, '<%= branch.id %>')">
+                            <label class="form-check-label fw-bold small ms-1 <%= isGirlsPhaseActive ? 'text-danger' : 'text-muted' %>" id="lbl_phase_girls_<%= branch.id %>_<%= pName %>" for="sw_phase_girls_<%= branch.id %>_<%= pName %>">
+                              تفعيل المرحلة - بنات
+                            </label>
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <!-- INDIVIDUAL GRADES & TRACKS IN THIS PHASE -->
-                    <div id="grades_box_<%= branch.id %>_<%= pName %>" style="<%= isPhaseActive ? '' : 'display:none;' %>">
+                    <div id="grades_box_<%= branch.id %>_<%= pName %>">
                       <div class="table-responsive">
                         <table class="table table-bordered table-sm align-middle text-center mb-0" style="font-size: 13px;">
                           <thead class="table-light">
@@ -430,7 +455,7 @@
                                 <!-- بنين عام -->
                                 <td>
                                   <div class="form-check form-switch d-inline-flex m-0">
-                                    <input class="form-check-input matrix-sw-<%= branch.id %>" type="checkbox" name="edit_matrix_<%= k_b_gen %>" id="m_<%= k_b_gen %>" value="1" <%= is_b_gen ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_b_gen %>', this.checked)">
+                                    <input class="form-check-input matrix-sw-<%= branch.id %> matrix-sw-boys-<%= branch.id %>-<%= pName %>" type="checkbox" name="edit_matrix_<%= k_b_gen %>" id="m_<%= k_b_gen %>" value="1" <%= is_b_gen ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_b_gen %>', this.checked)">
                                   </div>
                                 </td>
 
@@ -438,7 +463,7 @@
                                 <td>
                                   <% if(pInfo.tracks.includes('تحفيظ')){ %>
                                     <div class="form-check form-switch d-inline-flex m-0">
-                                      <input class="form-check-input matrix-sw-<%= branch.id %>" type="checkbox" name="edit_matrix_<%= k_b_tah %>" id="m_<%= k_b_tah %>" value="1" <%= is_b_tah ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_b_tah %>', this.checked)">
+                                      <input class="form-check-input matrix-sw-<%= branch.id %> matrix-sw-boys-<%= branch.id %>-<%= pName %>" type="checkbox" name="edit_matrix_<%= k_b_tah %>" id="m_<%= k_b_tah %>" value="1" <%= is_b_tah ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_b_tah %>', this.checked)">
                                     </div>
                                   <% } else { %>
                                     <span class="text-muted small">غير متاح</span>
@@ -448,7 +473,7 @@
                                 <!-- بنات عام -->
                                 <td>
                                   <div class="form-check form-switch d-inline-flex m-0">
-                                    <input class="form-check-input matrix-sw-<%= branch.id %>" type="checkbox" name="edit_matrix_<%= k_g_gen %>" id="m_<%= k_g_gen %>" value="1" <%= is_g_gen ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_g_gen %>', this.checked)">
+                                    <input class="form-check-input matrix-sw-<%= branch.id %> matrix-sw-girls-<%= branch.id %>-<%= pName %>" type="checkbox" name="edit_matrix_<%= k_g_gen %>" id="m_<%= k_g_gen %>" value="1" <%= is_g_gen ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_g_gen %>', this.checked)">
                                   </div>
                                 </td>
 
@@ -456,7 +481,7 @@
                                 <td>
                                   <% if(pInfo.tracks.includes('تحفيظ')){ %>
                                     <div class="form-check form-switch d-inline-flex m-0">
-                                      <input class="form-check-input matrix-sw-<%= branch.id %>" type="checkbox" name="edit_matrix_<%= k_g_tah %>" id="m_<%= k_g_tah %>" value="1" <%= is_g_tah ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_g_tah %>', this.checked)">
+                                      <input class="form-check-input matrix-sw-<%= branch.id %> matrix-sw-girls-<%= branch.id %>-<%= pName %>" type="checkbox" name="edit_matrix_<%= k_g_tah %>" id="m_<%= k_g_tah %>" value="1" <%= is_g_tah ? 'checked' : '' %> onchange="onGradeTrackSwitchToggle('<%= k_g_tah %>', this.checked)">
                                     </div>
                                   <% } else { %>
                                     <span class="text-muted small">غير متاح</span>
@@ -548,14 +573,177 @@
       }).catch(err => console.warn('Phase master toggle error:', err));
     }
 
-    // 4. Individual Grade/Track Switch Toggle
+    // 4. Gender-Specific Phase Master Switch Toggle
+    function onPhaseGenderMasterSwitchToggle(branchName, phaseName, gender, isChecked, branchId) {
+      const isBoys = gender === 'بنين';
+      const targetClass = isBoys ? `.matrix-sw-boys-${branchId}-${phaseName}` : `.matrix-sw-girls-${branchId}-${phaseName}`;
+      const inputs = document.querySelectorAll(targetClass);
+      inputs.forEach(inp => {
+        inp.checked = isChecked;
+      });
+
+      const badge = document.getElementById(`badge_phase_${isBoys ? 'boys' : 'girls'}_${branchId}_${phaseName}`);
+      const lbl = document.getElementById(`lbl_phase_${isBoys ? 'boys' : 'girls'}_${branchId}_${phaseName}`);
+      if (badge) {
+        badge.className = `badge ${isChecked ? (isBoys ? 'bg-primary-subtle text-primary border border-primary' : 'bg-danger-subtle text-danger border border-danger') : 'bg-light text-muted border'} small fw-bold`;
+      }
+      if (lbl) {
+        lbl.className = `form-check-label fw-bold small ms-1 ${isChecked ? (isBoys ? 'text-primary' : 'text-danger') : 'text-muted'}`;
+      }
+
+      // Update overall phase badge
+      const otherGender = isBoys ? 'بنات' : 'بنين';
+      const otherSw = document.getElementById(`sw_phase_${isBoys ? 'girls' : 'boys'}_${branchId}_${phaseName}`);
+      const isAnyActive = isChecked || (otherSw && otherSw.checked);
+      const overallBadge = document.getElementById(`badge_phase_${branchId}_${phaseName}`);
+      if (overallBadge) {
+        overallBadge.textContent = isAnyActive ? 'مفتوحة بالفرع' : 'مغلقة بالكامل';
+        overallBadge.className = `badge ${isAnyActive ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'} ms-2 small`;
+      }
+
+      fetch('/api/branches/structure/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'phase_gender_master',
+          branch: branchName,
+          phase: phaseName,
+          gender: gender,
+          enabled: isChecked
+        })
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          showStructureToast('success', `تم ${isChecked ? 'تفعيل' : 'تعطيل'} مرحلة ${phaseName} (${gender}) بنجاح`);
+        } else {
+          showStructureToast('danger', 'تعذر تحديث المفتاح في السيرفر');
+        }
+      }).catch(err => {
+        console.warn('Phase gender master toggle error:', err);
+        showStructureToast('danger', 'خطأ في الاتصال بالسيرفر');
+      });
+    }
+
+    // 5. Individual Grade/Track Switch Toggle
     function onGradeTrackSwitchToggle(key, isChecked) {
       fetch('/api/branches/structure/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'grade_track', key: key, enabled: isChecked })
-      }).catch(err => console.warn('Grade track toggle error:', err));
+      }).then(r => r.json()).then(data => {
+        if (!data.success) {
+          showStructureToast('danger', 'تعذر تحديث الصف في السيرفر');
+        }
+      }).catch(err => {
+        console.warn('Grade track toggle error:', err);
+        showStructureToast('danger', 'خطأ في الاتصال بالسيرفر');
+      });
     }
+
+    // 6. Toast Notification Helper
+    function showStructureToast(type, message) {
+      let toastEl = document.getElementById('structureLiveToast');
+      if (!toastEl) {
+        alert(message);
+        return;
+      }
+      const toastHeader = document.getElementById('structureToastHeader');
+      const toastBody = document.getElementById('structureToastBody');
+      
+      toastEl.className = 'toast align-items-center text-white border-0 shadow-lg ' + (type === 'success' ? 'bg-success' : 'bg-danger');
+      if (toastBody) {
+        const icon = type === 'success' ? '<i class="fa-solid fa-circle-check fs-5 me-2"></i>' : '<i class="fa-solid fa-triangle-exclamation fs-5 me-2"></i>';
+        toastBody.innerHTML = `<div class="d-flex align-items-center">${icon}<span class="fw-bold">${message}</span></div>`;
+      }
+      const toast = new bootstrap.Toast(toastEl, { delay: 4500 });
+      toast.show();
+    }
+
+    // 7. Academic Structure Save Handler with try/catch & Status 200 Verification
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.structure-form').forEach(form => {
+        form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const submitBtn = form.querySelector('button[type="submit"]');
+          const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+          
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> جاري الحفظ والتثبيت...';
+          }
+
+          try {
+            const branchNameInp = form.querySelector('input[name="target_branch_name"]');
+            const targetBranch = branchNameInp ? branchNameInp.value : '';
+            const grade_matrix = {};
+            const branch_phase_switches = {};
+
+            form.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+              if (chk.name && chk.name.startsWith('edit_matrix_')) {
+                const key = chk.name.replace('edit_matrix_', '');
+                grade_matrix[key] = chk.checked;
+              } else if (chk.name && chk.name.startsWith('edit_phase_boys_')) {
+                const pName = chk.name.split('_').pop();
+                const key = `${targetBranch}_بنين_${pName}`;
+                branch_phase_switches[key] = chk.checked;
+              } else if (chk.name && chk.name.startsWith('edit_phase_girls_')) {
+                const pName = chk.name.split('_').pop();
+                const key = `${targetBranch}_بنات_${pName}`;
+                branch_phase_switches[key] = chk.checked;
+              }
+            });
+
+            // Overall phase switches: active if either boys or girls is active
+            form.querySelectorAll('input[name^="edit_phase_boys_"]').forEach(boysChk => {
+              const pName = boysChk.name.split('_').pop();
+              const girlsChk = form.querySelector(`input[name="edit_phase_girls_${targetBranch}_${pName}"]`);
+              const phaseKey = `${targetBranch}_${pName}`;
+              branch_phase_switches[phaseKey] = boysChk.checked || (girlsChk && girlsChk.checked);
+            });
+
+            const response = await fetch('/api/branches/structure/save', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify({
+                target_branch_name: targetBranch,
+                grade_matrix,
+                branch_phase_switches
+              })
+            });
+
+            if (response.ok && response.status === 200) {
+              const data = await response.json();
+              showStructureToast('success', data.message || `تم حفظ جميع تعديلات الهيكل لفرع ${targetBranch} بنجاح ✅`);
+            } else {
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(errData.error || `تعذر حفظ الهيكل (كود الخطأ: ${response.status})`);
+            }
+          } catch (err) {
+            console.error('Error in structure save:', err);
+            showStructureToast('danger', `فشل حفظ الهيكل الأكاديمي: ${err.message}. تم الحفاظ على تعديلاتك بالنموذج`);
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = originalBtnHtml;
+            }
+          }
+        });
+      });
+    });
   </script>
+
+  <!-- TOAST NOTIFICATION CONTAINER (FOR STRICT SERVER FEEDBACK) -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+    <div id="structureLiveToast" class="toast align-items-center text-white border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="structureToastBody">
+          <!-- Dynamically populated -->
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
