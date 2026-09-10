@@ -1,0 +1,120 @@
+﻿<!-- REUSABLE DATE RANGE FILTER COMPONENT (DRY) -->
+<div class="d-flex align-items-center flex-wrap gap-2 p-2 rounded-3 bg-light border shadow-2xs w-100 my-1" id="globalDateFilterContainer">
+  <div class="d-flex align-items-center gap-1 text-primary fw-bold small text-nowrap">
+    <i class="fa-solid fa-calendar-days fs-6"></i>
+    <span>الفترة الزمنية:</span>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <div class="d-flex align-items-center gap-1">
+      <label for="filterStartDate" class="form-label mb-0 text-muted small fw-bold text-nowrap">من:</label>
+      <input type="date" id="filterStartDate" name="startDate" class="form-control form-control-sm fw-bold border-secondary-subtle" style="max-width: 145px; font-size: 12.5px;" value="<%= typeof startDate !== 'undefined' ? startDate : '' %>">
+    </div>
+
+    <div class="d-flex align-items-center gap-1">
+      <label for="filterEndDate" class="form-label mb-0 text-muted small fw-bold text-nowrap">إلى:</label>
+      <input type="date" id="filterEndDate" name="endDate" class="form-control form-control-sm fw-bold border-secondary-subtle" style="max-width: 145px; font-size: 12.5px;" value="<%= typeof endDate !== 'undefined' ? endDate : '' %>">
+    </div>
+
+    <button type="button" class="btn btn-primary btn-sm px-3 fw-bold shadow-2xs d-inline-flex align-items-center gap-1" onclick="window.applyGlobalDateFilter()">
+      <i class="fa-solid fa-filter"></i>
+      <span>تطبيق</span>
+    </button>
+  </div>
+
+  <!-- QUICK PRESET BUTTONS -->
+  <div class="d-flex align-items-center gap-1 flex-wrap ms-auto">
+    <span class="text-muted small fw-semibold me-1 d-none d-sm-inline">وصول سريع:</span>
+    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('today')">
+      اليوم
+    </button>
+    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('week')">
+      هذا الأسبوع
+    </button>
+    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('month')">
+      هذا الشهر
+    </button>
+    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('academic_year')">
+      العام الدراسي
+    </button>
+  </div>
+</div>
+
+<script>
+  (function() {
+    function formatDate(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    window.setDateFilterPreset = function(preset) {
+      const now = new Date();
+      let startStr = '';
+      let endStr = '';
+
+      if (preset === 'today') {
+        startStr = formatDate(now);
+        endStr = formatDate(now);
+      } else if (preset === 'week') {
+        // Start of week (Sunday in Saudi Arabia / Middle East)
+        const day = now.getDay(); // 0 is Sunday
+        const diff = now.getDate() - day;
+        const start = new Date(now);
+        start.setDate(diff);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        startStr = formatDate(start);
+        endStr = formatDate(end);
+      } else if (preset === 'month') {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        startStr = formatDate(start);
+        endStr = formatDate(end);
+      } else if (preset === 'academic_year') {
+        // Academic year typically starts Aug 1st
+        const currentYear = now.getFullYear();
+        const startYear = (now.getMonth() >= 7) ? currentYear : (currentYear - 1);
+        startStr = `${startYear}-08-01`;
+        endStr = `${startYear + 1}-07-31`;
+      }
+
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      if (startInput) startInput.value = startStr;
+      if (endInput) endInput.value = endStr;
+
+      window.applyGlobalDateFilter();
+    };
+
+    window.applyGlobalDateFilter = function() {
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      const sVal = startInput ? startInput.value.trim() : '';
+      const eVal = endInput ? endInput.value.trim() : '';
+
+      // Check if inside analytics page with refreshAnalytics
+      if (typeof window.refreshAnalytics === 'function') {
+        window.refreshAnalytics();
+        return;
+      }
+
+      // If there is an enclosing form, update hidden/visible inputs or submit
+      const currentUrl = new URL(window.location.href);
+      if (sVal) {
+        currentUrl.searchParams.set('startDate', sVal);
+      } else {
+        currentUrl.searchParams.delete('startDate');
+      }
+      if (eVal) {
+        currentUrl.searchParams.set('endDate', eVal);
+      } else {
+        currentUrl.searchParams.delete('endDate');
+      }
+
+      // Preserve existing filters and navigate
+      window.location.href = currentUrl.toString();
+    };
+  })();
+</script>
