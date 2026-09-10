@@ -238,6 +238,11 @@
             <div class="col-md-2 col-6"><select name="source_filter" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">مصدر التسجيل (الكل)</option><option value="رابط خارجي" <%= typeof sourceFilter !== 'undefined' && sourceFilter==='رابط خارجي' ? 'selected' : '' %>>🌐 رابط خارجي</option><option value="تسجيل داخلي" <%= typeof sourceFilter !== 'undefined' && sourceFilter==='تسجيل داخلي' ? 'selected' : '' %>>🏫 تسجيل داخلي</option></select></div>
             <div class="col-auto"><a href="/students" class="btn btn-sm btn-light text-muted border"><i class="fa-solid fa-rotate-left"></i></a></div>
           </div>
+
+          <!-- REUSABLE GLOBAL DATE FILTER -->
+          <div class="mt-3">
+            <%- include('partials/date_filter') %>
+          </div>
         </form>
       </div>
     </div>
@@ -252,11 +257,11 @@
         </h5>
         <div class="d-flex gap-2">
           <% if(currentUser && currentUser.permissions && currentUser.permissions.export_reports){ %>
-          <a href="/export/excel" class="btn btn-sm btn-outline-success fw-bold" id="excelBtn">
+          <a href="/export/excel?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>&startDate=<%= typeof startDate !== 'undefined' ? startDate : '' %>&endDate=<%= typeof endDate !== 'undefined' ? endDate : '' %>" class="btn btn-sm btn-outline-success fw-bold" id="excelBtn">
             <span><i class="fa-solid fa-file-excel me-1"></i> تصدير Excel</span>
             <span class="spinner-border spinner-border-sm d-none" role="status"></span>
           </a>
-          <a href="/export/pdf" target="_blank" class="btn btn-sm btn-outline-danger fw-bold"><i class="fa-solid fa-print me-1"></i> طباعة PDF</a>
+          <a href="/export/pdf?branch_filter=<%= typeof branchFilter !== 'undefined' ? branchFilter : '' %>&phase_filter=<%= typeof phaseFilter !== 'undefined' ? phaseFilter : '' %>&interview_filter=<%= typeof interviewFilter !== 'undefined' ? interviewFilter : '' %>&followup_filter=<%= typeof followupFilter !== 'undefined' ? followupFilter : '' %>&source_filter=<%= typeof sourceFilter !== 'undefined' ? encodeURIComponent(sourceFilter) : '' %>&startDate=<%= typeof startDate !== 'undefined' ? startDate : '' %>&endDate=<%= typeof endDate !== 'undefined' ? endDate : '' %>" target="_blank" class="btn btn-sm btn-outline-danger fw-bold"><i class="fa-solid fa-print me-1"></i> طباعة PDF</a>
           <% } %>
         </div>
       </div>
