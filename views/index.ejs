@@ -441,6 +441,9 @@
             </div>
 
             <input type="hidden" name="student_id" id="studentIdHidden" value="<%= editingStudent ? editingStudent.id : '' %>">
+            <!-- SOURCE TAGGING (INTERNAL REGISTRATION) -->
+            <input type="hidden" name="source" id="sourceHidden" value="<%= (editingStudent && editingStudent.registration_source) ? editingStudent.registration_source : 'تسجيل داخلي' %>">
+            <input type="hidden" name="registration_source" id="registrationSourceHidden" value="<%= (editingStudent && editingStudent.registration_source) ? editingStudent.registration_source : 'تسجيل داخلي' %>">
 
             <div class="row g-3">
               <!-- اسم الطالب -->
@@ -1139,9 +1142,14 @@
       if (!form) return;
       form.reset();
 
-      // Set ID
+      // Set ID & Source
       const idInp = document.getElementById('studentIdHidden');
       if (idInp) idInp.value = s.id;
+
+      const srcInp = document.getElementById('sourceHidden');
+      if (srcInp) srcInp.value = s.registration_source || 'تسجيل داخلي';
+      const regSrcInp = document.getElementById('registrationSourceHidden');
+      if (regSrcInp) regSrcInp.value = s.registration_source || 'تسجيل داخلي';
 
       // Set Title
       const title = document.getElementById('studentModalLabel');
@@ -1376,7 +1384,16 @@
           branchBadge.textContent = s.branch || 'الندى';
         }
 
-        // Notes
+        // Source Tagging Badge (cells[7])
+        const sourceCell = cells[7];
+        if (sourceCell) {
+          const isOnline = (s.registration_source || '').trim() === 'رابط خارجي';
+          sourceCell.innerHTML = isOnline
+            ? '<span class="badge bg-info-subtle text-info border border-info rounded-pill px-2 py-1 fw-bold" style="font-size:11px;" title="مسجل عبر الرابط العام أونلاين"><i class="fa-solid fa-globe me-1"></i> أونلاين</span>'
+            : '<span class="badge bg-secondary-subtle text-secondary border border-secondary rounded-pill px-2 py-1 fw-bold" style="font-size:11px;" title="مسجل حضورياً داخل المدارس"><i class="fa-solid fa-school me-1"></i> داخلي</span>';
+        }
+
+        // Notes (cells[8])
         const notesCell = cells[8];
         if (notesCell) {
           const noteText = s.display_notes || s.notes || '';
