@@ -477,14 +477,18 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   // Client-accessible dataset for instant frontend recalculation
   const clientStudents = userAccessibleStudents.map(s => ({
     id: s.id,
+    name: s.name || "",
     branch: (s.branch || "").trim(),
     phase: (s.phase || "").trim(),
     grade: String(s.grade || "").trim(),
     student_type: (s.student_type || "بنين").trim(),
     track: (s.track || "عام").trim(),
+    nationality: (s.nationality || "سعودي").trim(),
     interview_result: (s.interview_result || "").trim(),
     followup_status: (s.followup_status || "").trim(),
-    registration_source: (s.registration_source || "").trim()
+    status: (s.status || s.followup_status || "").trim(),
+    registration_source: (s.registration_source || "").trim(),
+    registration_reason: (s.registration_reason || "").trim()
   }));
 
   // Support JSON API response
