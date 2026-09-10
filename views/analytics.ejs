@@ -1096,6 +1096,61 @@
 
     // Client-side dataset for instant reactive updates (Derived State)
     window.allAnalyticsStudents = <%- JSON.stringify(typeof clientStudents !== 'undefined' ? clientStudents : []) %>;
+    window.rawData = window.allAnalyticsStudents;
+    window.filteredData = window.allAnalyticsStudents;
+
+    // Dedicated Nationality Distribution Chart Component (accepts filteredData strictly)
+    function renderNationalityChart(filteredData) {
+      const natContainer = document.getElementById('nationalityListContainer');
+      const natTotalBadge = document.getElementById('nationalityTotalBadge');
+      
+      if (!filteredData || filteredData.length === 0) {
+        if (natTotalBadge) natTotalBadge.textContent = '0 طالب';
+        if (natContainer) {
+          natContainer.innerHTML = '<div class="col-12 text-center text-muted py-3"><i class="fa-solid fa-chart-pie me-2"></i> لا توجد بيانات جنسيات متاحة للفلتر المحدد</div>';
+        }
+        return;
+      }
+
+      const total = filteredData.length;
+      if (natTotalBadge) natTotalBadge.textContent = total + ' طالب';
+
+      const natMap = {};
+      filteredData.forEach(s => {
+        const n = (s.nationality || 'غير محدد').trim();
+        natMap[n] = (natMap[n] || 0) + 1;
+      });
+
+      const natColors = ['primary', 'success', 'danger', 'warning', 'info', 'secondary', 'dark'];
+      const entries = Object.entries(natMap).sort((a, b) => b[1] - a[1]);
+
+      if (entries.length === 0) {
+        if (natContainer) {
+          natContainer.innerHTML = '<div class="col-12 text-center text-muted py-3"><i class="fa-solid fa-chart-pie me-2"></i> لا توجد بيانات جنسيات متاحة</div>';
+        }
+        return;
+      }
+
+      let natHtml = '';
+      entries.forEach(([nat, cnt], i) => {
+        const natPct = total > 0 ? Math.round((cnt / total) * 100) : 0;
+        const col = natColors[i % natColors.length];
+        natHtml += `
+          <div class="col-md-6 col-sm-6">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-bold text-dark small"><i class="fa-solid fa-flag me-1 text-${col}"></i> ${nat}</span>
+              <span class="badge bg-${col}-subtle text-${col} border fw-bold">${cnt} (${natPct}%)</span>
+            </div>
+            <div class="progress" style="height:10px; border-radius:6px;">
+              <div class="progress-bar bg-${col}" role="progressbar" style="width:${natPct}%"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      if (natContainer) natContainer.innerHTML = natHtml;
+    }
+    window.renderNationalityChart = renderNationalityChart;
 
     function updateClientSideAggregations(branch, phase, grade, type, track, source) {
       const normBranch = (branch || 'الكل').trim();
@@ -1128,6 +1183,9 @@
         }
         return true;
       });
+
+      // Update global state references
+      window.filteredData = filtered;
 
       const total = filtered.length;
       const accepted = filtered.filter(s => (s.interview_result || '').trim() === 'مقبول').length;
@@ -1195,10 +1253,11 @@
       if (badgeGen) { badgeGen.textContent = `${general} طالب (${genPct}%)`; badgeGen.setAttribute('data-default-count', general); badgeGen.setAttribute('data-default-percent', genPct); }
       if (badgeTah) { badgeTah.textContent = `${tahfeez} طالب (${tahPct}%)`; badgeTah.setAttribute('data-default-count', tahfeez); badgeTah.setAttribute('data-default-percent', tahPct); }
 
-      // Update Waitlist Demand
+      // Update Waitlist Demand (Checking followup_status, status, and registration_reason)
       const waitlist = filtered.filter(s => {
         const st = (s.followup_status || '').trim();
-        return st === 'صف غير متاح' || st === 'unavailable_grade' || (s.registration_reason || '').includes('غير متاح');
+        const stat = (s.status || '').trim();
+        return st === 'صف غير متاح' || st === 'unavailable_grade' || stat === 'unavailable_grade' || stat === 'صف غير متاح' || (s.registration_reason || '').includes('غير متاح');
       }).length;
       const waitlistRate = total > 0 ? Math.round((waitlist / total) * 1000) / 10 : 0;
       const elWaitlist = document.getElementById('statWaitlistCount');
@@ -1206,46 +1265,8 @@
       if (elWaitlist) elWaitlist.textContent = waitlist;
       if (elWaitlistRate) elWaitlistRate.textContent = waitlistRate + '%';
 
-      // Update Nationality Distribution dynamically based on filtered data
-      const natContainer = document.getElementById('nationalityListContainer');
-      const natTotalBadge = document.getElementById('nationalityTotalBadge');
-      if (natTotalBadge) {
-        natTotalBadge.textContent = total + ' طالب';
-      }
-      if (natContainer) {
-        if (!filtered || filtered.length === 0) {
-          natContainer.innerHTML = '<div class="col-12 text-center text-muted py-3"><i class="fa-solid fa-chart-pie me-2"></i> لا توجد بيانات جنسيات متاحة للفلتر المحدد</div>';
-        } else {
-          const natMap = {};
-          filtered.forEach(s => {
-            const n = (s.nationality || 'غير محدد').trim();
-            natMap[n] = (natMap[n] || 0) + 1;
-          });
-          const natColors = ['primary', 'success', 'danger', 'warning', 'info', 'secondary', 'dark'];
-          const entries = Object.entries(natMap).sort((a, b) => b[1] - a[1]);
-          if (entries.length === 0) {
-            natContainer.innerHTML = '<div class="col-12 text-center text-muted py-3"><i class="fa-solid fa-chart-pie me-2"></i> لا توجد بيانات جنسيات متاحة</div>';
-          } else {
-            let natHtml = '';
-            entries.forEach(([nat, cnt], i) => {
-              const natPct = total > 0 ? Math.round((cnt / total) * 100) : 0;
-              const col = natColors[i % natColors.length];
-              natHtml += `
-                <div class="col-md-6 col-sm-6">
-                  <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="fw-bold text-dark small"><i class="fa-solid fa-flag me-1 text-${col}"></i> ${nat}</span>
-                    <span class="badge bg-${col}-subtle text-${col} border fw-bold">${cnt} (${natPct}%)</span>
-                  </div>
-                  <div class="progress" style="height:10px; border-radius:6px;">
-                    <div class="progress-bar bg-${col}" role="progressbar" style="width:${natPct}%"></div>
-                  </div>
-                </div>
-              `;
-            });
-            natContainer.innerHTML = natHtml;
-          }
-        }
-      }
+      // Update Nationality Distribution dynamically based on filteredData
+      renderNationalityChart(filtered);
     }
 
     function refreshAnalytics() {
