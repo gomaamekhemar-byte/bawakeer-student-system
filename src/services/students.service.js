@@ -155,6 +155,32 @@ async function createStudent(studentData) {
     console.warn('Grade availability check warning in createStudent:', err.message);
   }
 
+  // Preserve custom metadata (registration_source, mother_phone, etc.) in attachments JSONB
+  try {
+    let rawAtts = Array.isArray(studentData.attachments) ? studentData.attachments : [];
+    let metaIndex = rawAtts.findIndex(a => a && a.__meta);
+    let meta = metaIndex !== -1 ? { ...rawAtts[metaIndex].__meta } : {};
+
+    const sourceVal = studentData.registration_source || studentData.source;
+    if (sourceVal !== undefined) {
+      meta.registration_source = (sourceVal === 'external' || sourceVal === 'رابط خارجي' || sourceVal === 'الرابط الخارجي') 
+        ? 'رابط خارجي' 
+        : 'تسجيل داخلي';
+    } else if (!meta.registration_source) {
+      meta.registration_source = 'تسجيل داخلي';
+    }
+
+    if (studentData.mother_phone !== undefined) {
+      meta.mother_phone = studentData.mother_phone;
+    }
+
+    let attsToSave = rawAtts.filter(a => a && !a.__meta);
+    attsToSave.push({ __meta: meta });
+    studentData.attachments = attsToSave;
+  } catch (err) {
+    console.error('Error packaging metadata in createStudent:', err);
+  }
+
   const sanitized = sanitizeStudentData(studentData);
   sanitized.updated_at = new Date().toISOString();
 
@@ -194,8 +220,11 @@ async function updateStudent(id, studentData) {
     if (studentData.mother_phone !== undefined) {
       meta.mother_phone = studentData.mother_phone;
     }
-    if (studentData.registration_source !== undefined) {
-      meta.registration_source = studentData.registration_source;
+    const sourceVal = studentData.registration_source || studentData.source;
+    if (sourceVal !== undefined) {
+      meta.registration_source = (sourceVal === 'external' || sourceVal === 'رابط خارجي' || sourceVal === 'الرابط الخارجي')
+        ? 'رابط خارجي'
+        : 'تسجيل داخلي';
     }
 
     let attsToSave = studentData.attachments !== undefined ? studentData.attachments : rawAtts.filter(a => a && !a.__meta);
