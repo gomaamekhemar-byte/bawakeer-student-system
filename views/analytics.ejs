@@ -1188,11 +1188,11 @@
       window.filteredData = filtered;
 
       const total = filtered.length;
-      const accepted = filtered.filter(s => (s.interview_result || '').trim() === 'مقبول').length;
-      const rejected = filtered.filter(s => (s.interview_result || '').trim() === 'غير مقبول').length;
-      const registered = filtered.filter(s => (s.followup_status || '').trim() === 'تم التسجيل').length;
-      const waiting = filtered.filter(s => (s.followup_status || '').trim() === 'في انتظار التسجيل').length;
-      const pending_interview = filtered.filter(s => (s.interview_result || '').trim() === 'في انتظار المقابلة').length;
+      const accepted = filtered.filter(s => (s.interview_result || '').trim() === 'مقبول' && s.status !== 'unavailable_grade').length;
+      const rejected = filtered.filter(s => (s.interview_result || '').trim() === 'غير مقبول' && s.status !== 'unavailable_grade').length;
+      const registered = filtered.filter(s => (s.followup_status || '').trim() === 'تم التسجيل' && s.status !== 'unavailable_grade').length;
+      const waiting = filtered.filter(s => (s.followup_status || '').trim() === 'في انتظار التسجيل' && s.status !== 'unavailable_grade').length;
+      const pending_interview = filtered.filter(s => (s.interview_result || '').trim() === 'في انتظار المقابلة' && s.status !== 'unavailable_grade').length;
 
       // Update Top Stat Cards
       const elTotal = document.getElementById('statTotal');
