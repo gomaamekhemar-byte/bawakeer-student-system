@@ -11,9 +11,11 @@ const {
   saveExternalSettings,
   isBranchMasterActive,
   isPhaseActiveInBranch,
+  isPhaseGenderActiveInBranch,
   isGradeAvailable,
   buildMatrixKey,
-  buildPhaseKey
+  buildPhaseKey,
+  buildPhaseGenderKey
 } = require("../services/settings.service");
 const { PHASE_STRUCTURE, PHASES, STUDENT_TYPES } = require("../utils/constants");
 
@@ -64,9 +66,11 @@ router.get("/branches", requireAuth, withUser, async (req, res) => {
     studentTypes: STUDENT_TYPES,
     isBranchMasterActive,
     isPhaseActiveInBranch,
+    isPhaseGenderActiveInBranch,
     isGradeAvailable,
     buildMatrixKey,
     buildPhaseKey,
+    buildPhaseGenderKey,
     message: req.query.msg || null,
     currentUser
   });
@@ -129,22 +133,34 @@ router.post("/branches", requireAuth, withUser, async (req, res) => {
     // Post-creation full structure save
     const targetBranch = (req.body.target_branch_name || "").trim();
     if (targetBranch) {
+      console.log(`[EDIT STRUCTURE] Processing structure update for branch: "${targetBranch}"`);
       Object.entries(PHASE_STRUCTURE).forEach(([pName, pInfo]) => {
+        // Boys phase switch
+        const boysPhaseKey = buildPhaseGenderKey(targetBranch, 'بنين', pName);
+        const boysPhaseEnabled = req.body[`edit_phase_boys_${targetBranch}_${pName}`] === "1" || req.body[`edit_phase_boys_${targetBranch}_${pName}`] === true;
+        branch_phase_switches[boysPhaseKey] = boysPhaseEnabled;
+
+        // Girls phase switch
+        const girlsPhaseKey = buildPhaseGenderKey(targetBranch, 'بنات', pName);
+        const girlsPhaseEnabled = req.body[`edit_phase_girls_${targetBranch}_${pName}`] === "1" || req.body[`edit_phase_girls_${targetBranch}_${pName}`] === true;
+        branch_phase_switches[girlsPhaseKey] = girlsPhaseEnabled;
+
+        // Overall phase switch (active if either boys or girls is active)
         const phaseKey = buildPhaseKey(targetBranch, pName);
-        const phaseEnabled = req.body[`edit_phase_${targetBranch}_${pName}`] === "1";
-        branch_phase_switches[phaseKey] = phaseEnabled;
+        branch_phase_switches[phaseKey] = boysPhaseEnabled || girlsPhaseEnabled;
 
         STUDENT_TYPES.forEach(st => {
           pInfo.grades.forEach(gItem => {
             ['عام', 'تحفيظ'].forEach(tName => {
               const k = buildMatrixKey(targetBranch, st, pName, gItem.id, tName);
               const fieldName = `edit_matrix_${k}`;
-              grade_matrix[k] = req.body[fieldName] === "1";
+              grade_matrix[k] = req.body[fieldName] === "1" || req.body[fieldName] === true || req.body[fieldName] === "true";
             });
           });
         });
       });
 
+      console.log(`[EDIT STRUCTURE] Persisting settings for branch "${targetBranch}" (${Object.keys(grade_matrix).length} matrix keys)`);
       await saveExternalSettings({
         branch_phase_switches,
         grade_matrix
@@ -152,6 +168,10 @@ router.post("/branches", requireAuth, withUser, async (req, res) => {
 
       await addHistory("branch_structure_updated", `تم تحديث الهيكل الأكاديمي لفرع ${targetBranch}`, currentUser.username);
       message = `تم حفظ الهيكل الأكاديمي لفرع ${targetBranch} بنجاح ✅`;
+
+      if (req.xhr || (req.headers.accept && req.headers.accept.includes('application/json')) || req.is('json')) {
+        return res.status(200).json({ success: true, message });
+      }
     }
   } else if (action === "edit") {
     await updateBranch(parseInt(branch_id), { name: (name || "").trim(), location: (location || "").trim() });
@@ -191,12 +211,58 @@ router.post("/branches", requireAuth, withUser, async (req, res) => {
     studentTypes: STUDENT_TYPES,
     isBranchMasterActive,
     isPhaseActiveInBranch,
+    isPhaseGenderActiveInBranch,
     isGradeAvailable,
     buildMatrixKey,
     buildPhaseKey,
+    buildPhaseGenderKey,
     message,
     currentUser
   });
+});
+
+// POST /api/branches/structure/save - Dedicated, fully logged AJAX endpoint for saving complete branch structure
+router.post("/api/branches/structure/save", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser || currentUser.role !== "admin") {
+    return res.status(403).json({ success: false, error: "غير مصرح لك بتعديل الهيكل الأكاديمي" });
+  }
+
+  try {
+    const targetBranch = (req.body.target_branch_name || "").trim();
+    const incomingMatrix = req.body.grade_matrix || {};
+    const incomingPhaseSwitches = req.body.branch_phase_switches || {};
+
+    if (!targetBranch) {
+      return res.status(400).json({ success: false, error: "اسم الفرع مطلوب" });
+    }
+
+    console.log(`[API SAVE STRUCTURE] Received payload for branch: "${targetBranch}"`);
+    console.log(`[API SAVE STRUCTURE] Matrix keys: ${Object.keys(incomingMatrix).length}, Phase switches: ${Object.keys(incomingPhaseSwitches).length}`);
+
+    const currentSettings = await getExternalSettings();
+    const mergedGradeMatrix = { ...(currentSettings.grade_matrix || {}), ...incomingMatrix };
+    const mergedPhaseSwitches = { ...(currentSettings.branch_phase_switches || {}), ...incomingPhaseSwitches };
+
+    await saveExternalSettings({
+      grade_matrix: mergedGradeMatrix,
+      branch_phase_switches: mergedPhaseSwitches
+    }, currentUser.username);
+
+    await addHistory("branch_structure_updated", `تم تحديث وحفظ جميع تعديلات الهيكل الأكاديمي لفرع ${targetBranch}`, currentUser.username);
+
+    console.log(`✅ [API SAVE STRUCTURE] Successfully persisted structure for branch "${targetBranch}"`);
+    return res.status(200).json({
+      success: true,
+      message: `تم حفظ وتثبيت جميع تعديلات الهيكل الأكاديمي لفرع ${targetBranch} بنجاح ✅`
+    });
+  } catch (err) {
+    console.error("❌ [API SAVE STRUCTURE] Error saving branch structure:", err);
+    return res.status(500).json({
+      success: false,
+      error: "فشل حفظ الهيكل الأكاديمي في قاعدة البيانات: " + (err.message || "")
+    });
+  }
 });
 
 // POST /api/branches/structure/toggle - Instant AJAX toggle for branch structure
@@ -206,11 +272,47 @@ router.post("/api/branches/structure/toggle", requireAuth, withUser, async (req,
     return res.status(403).json({ success: false, error: "غير مصرح" });
   }
 
-  const { type, branch, phase, key, enabled } = req.body;
+  const { type, branch, phase, gender, key, enabled } = req.body;
   const currentSettings = await getExternalSettings();
 
+  // 1. Gender-Specific Phase Master Switch Toggle
+  if (type === "phase_gender_master" && branch && phase && gender) {
+    const branch_phase_switches = { ...(currentSettings.branch_phase_switches || {}) };
+    const genderPhaseKey = buildPhaseGenderKey(branch, gender, phase);
+    branch_phase_switches[genderPhaseKey] = !!enabled;
+
+    // Check if other gender is enabled to update overall phase key
+    const otherGender = gender === 'بنين' ? 'بنات' : 'بنين';
+    const otherGenderKey = buildPhaseGenderKey(branch, otherGender, phase);
+    const otherEnabled = branch_phase_switches[otherGenderKey] !== undefined ? !!branch_phase_switches[otherGenderKey] : true;
+    branch_phase_switches[buildPhaseKey(branch, phase)] = (!!enabled) || otherEnabled;
+
+    // Also update all grades in this phase for this gender in grade_matrix
+    const grade_matrix = { ...(currentSettings.grade_matrix || {}) };
+    const pInfo = PHASE_STRUCTURE[phase];
+    if (pInfo && pInfo.grades) {
+      pInfo.grades.forEach(gItem => {
+        ['عام', 'تحفيظ'].forEach(tName => {
+          const k = buildMatrixKey(branch, gender, phase, gItem.id, tName);
+          grade_matrix[k] = !!enabled;
+        });
+      });
+    }
+
+    console.log(`[TOGGLE] Set phase gender master: branch=${branch}, gender=${gender}, phase=${phase}, enabled=${enabled}`);
+    await saveExternalSettings({ branch_phase_switches, grade_matrix }, currentUser.username);
+    return res.json({
+      success: true,
+      type: "phase_gender_master",
+      branch,
+      phase,
+      gender,
+      enabled: !!enabled
+    });
+  }
+
+  // 2. Overall Phase Master Switch Toggle
   if (type === "phase_master" && branch && phase) {
-    // 1. Toggle Phase Master Switch
     const branch_phase_switches = { ...(currentSettings.branch_phase_switches || {}) };
     const phaseKey = buildPhaseKey(branch, phase);
     branch_phase_switches[phaseKey] = !!enabled;
@@ -225,8 +327,8 @@ router.post("/api/branches/structure/toggle", requireAuth, withUser, async (req,
     });
   }
 
+  // 3. Toggle Individual Grade/Track Switch
   if (type === "grade_track" && key) {
-    // 2. Toggle Individual Grade/Track Switch
     const grade_matrix = { ...(currentSettings.grade_matrix || {}) };
     grade_matrix[key] = !!enabled;
 
@@ -239,8 +341,8 @@ router.post("/api/branches/structure/toggle", requireAuth, withUser, async (req,
     });
   }
 
+  // 4. Toggle Branch Master Switch
   if (type === "branch_master" && branch) {
-    // 3. Toggle Branch Master Switch
     const branch_master_switches = { ...(currentSettings.branch_master_switches || {}) };
     branch_master_switches[branch] = !!enabled;
 
