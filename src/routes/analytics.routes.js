@@ -286,7 +286,10 @@ function buildAnalytics(students, branchLabel) {
   const conversionRate = accepted > 0 ? Math.round((registered / accepted) * 1000) / 10 : 0;
 
   // Demand tracking for unavailable grades (Waitlist)
-  const waitlist_count = students.filter(s => s.followup_status === "صف غير متاح").length;
+  const waitlist_count = students.filter(s => {
+    const st = (s.followup_status || "").trim();
+    return st === "صف غير متاح" || st === "unavailable_grade" || (s.registration_reason || "").includes("غير متاح");
+  }).length;
   const waitlist_rate = total > 0 ? Math.round((waitlist_count / total) * 1000) / 10 : 0;
 
   // Source Stats (Online vs Internal)
