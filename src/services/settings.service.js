@@ -43,6 +43,13 @@ function buildPhaseKey(branch, phase) {
   return `${b}_${p}`;
 }
 
+function buildPhaseGenderKey(branch, gender, phase) {
+  const b = String(branch || '').trim();
+  const st = String(gender || '').trim();
+  const p = String(phase || '').trim();
+  return `${b}_${st}_${p}`;
+}
+
 function isBranchMasterActive(branchName, settings) {
   const cfg = settings || memorySettings;
   const masters = cfg.branch_master_switches || {};
@@ -63,6 +70,17 @@ function isPhaseActiveInBranch(branchName, phaseName, settings) {
   return true; // Default active if not explicitly turned off
 }
 
+function isPhaseGenderActiveInBranch(branchName, gender, phaseName, settings) {
+  const cfg = settings || memorySettings;
+  const pSwitches = cfg.branch_phase_switches || {};
+  const genderKey = buildPhaseGenderKey(branchName, gender, phaseName);
+  if (pSwitches[genderKey] !== undefined) {
+    return pSwitches[genderKey] === true || pSwitches[genderKey] === 'true' || pSwitches[genderKey] === 1;
+  }
+  // Fallback to overall phase key
+  return isPhaseActiveInBranch(branchName, phaseName, cfg);
+}
+
 function getActiveBranches(allBranches, settings) {
   const cfg = settings || memorySettings;
   return (allBranches || []).filter(b => {
@@ -74,7 +92,7 @@ function getActiveBranches(allBranches, settings) {
 async function getExternalSettings() {
   try {
     const { data, error } = await supabase
-      .from('system_settings')
+      .from('settings')
       .select('*')
       .eq('key', 'external_portal_config')
       .single();
@@ -103,7 +121,7 @@ async function getExternalSettings() {
       };
     }
   } catch (e) {
-    // If system_settings table doesn't exist yet, fallback to robust memorySettings
+    console.warn('Notice: Loading fallback memorySettings:', e.message);
   }
   return { ...memorySettings };
 }
@@ -141,13 +159,19 @@ async function saveExternalSettings(newConfig, username) {
   };
 
   try {
-    await supabase.from('system_settings').upsert({
+    const { data, error } = await supabase.from('settings').upsert({
       key: 'external_portal_config',
       value: memorySettings,
       updated_at: new Date().toISOString()
-    });
+    }, { onConflict: 'key' });
+
+    if (error) {
+      console.error('❌ [SETTINGS] Failed to persist settings in Supabase table "settings":', error.message);
+    } else {
+      console.log('✅ [SETTINGS] Successfully persisted settings in Supabase table "settings"');
+    }
   } catch (e) {
-    console.error('Failed to persist settings in Supabase:', e.message);
+    console.error('❌ [SETTINGS] Exception persisting settings in Supabase:', e.message);
   }
 
   return memorySettings;
@@ -182,7 +206,12 @@ function isGradeAvailable(branch, student_type, phase, grade, track, settings) {
     return false;
   }
 
-  // 2. Check Phase Master Switch for this branch
+  // 2. Check Gender-Specific Phase Master Switch if present
+  if (student_type && !isPhaseGenderActiveInBranch(branch, student_type, phase, cfg)) {
+    return false;
+  }
+
+  // 3. Check Overall Phase Master Switch for this branch
   if (!isPhaseActiveInBranch(branch, phase, cfg)) {
     return false;
   }
@@ -220,8 +249,8 @@ function getAvailableHierarchy(branch, student_type, settings) {
   }
 
   for (const [pName, pInfo] of Object.entries(PHASE_STRUCTURE)) {
-    // Check Phase Master Switch for this branch
-    if (!isPhaseActiveInBranch(branch, pName, cfg)) {
+    // Check Phase Master Switch for this branch (gender-specific and overall)
+    if (!isPhaseGenderActiveInBranch(branch, student_type, pName, cfg) || !isPhaseActiveInBranch(branch, pName, cfg)) {
       continue;
     }
 
@@ -285,9 +314,11 @@ module.exports = {
   getBranchWhatsAppPhone,
   isBranchMasterActive,
   isPhaseActiveInBranch,
+  isPhaseGenderActiveInBranch,
   getActiveBranches,
   isGradeAvailable,
   getAvailableHierarchy,
   buildMatrixKey,
-  buildPhaseKey
+  buildPhaseKey,
+  buildPhaseGenderKey
 };
