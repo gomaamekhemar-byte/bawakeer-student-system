@@ -221,15 +221,16 @@ router.post("/branches", requireAuth, withUser, async (req, res) => {
   });
 });
 
-// POST /api/branches/structure/save - Dedicated, fully logged AJAX endpoint for saving complete branch structure
-router.post("/api/branches/structure/save", requireAuth, withUser, async (req, res) => {
+// POST/PUT /api/branches/structure/save - Dedicated, fully logged AJAX endpoint for saving complete branch structure
+async function handleSaveStructureApi(req, res) {
   const currentUser = req.currentUser;
-  if (!currentUser || currentUser.role !== "admin") {
+  const canManage = currentUser && (userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_years"));
+  if (!canManage) {
     return res.status(403).json({ success: false, error: "غير مصرح لك بتعديل الهيكل الأكاديمي" });
   }
 
   try {
-    const targetBranch = (req.body.target_branch_name || "").trim();
+    const targetBranch = (req.body.target_branch_name || req.body.branch || req.body.branch_name || "").trim();
     const incomingMatrix = req.body.grade_matrix || {};
     const incomingPhaseSwitches = req.body.branch_phase_switches || {};
 
@@ -263,7 +264,12 @@ router.post("/api/branches/structure/save", requireAuth, withUser, async (req, r
       error: "فشل حفظ الهيكل الأكاديمي في قاعدة البيانات: " + (err.message || "")
     });
   }
-});
+}
+
+router.post("/api/branches/structure/save", requireAuth, withUser, handleSaveStructureApi);
+router.put("/api/branches/structure/save", requireAuth, withUser, handleSaveStructureApi);
+router.post("/api/branches/structure", requireAuth, withUser, handleSaveStructureApi);
+router.put("/api/branches/structure", requireAuth, withUser, handleSaveStructureApi);
 
 // POST /api/branches/structure/toggle - Instant AJAX toggle for branch structure
 router.post("/api/branches/structure/toggle", requireAuth, withUser, async (req, res) => {
