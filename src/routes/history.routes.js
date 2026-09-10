@@ -1,16 +1,35 @@
-﻿const express = require("express");
+const express = require("express");
 const router = express.Router();
 const { requireAuth } = require("../middleware/auth");
 const { withUser, userCan } = require("../middleware/permissions");
 const { getHistory, getStudentHistory } = require("../services/history.service");
 const { getStudents, getStudentById } = require("../services/students.service");
+const { getDateRange, filterByDateRange } = require("../utils/date_filter");
 
 // GET /history
 router.get("/history", requireAuth, withUser, async (req, res) => {
   const currentUser = req.currentUser;
   if (!currentUser || !userCan(currentUser, "admin", "manager")) return res.redirect("/");
-  const entries = await getHistory();
-  res.render("history", { entries, currentUser });
+  
+  const { startDate, endDate, isDefault } = getDateRange(req.query.startDate, req.query.endDate);
+  let entries = await getHistory();
+  
+  entries = filterByDateRange(entries, "timestamp", startDate, endDate);
+
+  res.render("history", { entries, currentUser, startDate, endDate, isDefaultDateRange: isDefault });
+});
+
+// JSON API /api/logs
+router.get("/api/logs", requireAuth, withUser, async (req, res) => {
+  const currentUser = req.currentUser;
+  if (!currentUser || !userCan(currentUser, "admin", "manager")) return res.status(401).json({ error: "Unauthorized" });
+
+  const { startDate, endDate, isDefault } = getDateRange(req.query.startDate, req.query.endDate);
+  let entries = await getHistory();
+
+  entries = filterByDateRange(entries, "timestamp", startDate, endDate);
+
+  res.json({ success: true, entries, startDate, endDate, isDefaultDateRange: isDefault });
 });
 
 // GET /student_history/:id
