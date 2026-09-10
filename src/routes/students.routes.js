@@ -83,36 +83,45 @@ router.get("/apply", async (req, res) => {
 
 router.get("/register", (req, res) => res.redirect("/apply"));
 
-router.post("/apply", async (req, res) => {
+// Unified Registration Handler (supports /apply, /register, /api/register, /api/apply)
+async function handleExternalRegistration(req, res) {
+  const isJsonRequest = req.is("json") || req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")) || (req.path && req.path.startsWith("/api/"));
   const allBranches = await getBranchNames();
   const settings = await getExternalSettings();
-  const { getActiveBranches } = require("../services/settings.service");
+  const { getActiveBranches, isGradeAvailable } = require("../services/settings.service");
   const branches = getActiveBranches(allBranches, settings);
   const activeYear = await getActiveYear();
 
   if (settings.is_portal_open === false) {
+    if (isJsonRequest) {
+      return res.status(403).json({ success: false, error: "بوابة التسجيل مغلقة حالياً" });
+    }
     return res.render("apply", { branches, activeYear, settings, submitted: false, error: null });
   }
 
   // 1. Anti-Spam Honeypot check
   if (req.body.website_trap) {
+    if (isJsonRequest) return res.status(400).json({ success: false, error: "طلب غير صالح" });
     return res.redirect("/apply");
   }
 
-  const name = (req.body.name || "").trim();
-  const phone = (req.body.phone || "").trim();
+  const name = (req.body.name || req.body.student_name || "").trim();
+  const phone = (req.body.phone || req.body.mobile || "").trim();
   const mother_phone = (req.body.mother_phone || "").trim();
-  const student_type = (req.body.student_type || "بنين").trim();
+  const student_type = (req.body.student_type || req.body.gender || "بنين").trim();
   const date_of_birth = (req.body.date_of_birth || "").trim();
   const nationality = (req.body.nationality || "سعودي").trim();
-  const student_branch = (req.body.student_branch || (branches[0] || "الروابي")).trim();
-  const phase = (req.body.phase || "ابتدائي").trim();
-  const grade = (req.body.grade || "1").trim();
+  const student_branch = (req.body.student_branch || req.body.branch || req.body.branch_id || (branches[0] || "الروابي")).trim();
+  const phase = (req.body.phase || req.body.stage || "ابتدائي").trim();
+  const grade = String(req.body.grade || req.body.class || "1").trim();
   const track = (req.body.track || "عام").trim();
   const neighborhood = (req.body.neighborhood || "").trim();
   const notes = (req.body.notes || "").trim();
 
   if (!name || !phone) {
+    if (isJsonRequest) {
+      return res.status(400).json({ success: false, error: "يرجى تعبئة كافة الحقول الإلزامية المطلوبة (اسم الطالب ورقم الجوال)" });
+    }
     return res.render("apply", {
       branches,
       activeYear,
@@ -122,7 +131,6 @@ router.post("/apply", async (req, res) => {
   }
 
   // Check if requested grade/track combination is available in Dynamic Grade Matrix
-  const { isGradeAvailable } = require("../services/settings.service");
   const isAvailable = isGradeAvailable(student_branch, student_type, phase, grade, track, settings);
   const isWaitlist = !isAvailable;
 
@@ -141,7 +149,8 @@ router.post("/apply", async (req, res) => {
     notes: cleanNotesForDisplay(notes),
     interview_result: "في انتظار المقابلة",
     interview_reason: "",
-    followup_status: isWaitlist ? "صف غير متاح" : "في انتظار المقابلة",
+    status: isWaitlist ? "unavailable_grade" : "في انتظار المقابلة",
+    followup_status: isWaitlist ? "unavailable_grade" : "في انتظار المقابلة",
     registration_reason: isWaitlist ? "تم التسجيل على قائمة الانتظار (الصف المطلوب غير متاح حالياً)" : "",
     registration_source: "رابط خارجي",
     academic_year_id: activeYear ? activeYear.id : 1,
@@ -152,6 +161,9 @@ router.post("/apply", async (req, res) => {
 
   const created = await createStudent(newStudent);
   if (!created) {
+    if (isJsonRequest) {
+      return res.status(500).json({ success: false, error: "تعذر إرسال الطلب حالياً، يرجى المحاولة لاحقاً" });
+    }
     return res.render("apply", {
       branches,
       activeYear,
@@ -166,10 +178,20 @@ router.post("/apply", async (req, res) => {
     : `طلب تسجيل جديد عبر الإنترنت للطالب ${name} بفرع ${student_branch}`;
   await addHistory(historyAction, historyText, "بوابة التسجيل العامة");
 
-  // 1. Send automated WhatsApp confirmation to parent
+  // Send automated WhatsApp confirmation to parent
   await sendWhatsAppNotification(created, phone);
 
-  // 2. Intelligent Dynamic Branch WhatsApp Routing for 'متابعة الطلب' button
+  if (isJsonRequest) {
+    return res.status(201).json({
+      success: true,
+      message: isWaitlist ? "تم تسجيل الطالب على قائمة الانتظار لصف غير متاح" : "تم تسجيل طلبك بنجاح",
+      is_waitlist: isWaitlist,
+      status: isWaitlist ? "unavailable_grade" : "registered",
+      student: created
+    });
+  }
+
+  // Dynamic Branch WhatsApp Routing for 'متابعة الطلب' button
   const { getBranchWhatsAppPhone } = require("../services/settings.service");
   const { formatPhoneNumber } = require("../services/whatsapp.service");
 
@@ -196,7 +218,12 @@ router.post("/apply", async (req, res) => {
     whatsappUrl: branchWhatsAppUrl,
     error: null
   });
-});
+}
+
+router.post("/apply", handleExternalRegistration);
+router.post("/register", handleExternalRegistration);
+router.post("/api/register", handleExternalRegistration);
+router.post("/api/apply", handleExternalRegistration);
 
 // =============================================
 // INTERNAL PORTAL ROUTES (Require Auth)
