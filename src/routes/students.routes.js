@@ -134,6 +134,11 @@ async function handleExternalRegistration(req, res) {
   const isAvailable = isGradeAvailable(student_branch, student_type, phase, grade, track, settings);
   const isWaitlist = !isAvailable;
 
+  const rawSource = (req.body.source || req.body.registration_source || "رابط خارجي").trim();
+  const registration_source = (rawSource === "external" || rawSource === "رابط خارجي" || rawSource === "الرابط الخارجي")
+    ? "رابط خارجي"
+    : (rawSource === "internal" || rawSource === "تسجيل داخلي" ? "تسجيل داخلي" : "رابط خارجي");
+
   const newStudent = {
     name,
     phone,
@@ -152,7 +157,8 @@ async function handleExternalRegistration(req, res) {
     status: isWaitlist ? "unavailable_grade" : "في انتظار المقابلة",
     followup_status: isWaitlist ? "unavailable_grade" : "في انتظار المقابلة",
     registration_reason: isWaitlist ? "تم التسجيل على قائمة الانتظار (الصف المطلوب غير متاح حالياً)" : "",
-    registration_source: "رابط خارجي",
+    registration_source,
+    source: registration_source,
     academic_year_id: activeYear ? activeYear.id : 1,
     attachments: [],
     created_at: new Date().toISOString(),
@@ -630,6 +636,7 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       grade: grade || existing.grade,
       notes: cleanNotesForDisplay(finalNotes),
       branch: student_branch || existing.branch || activeBranch,
+      registration_source: req.body.source || req.body.registration_source || existing.registration_source || "تسجيل داخلي",
       attachments: newAttachments,
     };
     
@@ -659,6 +666,11 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
 
     const targetBranch = student_branch || activeBranch || "الندى";
 
+    const rawSource = (req.body.source || req.body.registration_source || "تسجيل داخلي").trim();
+    const regSource = (rawSource === "external" || rawSource === "رابط خارجي" || rawSource === "الرابط الخارجي")
+      ? "رابط خارجي"
+      : "تسجيل داخلي";
+
     const newStudent = {
       name,
       phone,
@@ -677,7 +689,8 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
       grade: grade || "1",
       notes: finalNotes,
       branch: targetBranch,
-      registration_source: "تسجيل داخلي",
+      registration_source: regSource,
+      source: regSource,
       academic_year_id: (req.sessionYear && req.sessionYear.id) ? req.sessionYear.id : (activeYear ? activeYear.id : 1),
       attachments: uploadedFiles,
       created_at: new Date().toISOString(),
@@ -816,6 +829,7 @@ async function handleUpdateStudentApi(req, res) {
       grade: grade || existing.grade,
       notes: notes,
       branch: targetBranch,
+      registration_source: req.body.source || req.body.registration_source || existing.registration_source || "تسجيل داخلي",
       attachments: newAttachments
     };
 
