@@ -12,6 +12,7 @@ const { getExternalSettings } = require("../services/settings.service");
 const supabase = require("../config/supabase");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES, PHASE_STRUCTURE } = require("../utils/constants");
 const { cleanNotesForDisplay } = require("../utils/timeline");
+const { getDateRange, filterByDateRange } = require("../utils/date_filter");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
@@ -290,6 +291,9 @@ async function handleGetStudents(req, res) {
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
 
+  const { startDate, endDate, isDefault: isDefaultDateRange } = getDateRange(req.query.startDate, req.query.endDate);
+  students = filterByDateRange(students, "created_at", startDate, endDate);
+
   // Academic Year Scoping
   const sessionYear = req.sessionYear;
   if (sessionYear && sessionYear.id) {
@@ -421,6 +425,9 @@ async function handleGetStudents(req, res) {
     activeYear,
     allPhonesMap,
     getWhatsAppDirectUrl,
+    startDate,
+    endDate,
+    isDefaultDateRange,
     settings: await getExternalSettings(),
     phaseStructure: PHASE_STRUCTURE
   });
