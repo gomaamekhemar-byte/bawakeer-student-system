@@ -198,6 +198,37 @@ function getBranchWhatsAppPhone(branchIdOrName, settings) {
   return "0553620441"; // Default fallback
 }
 
+async function updateBranchWhatsAppNumber(branchIdOrName, whatsappNumber, username) {
+  const { getBranches } = require('./branches.service');
+  const branches = await getBranches(false);
+  const cleanPhone = String(whatsappNumber !== undefined ? whatsappNumber : '').trim();
+  const idStr = String(branchIdOrName || '').trim();
+
+  // Find matching branch
+  let branch = branches.find(b => String(b.id) === idStr || b.name === idStr);
+  if (!branch) {
+    branch = { id: idStr, name: idStr };
+  }
+
+  // Update in settings
+  const settings = await getExternalSettings();
+  const branch_phones = { ...(settings.branch_phones || {}) };
+  branch_phones[String(branch.id)] = cleanPhone;
+  if (branch.name) {
+    branch_phones[branch.name] = cleanPhone;
+  }
+
+  await saveExternalSettings({ branch_phones }, username || 'admin');
+
+  return {
+    id: branch.id,
+    name: branch.name,
+    whatsapp_number: cleanPhone,
+    contact_phone: cleanPhone,
+    phone: cleanPhone
+  };
+}
+
 function isGradeAvailable(branch, student_type, phase, grade, track, settings) {
   const cfg = settings || memorySettings;
 
@@ -312,6 +343,7 @@ module.exports = {
   getSystemIdentity,
   saveSystemIdentity,
   getBranchWhatsAppPhone,
+  updateBranchWhatsAppNumber,
   isBranchMasterActive,
   isPhaseActiveInBranch,
   isPhaseGenderActiveInBranch,
