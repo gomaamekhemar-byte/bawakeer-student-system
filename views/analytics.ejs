@@ -1035,6 +1035,75 @@
       </div>
     </div>
 
+    <!-- 6. REGISTRATION SOURCE BREAKDOWN CARD (الرابط الخارجي vs التسجيل الداخلي) -->
+    <div class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-3">
+          <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+              <i class="fa-solid fa-chart-column text-primary"></i>
+              <span>الرسم البياني لمصادر التسجيل (الرابط الخارجي أونلاين vs التسجيل الداخلي بالمدرسة)</span>
+            </h6>
+            <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-1 fw-bold" id="sourceCardScopeBadge">
+              إجمالي الطلاب: <%= analytics.total %> طالب
+            </span>
+          </div>
+          <div class="card-body p-4 pt-2">
+            <%
+              const sStats = analytics.sourceStats || { online_count: 0, internal_count: 0, online_percent: 0, internal_percent: 0 };
+              const onlineCount = sStats.online_count || 0;
+              const internalCount = sStats.internal_count || 0;
+              const onlinePct = sStats.online_percent || 0;
+              const internalPct = sStats.internal_percent || 0;
+            %>
+            <div class="row g-4 align-items-center">
+              <!-- Online Applicants (External Portal) -->
+              <div class="col-md-6">
+                <div class="p-3 rounded-3 border bg-light">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-info fs-6">
+                      <i class="fa-solid fa-globe me-1"></i> الرابط الخارجي (أونلاين)
+                    </span>
+                    <span id="sourceBadgeOnline" class="badge bg-info-subtle text-info border border-info fs-7 fw-bold px-3 py-1">
+                      <%= onlineCount %> طالب (<%= onlinePct %>%)
+                    </span>
+                  </div>
+                  <div class="progress" style="height: 16px;">
+                    <div id="sourceBarOnline" class="progress-bar bg-info animated-progress-bar" role="progressbar" style="width: <%= onlinePct %>%;"></div>
+                  </div>
+                  <div class="mt-2 text-muted small d-flex justify-content-between">
+                    <span>مسجلون عبر الرابط العام لأولياء الأمور</span>
+                    <span class="fw-bold text-dark"><span id="sourceCountOnline"><%= onlineCount %></span> مسجل</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Internal Applicants (In-School) -->
+              <div class="col-md-6">
+                <div class="p-3 rounded-3 border bg-light">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-secondary fs-6">
+                      <i class="fa-solid fa-school me-1"></i> التسجيل الداخلي (المدرسة)
+                    </span>
+                    <span id="sourceBadgeInternal" class="badge bg-secondary-subtle text-secondary border border-secondary fs-7 fw-bold px-3 py-1">
+                      <%= internalCount %> طالب (<%= internalPct %>%)
+                    </span>
+                  </div>
+                  <div class="progress" style="height: 16px;">
+                    <div id="sourceBarInternal" class="progress-bar bg-secondary animated-progress-bar" role="progressbar" style="width: <%= internalPct %>%;"></div>
+                  </div>
+                  <div class="mt-2 text-muted small d-flex justify-content-between">
+                    <span>مسجلون حضورياً عبر إدارة المدرسة</span>
+                    <span class="fw-bold text-dark"><span id="sourceCountInternal"><%= internalCount %></span> مسجل</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   <!-- SELF CHANGE PASSWORD MODAL -->
   <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -1261,6 +1330,28 @@
       const elWaitlistRate = document.getElementById('statWaitlistRate');
       if (elWaitlist) elWaitlist.textContent = waitlist;
       if (elWaitlistRate) elWaitlistRate.textContent = waitlistRate + '%';
+
+      // Update Source Stats Card Dynamically
+      const onlineTotal = filtered.filter(s => (s.registration_source || '').trim() === 'رابط خارجي').length;
+      const internalTotal = filtered.filter(s => (s.registration_source || '').trim() !== 'رابط خارجي').length;
+      const onlinePct = total > 0 ? Math.round((onlineTotal / total) * 100) : 0;
+      const internalPct = total > 0 ? Math.round((internalTotal / total) * 100) : 0;
+
+      const barOnline = document.getElementById('sourceBarOnline');
+      const barInternal = document.getElementById('sourceBarInternal');
+      const badgeOnline = document.getElementById('sourceBadgeOnline');
+      const badgeInternal = document.getElementById('sourceBadgeInternal');
+      const countOnline = document.getElementById('sourceCountOnline');
+      const countInternal = document.getElementById('sourceCountInternal');
+      const scopeBadge = document.getElementById('sourceCardScopeBadge');
+
+      if (barOnline) barOnline.style.width = onlinePct + '%';
+      if (barInternal) barInternal.style.width = internalPct + '%';
+      if (badgeOnline) badgeOnline.textContent = `${onlineTotal} طالب (${onlinePct}%)`;
+      if (badgeInternal) badgeInternal.textContent = `${internalTotal} طالب (${internalPct}%)`;
+      if (countOnline) countOnline.textContent = onlineTotal;
+      if (countInternal) countInternal.textContent = internalTotal;
+      if (scopeBadge) scopeBadge.textContent = `إجمالي الطلاب: ${total} طالب`;
 
       // Update Nationality Distribution dynamically based on filteredData
       renderNationalityChart(filtered);
