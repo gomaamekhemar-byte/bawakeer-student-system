@@ -193,13 +193,13 @@ function computeAdaptiveFilters(baseStudents, currentFilters) {
 
 function buildAnalytics(students, branchLabel) {
   const total = students.length;
-  const accepted = students.filter(s => s.interview_result === "مقبول").length;
-  const registered = students.filter(s => s.followup_status === "تم التسجيل").length;
-  const rejected = students.filter(s => s.interview_result === "غير مقبول").length;
-  const waiting = students.filter(s => s.followup_status === "في انتظار التسجيل").length;
-  const not_interested = students.filter(s => s.followup_status === "لا يرغب في التسجيل").length;
-  const pending_interview = students.filter(s => s.interview_result === "في انتظار المقابلة").length;
-  const not_registered = students.filter(s => s.followup_status !== "تم التسجيل").length;
+  const accepted = students.filter(s => s.interview_result === "مقبول" && s.status !== "unavailable_grade").length;
+  const registered = students.filter(s => s.followup_status === "تم التسجيل" && s.status !== "unavailable_grade").length;
+  const rejected = students.filter(s => s.interview_result === "غير مقبول" && s.status !== "unavailable_grade").length;
+  const waiting = students.filter(s => s.followup_status === "في انتظار التسجيل" && s.status !== "unavailable_grade").length;
+  const not_interested = students.filter(s => s.followup_status === "لا يرغب في التسجيل" && s.status !== "unavailable_grade").length;
+  const pending_interview = students.filter(s => s.interview_result === "في انتظار المقابلة" && s.status !== "unavailable_grade").length;
+  const not_registered = students.filter(s => s.followup_status !== "تم التسجيل" && s.status !== "unavailable_grade").length;
 
   const phaseStats = {};
   PHASES.forEach(p => {
