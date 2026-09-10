@@ -6,6 +6,7 @@ const { getStudents } = require("../services/students.service");
 const { getBranchNames } = require("../services/branches.service");
 const { getExternalSettings, getActiveBranches, isBranchMasterActive } = require("../services/settings.service");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, PHASE_STRUCTURE } = require("../utils/constants");
+const { getDateRange, filterByDateRange } = require("../utils/date_filter");
 
 // 1. Build Demographic Matrix Grid (Strict Multi-Filter Intersection & Auto-Hiding Zero Rows)
 function buildDemographicMatrixGrid(filteredStudents, branches, filters = {}) {
@@ -354,7 +355,8 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   let selectedTrack = (req.query.track || "الكل").trim();
   let selectedSource = (req.query.source || req.query.source_filter || "الكل").trim();
 
-  let userAccessibleStudents = allStudents;
+  const { startDate, endDate, isDefault: isDefaultDateRange } = getDateRange(req.query.startDate, req.query.endDate);
+  let userAccessibleStudents = filterByDateRange(allStudents, "created_at", startDate, endDate);
 
   if (isSingleBranchUser) {
     const assignedBranch = userBranches[0];
@@ -503,7 +505,10 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
       selectedGrade,
       selectedType,
       selectedTrack,
-      selectedSource
+      selectedSource,
+      startDate,
+      endDate,
+      isDefaultDateRange
     });
   }
 
@@ -520,6 +525,9 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     selectedType,
     selectedTrack,
     selectedSource,
+    startDate,
+    endDate,
+    isDefaultDateRange,
     branches: availableFilters.branches,
     isFullBranchAccess,
     isSingleBranchUser,
