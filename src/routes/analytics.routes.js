@@ -286,10 +286,8 @@ function buildAnalytics(students, branchLabel) {
   const conversionRate = accepted > 0 ? Math.round((registered / accepted) * 1000) / 10 : 0;
 
   // Demand tracking for unavailable grades (Waitlist)
-  const waitlist_count = students.filter(s => {
-    const st = (s.followup_status || "").trim();
-    return st === "صف غير متاح" || st === "unavailable_grade" || (s.registration_reason || "").includes("غير متاح");
-  }).length;
+  const unavailableCount = students.filter(student => student.status === 'unavailable_grade').length;
+  const waitlist_count = unavailableCount;
   const waitlist_rate = total > 0 ? Math.round((waitlist_count / total) * 1000) / 10 : 0;
 
   // Source Stats (Online vs Internal)
@@ -486,7 +484,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     nationality: (s.nationality || "سعودي").trim(),
     interview_result: (s.interview_result || "").trim(),
     followup_status: (s.followup_status || "").trim(),
-    status: (s.status || s.followup_status || "").trim(),
+    status: (s.status === 'unavailable_grade' || s.followup_status === 'unavailable_grade' || s.followup_status === 'صف غير متاح' || (s.registration_reason || '').includes('غير متاح')) ? 'unavailable_grade' : (s.status || s.followup_status || '').trim(),
     registration_source: (s.registration_source || "").trim(),
     registration_reason: (s.registration_reason || "").trim()
   }));
