@@ -11,6 +11,9 @@ const VALID_STUDENT_COLUMNS = [
 ];
 
 function sanitizeStudentData(data) {
+  if (data.status && !data.followup_status) {
+    data.followup_status = data.status;
+  }
   const clean = {};
   for (const col of VALID_STUDENT_COLUMNS) {
     if (data[col] !== undefined) {
@@ -32,6 +35,7 @@ function normalizeStudent(student) {
   student.track = student.track || 'عام';
   student.interview_result = student.interview_result || 'لم يقابل';
   student.followup_status = student.followup_status || 'في انتظار التسجيل';
+  student.status = student.followup_status;
   
   // Extract metadata safely from JSONB attachments
   const rawAtts = Array.isArray(student.attachments) ? student.attachments : [];
@@ -385,6 +389,7 @@ module.exports = {
   softDeleteStudent,
   restoreStudent,
   permanentDeleteStudent,
-  normalizeStudent
+  normalizeStudent,
+  sanitizeStudentData
 };
 
