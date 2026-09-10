@@ -286,6 +286,11 @@
 
   <div class="container-fluid px-4 py-4" id="analyticsMainContent" style="transition: opacity 0.2s ease-in-out;">
 
+    <!-- GLOBAL REUSABLE DATE FILTER -->
+    <div class="mb-4">
+      <%- include('partials/date_filter') %>
+    </div>
+
     <!-- 1. TOP STATS CARDS (HORIZONTAL ROW) -->
     <div class="row g-3 mb-4">
       <div class="col-xl-2 col-md-4 col-6">
@@ -1373,6 +1378,11 @@
       const source = sourceSel ? sourceSel.value : 'الكل';
       const spinner = document.getElementById('filterLoadingSpinner');
 
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      const startDate = startInput ? startInput.value.trim() : '';
+      const endDate = endInput ? endInput.value.trim() : '';
+
       if (spinner) spinner.classList.remove('d-none');
 
       // 1. Instant client-side derived state calculation
@@ -1387,9 +1397,11 @@
       if (type) params.set('type', type);
       if (track) params.set('track', track);
       if (source) params.set('source', source);
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
 
       const url = '/analytics?' + params.toString();
-      window.history.pushState({ branch, phase, grade, type, track, source }, '', url);
+      window.history.pushState({ branch, phase, grade, type, track, source, startDate, endDate }, '', url);
 
       const container = document.getElementById('analyticsMainContent');
       if (container) {
