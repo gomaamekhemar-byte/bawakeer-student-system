@@ -559,9 +559,13 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
   const phase = (req.body.phase || "").trim();
   const grade = (req.body.grade || "").trim();
   const notes = (req.body.notes || "").trim();
-  const student_branch = (req.body.student_branch || "").trim();
+  const student_branch = (req.body.student_branch || req.body.branch || req.body.branch_id || "").trim();
   const attachment_title = (req.body.attachment_title || "").trim();
   const uploadedFiles = await uploadFiles(req.files || [], attachment_title);
+
+  if (currentId && (req.is("json") || req.xhr || (req.headers.accept && req.headers.accept.includes("application/json")))) {
+    return handleUpdateStudentApi(req, res);
+  }
 
   const allStudents = await getStudents();
   const otherStudents = currentId ? allStudents.filter(s => s.id !== currentId) : allStudents;
@@ -698,6 +702,153 @@ router.post("/students", requireAuth, withUser, upload.array("attachments", 10),
     }
   }
 });
+
+// =============================================
+// API: UPDATE STUDENT (PUT /api/students/:id)
+// Full administrative authority: transfer branch, update grade, phase, statuses
+// =============================================
+async function handleUpdateStudentApi(req, res) {
+  try {
+    const currentUser = req.currentUser;
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: "يجب تسجيل الدخول أولاً لتعديل البيانات" });
+    }
+
+    const canManageStudents = (userCan(currentUser, "admin", "manager", "employee")) && userHasPermission(currentUser, "manage_students");
+    const canManageInterviews = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_interviews");
+    const canManageRegistration = userCan(currentUser, "admin") || userHasPermission(currentUser, "manage_registration");
+
+    if (!canManageStudents && !canManageInterviews && !canManageRegistration) {
+      return res.status(403).json({ success: false, message: "عفواً، ليس لديك صلاحية لتعديل بيانات الطلاب" });
+    }
+
+    if (req.isReadOnlyYear) {
+      return res.status(403).json({ success: false, message: "عفواً، لا يمكن تعديل بيانات الطالب في عام دراسي مؤرشف (وضع القراءة فقط)" });
+    }
+
+    const rawId = req.params.id || (req.body && (req.body.student_id || req.body.id));
+    const studentId = parseInt(rawId);
+    if (!studentId || isNaN(studentId) || studentId <= 0) {
+      return res.status(400).json({ success: false, message: "معرف الطالب غير صالح أو مفقود" });
+    }
+
+    const existing = await getStudentById(studentId);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "الطالب غير موجود مسبقاً في قاعدة البيانات" });
+    }
+
+    const name = typeof req.body.name !== "undefined" ? String(req.body.name).trim() : existing.name;
+    const phone = typeof req.body.phone !== "undefined" ? String(req.body.phone).trim() : existing.phone;
+
+    // Check duplicate student (only if name and phone both match another student)
+    if (name) {
+      const allStudents = await getStudents();
+      const duplicate = allStudents.find(s => s.id !== studentId && (s.name || "").trim().toLowerCase() === name.toLowerCase() && phone && s.phone === phone);
+      if (duplicate) {
+        return res.status(400).json({ success: false, message: "يوجد طالب آخر مسجل بنفس الاسم ورقم الجوال" });
+      }
+    }
+
+    const mother_phone = typeof req.body.mother_phone !== "undefined" ? String(req.body.mother_phone).trim() : (existing.mother_phone || "");
+    const date_of_birth = typeof req.body.date_of_birth !== "undefined" ? String(req.body.date_of_birth).trim() : existing.date_of_birth;
+    const nationality = typeof req.body.nationality !== "undefined" ? String(req.body.nationality).trim() : existing.nationality;
+    const neighborhood = typeof req.body.neighborhood !== "undefined" ? String(req.body.neighborhood).trim() : existing.neighborhood;
+    const interview_date = typeof req.body.interview_date !== "undefined" ? String(req.body.interview_date).trim() : existing.interview_date;
+    const student_type = typeof req.body.student_type !== "undefined" ? String(req.body.student_type).trim() : existing.student_type;
+    const phase = typeof req.body.phase !== "undefined" ? String(req.body.phase).trim() : existing.phase;
+    const grade = typeof req.body.grade !== "undefined" ? String(req.body.grade).trim() : existing.grade;
+    const track = typeof req.body.track !== "undefined" ? String(req.body.track).trim() : existing.track;
+    
+    // Absolute Transfer Authority: accepts branch from any parameter/alias without restriction
+    const targetBranch = typeof req.body.student_branch !== "undefined" && req.body.student_branch.trim()
+      ? req.body.student_branch.trim()
+      : (typeof req.body.branch !== "undefined" && req.body.branch.trim()
+          ? req.body.branch.trim()
+          : (typeof req.body.branch_id !== "undefined" && req.body.branch_id.trim()
+              ? req.body.branch_id.trim()
+              : existing.branch));
+
+    const interview_result = typeof req.body.interview_result !== "undefined" ? String(req.body.interview_result).trim() : "";
+    const interview_reason = typeof req.body.interview_reason !== "undefined" ? String(req.body.interview_reason).trim() : existing.interview_reason;
+    const followup_status = typeof req.body.followup_status !== "undefined" ? String(req.body.followup_status).trim() : "";
+    const registration_reason = typeof req.body.registration_reason !== "undefined" ? String(req.body.registration_reason).trim() : existing.registration_reason;
+    const notes = typeof req.body.notes !== "undefined" ? cleanNotesForDisplay(String(req.body.notes)) : existing.notes;
+
+    let finalInterviewResult = existing.interview_result || "في انتظار المقابلة";
+    let finalFollowupStatus = existing.followup_status || "في انتظار المقابلة";
+
+    if (canManageInterviews && interview_result) {
+      finalInterviewResult = interview_result;
+      if (interview_result === "مقبول" && existing.interview_result !== "مقبول") {
+        finalFollowupStatus = "في انتظار التسجيل";
+      } else if (interview_result === "غير مقبول" && existing.interview_result !== "غير مقبول") {
+        finalFollowupStatus = "لم يجتز المقابلة";
+      }
+    }
+
+    if (canManageRegistration && followup_status) {
+      if (!canManageInterviews || (interview_result === existing.interview_result)) {
+        finalFollowupStatus = followup_status;
+      }
+    }
+
+    // Attachments
+    const attachment_title = (req.body.attachment_title || "").trim();
+    const uploadedFiles = await uploadFiles(req.files || [], attachment_title);
+    const existingAttachments = Array.isArray(existing.attachments) ? existing.attachments : [];
+    const newAttachments = [...existingAttachments, ...uploadedFiles];
+
+    const newData = {
+      name: name || existing.name,
+      phone: phone || existing.phone,
+      mother_phone: mother_phone || existing.mother_phone,
+      date_of_birth: date_of_birth || existing.date_of_birth,
+      nationality: nationality || existing.nationality,
+      neighborhood: neighborhood || existing.neighborhood,
+      interview_date: interview_date || existing.interview_date,
+      interview_result: finalInterviewResult,
+      interview_reason: interview_reason,
+      followup_status: finalFollowupStatus,
+      registration_reason: registration_reason,
+      student_type: student_type || existing.student_type,
+      track: track || existing.track,
+      phase: phase || existing.phase,
+      grade: grade || existing.grade,
+      notes: notes,
+      branch: targetBranch,
+      attachments: newAttachments
+    };
+
+    const fieldChanges = computeFieldChanges(existing, newData);
+    const updated = await updateStudent(studentId, newData);
+
+    if (!updated) {
+      return res.status(500).json({ success: false, message: "فشل حفظ التعديلات في قاعدة البيانات" });
+    }
+
+    const actionLabel = "student_updated";
+    const details = `تم تعديل بيانات الطالب ${newData.name}`;
+    await addStudentHistory(studentId, actionLabel, details, currentUser.username, fieldChanges);
+    await addHistory(actionLabel, details, currentUser.username);
+
+    return res.status(200).json({
+      success: true,
+      message: `تم تحديث بيانات الطالب (${updated.name}) بنجاح`,
+      student: updated
+    });
+  } catch (error) {
+    console.error("CRITICAL API handleUpdateStudentApi error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "حدث خطأ غير متوقع أثناء تحديث بيانات الطالب: " + error.message
+    });
+  }
+}
+
+router.put("/api/students/:id", requireAuth, withUser, upload.array("attachments", 10), handleUpdateStudentApi);
+router.patch("/api/students/:id", requireAuth, withUser, upload.array("attachments", 10), handleUpdateStudentApi);
+router.post("/api/students/:id", requireAuth, withUser, upload.array("attachments", 10), handleUpdateStudentApi);
+router.put("/students/:id", requireAuth, withUser, upload.array("attachments", 10), handleUpdateStudentApi);
 
 // POST /delete/:id (with safe error handling, JSON responses, and aliases)
 async function handleDeleteStudent(req, res) {
