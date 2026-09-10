@@ -8,6 +8,7 @@ const { getActiveYear } = require("../services/academic_years.service");
 const { getSystemIdentity } = require("../services/settings.service");
 const { addHistory } = require("../services/history.service");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES } = require("../utils/constants");
+const { getDateRange, filterByDateRange } = require("../utils/date_filter");
 const XLSX = require("xlsx");
 
 function cleanNotesForDisplay(notes) {
@@ -87,6 +88,9 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
   let students = await getStudents();
   const branches = await getBranchNames();
   const activeYear = await getActiveYear();
+
+  const { startDate, endDate, isDefault: isDefaultDateRange } = getDateRange(req.query.startDate, req.query.endDate);
+  students = filterByDateRange(students, "created_at", startDate, endDate);
 
   if (activeBranch && activeBranch !== "الكل") {
     students = students.filter(s => s.branch === activeBranch);
@@ -279,6 +283,9 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     tracks: availableFilters.tracks.length ? availableFilters.tracks : TRACKS,
     nationalities: NATIONALITIES,
     roles: ROLES,
+    startDate,
+    endDate,
+    isDefaultDateRange,
     cleanNotesForDisplay
   });
 });
@@ -292,6 +299,9 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   const activeBranch = rawCookieBranch ? decodeURIComponent(rawCookieBranch) : "";
 
   let students = await getStudents();
+
+  const { startDate, endDate } = getDateRange(req.query.startDate, req.query.endDate);
+  students = filterByDateRange(students, "created_at", startDate, endDate);
 
   if (activeBranch && activeBranch !== "الكل") {
     students = students.filter(s => s.branch === activeBranch);
@@ -368,6 +378,9 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
   const activeBranch = rawCookieBranch ? decodeURIComponent(rawCookieBranch) : "";
 
   let students = await getStudents();
+
+  const { startDate, endDate } = getDateRange(req.query.startDate, req.query.endDate);
+  students = filterByDateRange(students, "created_at", startDate, endDate);
 
   if (activeBranch && activeBranch !== "الكل") {
     students = students.filter(s => s.branch === activeBranch);
@@ -489,6 +502,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
     <div class="header-center">
       <div class="report-main-title">كشف بيانات الطلاب والتحليل الديموغرافي</div>
       <div class="year-badge">${activeYear ? activeYear.year_name : "العام الدراسي الحالي"}</div>
+      <div style="font-size: 10px; color: #1e3a8a; font-weight: 700; margin-top: 3px;">كشف الطلاب للفترة من ${startDate} إلى ${endDate}</div>
     </div>
     <div class="header-left">
       ${logoHtml}
