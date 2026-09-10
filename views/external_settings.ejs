@@ -247,18 +247,44 @@
                       }
                     %>
                     <div class="col-md-6">
-                      <div class="p-3 border rounded-3 bg-white h-100 shadow-sm">
+                      <div class="p-3 border rounded-3 bg-white h-100 shadow-sm" id="branch_card_<%= b.id %>">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                           <label class="form-label fw-bold text-dark mb-0">
                             <i class="fa-solid fa-building text-primary me-1"></i> فرع <%= b.name %>
                           </label>
-                          <span class="badge bg-secondary-subtle text-secondary small">ID: <%= b.id %></span>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1 d-none" id="phone_badge_<%= b.id %>">
+                              <i class="fa-solid fa-check me-1"></i>تم الحفظ
+                            </span>
+                            <span class="badge bg-secondary-subtle text-secondary small">ID: <%= b.id %></span>
+                          </div>
                         </div>
                         <div class="input-group">
                           <span class="input-group-text bg-light text-success"><i class="fa-brands fa-whatsapp fs-5"></i></span>
-                          <input type="tel" name="branch_phone_<%= b.id %>" class="form-control fw-bold" placeholder="05xxxxxxxx" value="<%= currentPhone %>" style="direction:ltr;">
+                          <input type="tel" 
+                                 id="branch_phone_input_<%= b.id %>"
+                                 name="branch_phone_<%= b.id %>" 
+                                 class="form-control fw-bold" 
+                                 placeholder="05xxxxxxxx" 
+                                 value="<%= currentPhone %>" 
+                                 data-branch-id="<%= b.id %>"
+                                 data-branch-name="<%= b.name %>"
+                                 data-last-saved="<%= currentPhone %>"
+                                 onblur="saveBranchPhoneOnBlur('<%= b.id %>')"
+                                 onkeydown="if(event.key==='Enter'){event.preventDefault();saveBranchPhoneBtn('<%= b.id %>');}"
+                                 style="direction:ltr;">
+                          <button type="button" 
+                                  class="btn btn-primary fw-bold px-3 btn-save-branch-phone" 
+                                  id="btn_save_phone_<%= b.id %>"
+                                  onclick="saveBranchPhoneBtn('<%= b.id %>')"
+                                  title="حفظ رقم الواتساب لفرع <%= b.name %>">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>حفظ
+                          </button>
                         </div>
-                        <small class="text-muted d-block mt-1" style="font-size:11px;">رقم واتساب المتابعة الخاص بفرع <%= b.name %></small>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                          <small class="text-muted" style="font-size:11px;">رقم واتساب المتابعة الخاص بفرع <%= b.name %></small>
+                          <small id="phone_feedback_<%= b.id %>" class="text-muted fw-bold" style="font-size:11px;"></small>
+                        </div>
                       </div>
                     </div>
                   <% }) %>
@@ -617,6 +643,152 @@
         const key = inp.name.replace('matrix_', '');
         onMatrixToggleChange(key, state);
       });
+    }
+  </script>
+
+  <!-- Bootstrap Bundle & Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <!-- Live Toast Container -->
+  <div class="toast-container position-fixed bottom-0 start-0 p-3" style="z-index: 99999;">
+    <div id="liveToast" class="toast align-items-center text-white border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body d-flex align-items-center gap-2 fs-6">
+          <i id="toastIcon" class="fa-solid fa-circle-check fs-5"></i>
+          <span id="toastMessage">تم الحفظ بنجاح</span>
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toast notification utility
+    function showToastNotification(message, isSuccess = true) {
+      const toastEl = document.getElementById('liveToast');
+      const msgEl = document.getElementById('toastMessage');
+      const iconEl = document.getElementById('toastIcon');
+      if (!toastEl) {
+        alert(message);
+        return;
+      }
+      if (msgEl) msgEl.textContent = message;
+      if (isSuccess) {
+        toastEl.className = 'toast align-items-center text-white bg-success border-0 shadow-lg';
+        if (iconEl) iconEl.className = 'fa-solid fa-circle-check fs-5';
+      } else {
+        toastEl.className = 'toast align-items-center text-white bg-danger border-0 shadow-lg';
+        if (iconEl) iconEl.className = 'fa-solid fa-triangle-exclamation fs-5';
+      }
+
+      if (window.bootstrap && bootstrap.Toast) {
+        const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4000 });
+        bsToast.show();
+      } else {
+        toastEl.classList.add('show');
+        setTimeout(() => toastEl.classList.remove('show'), 4000);
+      }
+    }
+
+    window.toast = {
+      success: function(msg) { showToastNotification(msg, true); },
+      error: function(msg) { showToastNotification(msg, false); }
+    };
+
+    // Save Branch WhatsApp Phone Handler
+    async function saveBranchPhone(branchId, triggerType) {
+      const inputEl = document.getElementById('branch_phone_input_' + branchId);
+      if (!inputEl) return;
+
+      const newPhone = inputEl.value.trim();
+      const lastSaved = (inputEl.getAttribute('data-last-saved') || '').trim();
+
+      // If triggered by onblur and nothing changed, don't spam API
+      if (triggerType === 'blur' && newPhone === lastSaved) {
+        return;
+      }
+
+      const btnEl = document.getElementById('btn_save_phone_' + branchId);
+      const badgeEl = document.getElementById('phone_badge_' + branchId);
+      const feedbackEl = document.getElementById('phone_feedback_' + branchId);
+
+      // Loading state
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>جاري...';
+      }
+      if (feedbackEl) {
+        feedbackEl.className = 'text-primary fw-bold';
+        feedbackEl.textContent = 'جاري الحفظ في الخادم...';
+      }
+
+      try {
+        const payload = {
+          whatsapp_number: newPhone,
+          branch_phone: newPhone
+        };
+
+        const response = await axios.put('/api/branches/' + encodeURIComponent(branchId), payload, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.status === 200 && response.data && response.data.success) {
+          // 1. Update data-last-saved
+          inputEl.setAttribute('data-last-saved', newPhone);
+
+          // 2. Visual indication: Green border flash
+          inputEl.classList.remove('is-invalid');
+          inputEl.classList.add('is-valid');
+          setTimeout(() => {
+            inputEl.classList.remove('is-valid');
+          }, 3500);
+
+          // 3. Status badge
+          if (badgeEl) {
+            badgeEl.classList.remove('d-none');
+            setTimeout(() => {
+              badgeEl.classList.add('d-none');
+            }, 3500);
+          }
+
+          // 4. Feedback text
+          if (feedbackEl) {
+            feedbackEl.className = 'text-success fw-bold';
+            feedbackEl.innerHTML = '<i class="fa-solid fa-check me-1"></i>تم الحفظ في قاعدة البيانات ✅';
+            setTimeout(() => {
+              feedbackEl.textContent = '';
+            }, 3500);
+          }
+
+          // 5. Toast alert
+          window.toast.success(response.data.message || 'تم حفظ رقم واتساب الفرع بنجاح ✅');
+        } else {
+          throw new Error((response.data && response.data.error) || 'تعذر حفظ الرقم');
+        }
+      } catch (err) {
+        console.error('Error saving branch phone:', err);
+        inputEl.classList.add('is-invalid');
+        const errMsg = (err.response && err.response.data && err.response.data.error) || err.message || 'حدث خطأ أثناء الحفظ';
+        if (feedbackEl) {
+          feedbackEl.className = 'text-danger fw-bold';
+          feedbackEl.textContent = 'فشل الحفظ: ' + errMsg;
+        }
+        window.toast.error('فشل حفظ رقم الواتساب: ' + errMsg);
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i>حفظ';
+        }
+      }
+    }
+
+    function saveBranchPhoneOnBlur(branchId) {
+      saveBranchPhone(branchId, 'blur');
+    }
+
+    function saveBranchPhoneBtn(branchId) {
+      saveBranchPhone(branchId, 'button');
     }
   </script>
 </body>
