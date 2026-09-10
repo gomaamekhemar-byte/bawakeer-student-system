@@ -612,162 +612,122 @@
       }
     }
   </script>
-  <!-- DYNAMIC CASCADING DROPDOWNS ENGINE (FEATURE 2) -->
+  <!-- UNRESTRICTED CASCADING DROPDOWNS (MEASURING DEMAND FOR ALL GRADES & PHASES) -->
   <script>
-    const serverGradeMatrix = <%- JSON.stringify((typeof settings !== 'undefined' && settings.grade_matrix) ? settings.grade_matrix : {}) %>;
     const serverPhaseStructure = <%- JSON.stringify(typeof phaseStructure !== 'undefined' ? phaseStructure : {}) %>;
 
-    function isMatrixCellOpen(branch, stType, phase, grade, track) {
-      if (!serverGradeMatrix || Object.keys(serverGradeMatrix).length === 0) return true;
-      const key = branch + '_' + stType + '_' + phase + '_' + grade + '_' + (track || 'عام');
-      if (serverGradeMatrix[key] !== undefined) {
-        return serverGradeMatrix[key] === true || serverGradeMatrix[key] === 'true' || serverGradeMatrix[key] === 1;
+    // Standard complete academic structure fallback
+    const defaultPhaseStructure = {
+      'روضة': {
+        grades: [
+          { id: '1', name: 'روضة أولى (KG1)' },
+          { id: '2', name: 'روضة ثانية (KG2)' },
+          { id: '3', name: 'تمهيدي (KG3)' }
+        ],
+        tracks: ['عام']
+      },
+      'ابتدائي': {
+        grades: [
+          { id: '1', name: 'الصف الأول الابتدائي' },
+          { id: '2', name: 'الصف الثاني الابتدائي' },
+          { id: '3', name: 'الصف الثالث الابتدائي' },
+          { id: '4', name: 'الصف الرابع الابتدائي' },
+          { id: '5', name: 'الصف الخامس الابتدائي' },
+          { id: '6', name: 'الصف السادس الابتدائي' }
+        ],
+        tracks: ['عام', 'تحفيظ']
+      },
+      'متوسط': {
+        grades: [
+          { id: '1', name: 'الصف الأول المتوسط' },
+          { id: '2', name: 'الصف الثاني المتوسط' },
+          { id: '3', name: 'الصف الثالث المتوسط' }
+        ],
+        tracks: ['عام', 'تحفيظ']
+      },
+      'ثانوي': {
+        grades: [
+          { id: '1', name: 'الصف الأول الثانوي' },
+          { id: '2', name: 'الصف الثاني الثانوي' },
+          { id: '3', name: 'الصف الثالث الثانوي' }
+        ],
+        tracks: ['عام']
       }
-      const fallback = branch + '_' + stType + '_' + phase + '_' + grade + '_عام';
-      if (serverGradeMatrix[fallback] !== undefined) {
-        return serverGradeMatrix[fallback] === true || serverGradeMatrix[fallback] === 'true' || serverGradeMatrix[fallback] === 1;
-      }
-      return true;
-    }
+    };
+
+    const phaseStructureMap = (serverPhaseStructure && Object.keys(serverPhaseStructure).length > 0)
+      ? serverPhaseStructure
+      : defaultPhaseStructure;
 
     function updateCascadingDropdowns() {
-      const branchSel = document.getElementById('studentBranchSelect');
-      const stTypeSel = document.getElementById('studentTypeSelect');
       const phaseSel = document.getElementById('phaseSelect');
-      const gradeSel = document.getElementById('gradeSelect');
-      const trackSel = document.getElementById('trackSelect');
-      const noticeCol = document.getElementById('matrixNoticeCol');
-      const noticeText = document.getElementById('matrixNoticeText');
+      if (!phaseSel) return;
 
-      if (!branchSel || !stTypeSel || !phaseSel) return;
+      const currentPhase = phaseSel.value || 'ابتدائي';
 
-      const branch = branchSel.value;
-      const stType = stTypeSel.value;
-      const currentPhase = phaseSel.value;
-
-      // 1. Calculate available phases for this branch + gender
+      // Always populate ALL phases (روضة، ابتدائي، متوسط، ثانوي) unconditionally
       phaseSel.innerHTML = '';
-      let availablePhasesCount = 0;
-
-      for (const [pName, pInfo] of Object.entries(serverPhaseStructure)) {
-        let hasOpenGrades = false;
-        for (const gItem of pInfo.grades) {
-          for (const tName of pInfo.tracks) {
-            if (isMatrixCellOpen(branch, stType, pName, gItem.id, tName)) {
-              hasOpenGrades = true;
-              break;
-            }
-          }
-          if (hasOpenGrades) break;
-        }
-
-        if (hasOpenGrades) {
-          const opt = document.createElement('option');
-          opt.value = pName;
-          opt.textContent = pName;
-          if (pName === currentPhase) opt.selected = true;
-          phaseSel.appendChild(opt);
-          availablePhasesCount++;
-        }
-      }
-
-      if (availablePhasesCount === 0) {
-        // No phases available
+      Object.keys(phaseStructureMap).forEach(pName => {
         const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'لا تتوفر مقاعد شاغرة حالياً';
+        opt.value = pName;
+        opt.textContent = pName;
+        if (pName === currentPhase) opt.selected = true;
         phaseSel.appendChild(opt);
-        if (noticeCol && noticeText) {
-          noticeText.textContent = 'عفواً، جميع فصول هذا الفرع والقسم غير متاحة حالياً. يمكنك التقديم للإدراج في قائمة الانتظار.';
-          noticeCol.classList.remove('d-none');
-        }
-      } else {
-        if (noticeCol) noticeCol.classList.add('d-none');
-        if (!phaseSel.value && phaseSel.options.length > 0) {
-          phaseSel.selectedIndex = 0;
-        }
+      });
+
+      if (!phaseSel.value && phaseSel.options.length > 0) {
+        phaseSel.selectedIndex = 0;
       }
 
       onPhaseSelectChange();
     }
 
     function onPhaseSelectChange() {
-      const branchSel = document.getElementById('studentBranchSelect');
-      const stTypeSel = document.getElementById('studentTypeSelect');
       const phaseSel = document.getElementById('phaseSelect');
       const gradeSel = document.getElementById('gradeSelect');
+      if (!phaseSel || !gradeSel) return;
 
-      if (!branchSel || !stTypeSel || !phaseSel || !gradeSel) return;
-
-      const branch = branchSel.value;
-      const stType = stTypeSel.value;
-      const phase = phaseSel.value;
-      const currentGrade = gradeSel.value;
+      const phase = phaseSel.value || 'ابتدائي';
+      const currentGrade = gradeSel.value || '1';
 
       gradeSel.innerHTML = '';
-      const pInfo = serverPhaseStructure[phase];
-      if (!pInfo) return;
+      const pInfo = phaseStructureMap[phase];
+      if (!pInfo || !pInfo.grades) return;
 
-      let openGradesCount = 0;
+      // Always populate ALL grades for this phase unconditionally
       pInfo.grades.forEach(gItem => {
-        let isGradeOpen = false;
-        pInfo.tracks.forEach(tName => {
-          if (isMatrixCellOpen(branch, stType, phase, gItem.id, tName)) {
-            isGradeOpen = true;
-          }
-        });
-
-        if (isGradeOpen) {
-          const opt = document.createElement('option');
-          opt.value = gItem.id;
-          opt.textContent = gItem.name;
-          if (gItem.id === currentGrade) opt.selected = true;
-          gradeSel.appendChild(opt);
-          openGradesCount++;
-        }
+        const opt = document.createElement('option');
+        opt.value = gItem.id;
+        opt.textContent = gItem.name;
+        if (String(gItem.id) === String(currentGrade)) opt.selected = true;
+        gradeSel.appendChild(opt);
       });
 
-      if (openGradesCount === 0) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'لا توجد صفوف متاحة';
-        gradeSel.appendChild(opt);
-      } else {
-        if (!gradeSel.value && gradeSel.options.length > 0) {
-          gradeSel.selectedIndex = 0;
-        }
+      if (!gradeSel.value && gradeSel.options.length > 0) {
+        gradeSel.selectedIndex = 0;
       }
 
       onGradeSelectChange();
     }
 
     function onGradeSelectChange() {
-      const branchSel = document.getElementById('studentBranchSelect');
-      const stTypeSel = document.getElementById('studentTypeSelect');
       const phaseSel = document.getElementById('phaseSelect');
-      const gradeSel = document.getElementById('gradeSelect');
       const trackSel = document.getElementById('trackSelect');
+      if (!trackSel || !phaseSel) return;
 
-      if (!trackSel || !branchSel || !stTypeSel || !phaseSel || !gradeSel) return;
-
-      const branch = branchSel.value;
-      const stType = stTypeSel.value;
-      const phase = phaseSel.value;
-      const grade = gradeSel.value;
-      const currentTrack = trackSel.value;
+      const phase = phaseSel.value || 'ابتدائي';
+      const currentTrack = trackSel.value || 'عام';
 
       trackSel.innerHTML = '';
-      const pInfo = serverPhaseStructure[phase];
-      if (!pInfo) return;
+      const pInfo = phaseStructureMap[phase];
+      const tracks = (pInfo && pInfo.tracks && pInfo.tracks.length > 0) ? pInfo.tracks : ['عام'];
 
-      pInfo.tracks.forEach(tName => {
-        if (isMatrixCellOpen(branch, stType, phase, grade, tName)) {
-          const opt = document.createElement('option');
-          opt.value = tName;
-          opt.textContent = tName;
-          if (tName === currentTrack) opt.selected = true;
-          trackSel.appendChild(opt);
-        }
+      tracks.forEach(tName => {
+        const opt = document.createElement('option');
+        opt.value = tName;
+        opt.textContent = tName;
+        if (tName === currentTrack) opt.selected = true;
+        trackSel.appendChild(opt);
       });
 
       if (trackSel.options.length === 0) {
