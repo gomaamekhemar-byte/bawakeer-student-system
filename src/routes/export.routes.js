@@ -9,6 +9,7 @@ const { getSystemIdentity } = require("../services/settings.service");
 const { addHistory } = require("../services/history.service");
 const { INTERVIEW_RESULTS, FOLLOWUP_STATUSES, STUDENT_TYPES, PHASES, GRADES, TRACKS, NATIONALITIES, ROLES } = require("../utils/constants");
 const { getDateRange, filterByDateRange } = require("../utils/date_filter");
+const { formatStudentStatus, prepareExportData } = require("../utils/export_utils");
 const XLSX = require("xlsx");
 
 function cleanNotesForDisplay(notes) {
@@ -286,7 +287,8 @@ router.get("/reports", requireAuth, withUser, async (req, res) => {
     startDate,
     endDate,
     isDefaultDateRange,
-    cleanNotesForDisplay
+    cleanNotesForDisplay,
+    formatStudentStatus
   });
 });
 
@@ -328,25 +330,7 @@ router.get("/export/excel", requireAuth, withUser, async (req, res) => {
   if (branchFilter) students = students.filter(s => s.branch === branchFilter);
   if (sourceFilter) students = students.filter(s => matchSourceFilter(s, sourceFilter));
 
-  const rows = students.map((s, idx) => ({
-    "م": idx + 1,
-    "اسم الطالب": s.name || "",
-    "نوع الطالب": s.student_type || "بنين",
-    "المسار التعليمي": s.track || "عام",
-    "رقم جوال ولي الأمر": s.phone || "",
-    "رقم جوال إضافي": s.mother_phone || "",
-    "تاريخ الميلاد": s.date_of_birth || "",
-    "الجنسية": s.nationality || "سعودي",
-    "الحي السكني": s.neighborhood || "",
-    "المرحلة الدراسية": s.phase || "",
-    "الصف": s.grade || "",
-    "الفرع": s.branch || "",
-    "مصدر التسجيل": s.registration_source || "تسجيل داخلي",
-    "نتيجة المقابلة": s.interview_result || "لم يقابل",
-    "حالة المتابعة والتسجيل": s.followup_status || "غير محدد",
-    "سبب عدم التسجيل": s.registration_reason || "",
-    "الملاحظات": cleanNotesForDisplay(s.notes || "")
-  }));
+  const rows = prepareExportData(students, cleanNotesForDisplay);
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -500,7 +484,7 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
       ${systemSettings.slogan ? `<div class="school-slogan">${systemSettings.slogan}</div>` : ""}
     </div>
     <div class="header-center">
-      <div class="report-main-title">كشف بيانات الطلاب والتحليل الديموغرافي</div>
+      <div class="report-main-title">كشف بيانات الطلاب</div>
       <div class="year-badge">${activeYear ? activeYear.year_name : "العام الدراسي الحالي"}</div>
       <div style="font-size: 10px; color: #1e3a8a; font-weight: 700; margin-top: 3px;">كشف الطلاب للفترة من ${startDate} إلى ${endDate}</div>
     </div>
@@ -550,12 +534,12 @@ router.get("/export/pdf", requireAuth, withUser, async (req, res) => {
           <td><span class="badge ${s.registration_source === 'رابط خارجي' ? 'badge-info' : ''}">${s.registration_source || "تسجيل داخلي"}</span></td>
           <td>
             <span class="badge ${s.interview_result === 'مقبول' ? 'badge-success' : s.interview_result === 'غير مقبول' ? 'badge-danger' : 'badge-warning'}">
-              ${s.interview_result || "لم يقابل"}
+              ${formatStudentStatus(s.interview_result, "لم يقابل")}
             </span>
           </td>
           <td>
-            <span class="badge ${s.followup_status === 'تم التسجيل' ? 'badge-info' : s.followup_status === 'صف غير متاح' ? 'badge-warning' : s.followup_status === 'لا يرغب في التسجيل' ? 'badge-danger' : 'badge-warning'}">
-              ${s.followup_status || "غير محدد"}
+            <span class="badge ${s.followup_status === 'تم التسجيل' ? 'badge-info' : (s.followup_status === 'صف غير متاح' || s.followup_status === 'unavailable_grade') ? 'badge-warning' : s.followup_status === 'لا يرغب في التسجيل' ? 'badge-danger' : 'badge-warning'}">
+              ${formatStudentStatus(s.followup_status, "غير محدد")}
             </span>
           </td>
           <td style="color:#64748b;">${cleanNotesForDisplay(s.notes || "")}</td>
