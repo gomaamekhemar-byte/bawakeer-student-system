@@ -286,6 +286,9 @@
 
   <div class="container-fluid px-4 py-4" id="analyticsMainContent" style="transition: opacity 0.2s ease-in-out;">
 
+    <!-- CLIENT STUDENTS PAYLOAD (For Instant Reactive Updates & Sync) -->
+    <script id="analyticsClientStudentsPayload" type="application/json"><%- JSON.stringify(typeof clientStudents !== 'undefined' ? clientStudents : []) %></script>
+
     <!-- GLOBAL REUSABLE DATE FILTER -->
     <div class="mb-4">
       <%- include('partials/date_filter') %>
@@ -1226,7 +1229,21 @@
     }
     window.renderNationalityChart = renderNationalityChart;
 
-    function updateClientSideAggregations(branch, phase, grade, type, track, source) {
+    // Robust Date Range Helper (Strict Normalization to 00:00:00 and 23:59:59.999)
+    function isWithinDateRange(itemDate, startDate, endDate) {
+      if (!startDate && !endDate) return true;
+      if (!itemDate) return false;
+      const time = new Date(itemDate).getTime();
+      if (isNaN(time)) return false;
+
+      const startBound = startDate ? new Date(startDate + 'T00:00:00.000').getTime() : -Infinity;
+      const endBound = endDate ? new Date(endDate + 'T23:59:59.999').getTime() : Infinity;
+
+      return time >= startBound && time <= endBound;
+    }
+    window.isWithinDateRange = isWithinDateRange;
+
+    function updateClientSideAggregations(branch, phase, grade, type, track, source, startDateParam, endDateParam) {
       const normBranch = (branch || 'الكل').trim();
       const normPhase = (phase || 'الكل').trim();
       const normGrade = (grade || 'الكل').trim();
@@ -1234,7 +1251,18 @@
       const normTrack = (track || 'الكل').trim();
       const normSource = (source || 'الكل').trim();
 
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      const startDate = (startDateParam !== undefined ? startDateParam : (startInput ? startInput.value : '')).trim();
+      const endDate = (endDateParam !== undefined ? endDateParam : (endInput ? endInput.value : '')).trim();
+
       const filtered = (window.allAnalyticsStudents || []).filter(s => {
+        // 1. Central Date Filtering with strict normalization
+        if (!isWithinDateRange(s.created_at, startDate, endDate)) {
+          return false;
+        }
+
+        // 2. Parallel Dropdown Filters
         const sBranch = (s.branch || '').trim();
         const sPhase = (s.phase || '').trim();
         const sGrade = String(s.grade || '').trim();
@@ -1385,9 +1413,9 @@
 
       if (spinner) spinner.classList.remove('d-none');
 
-      // 1. Instant client-side derived state calculation
+      // 1. Instant client-side derived state calculation (with Date Range filter integrated)
       if (window.allAnalyticsStudents && window.allAnalyticsStudents.length > 0) {
-        updateClientSideAggregations(branch, phase, grade, type, track, source);
+        updateClientSideAggregations(branch, phase, grade, type, track, source, startDate, endDate);
       }
 
       const params = new URLSearchParams();
@@ -1421,10 +1449,23 @@
             currentForm.innerHTML = newForm.innerHTML;
           }
 
+          // Extract updated client students payload from the fetched HTML
+          const payloadEl = doc.getElementById('analyticsClientStudentsPayload');
+          if (payloadEl) {
+            try {
+              window.allAnalyticsStudents = JSON.parse(payloadEl.textContent);
+              window.rawData = window.allAnalyticsStudents;
+            } catch (e) {
+              console.error('Error parsing clientStudents payload:', e);
+            }
+          }
+
           const newContent = doc.getElementById('analyticsMainContent');
           if (newContent && container) {
             container.innerHTML = newContent.innerHTML;
             container.style.opacity = '1';
+            // Re-run aggregations with fresh server dataset to ensure 100% sync
+            updateClientSideAggregations(branch, phase, grade, type, track, source, startDate, endDate);
           } else {
             window.location.reload();
           }
@@ -1453,6 +1494,10 @@
         if (typeSel && e.state.type) typeSel.value = e.state.type;
         if (trackSel && e.state.track) trackSel.value = e.state.track;
         if (sourceSel && e.state.source) sourceSel.value = e.state.source;
+        const startInput = document.getElementById('filterStartDate');
+        const endInput = document.getElementById('filterEndDate');
+        if (startInput && e.state.startDate) startInput.value = e.state.startDate;
+        if (endInput && e.state.endDate) endInput.value = e.state.endDate;
       }
       refreshAnalytics();
     });
