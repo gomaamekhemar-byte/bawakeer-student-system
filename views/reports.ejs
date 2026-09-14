@@ -236,7 +236,7 @@
       <% } %>
     </div>
     <div class="text-center">
-      <div style="font-size: 15px; font-weight: 800; color: #0f172a;">كشف بيانات الطلاب والتحليل الديموغرافي</div>
+      <div style="font-size: 15px; font-weight: 800; color: #0f172a;">كشف بيانات الطلاب</div>
       <div style="font-size: 11px; color: #475569; font-weight: 600;">العام الدراسي: <%= activeYear ? activeYear.year_name : '1448هـ' %></div>
       <div style="font-size: 11px; color: #1e3a8a; font-weight: 700; margin-top: 3px;">كشف الطلاب للفترة من <%= typeof startDate !== 'undefined' ? startDate : '' %> إلى <%= typeof endDate !== 'undefined' ? endDate : '' %></div>
     </div>
@@ -596,7 +596,7 @@
           <span class="badge bg-light text-secondary border px-3 py-2">
             <i class="fa-solid fa-school me-1 text-primary"></i> المسجلين من المدرسة: <strong><%= stats.filtered_internal_count %></strong> (<%= stats.filtered_internal_percent %>%)
           </span>
-          <% const waitlistCountInResult = students.filter(function(st){ return st.followup_status === 'صف غير متاح'; }).length; %>
+          <% const waitlistCountInResult = students.filter(function(st){ return st.followup_status === 'صف غير متاح' || st.followup_status === 'unavailable_grade'; }).length; %>
           <% if(waitlistCountInResult > 0){ %>
             <span class="badge bg-warning text-dark border border-warning px-3 py-2">
               <i class="fa-solid fa-hourglass-start me-1"></i> قائمة الانتظار (صفوف غير متاحة): <strong><%= waitlistCountInResult %></strong>
@@ -696,7 +696,7 @@
                       <span class="badge-status bg-warning-subtle text-warning border border-warning">
                         <i class="fa-solid fa-hourglass-start"></i> في انتظار التسجيل
                       </span>
-                    <% } else if(s.followup_status === 'صف غير متاح'){ %>
+                    <% } else if(s.followup_status === 'صف غير متاح' || s.followup_status === 'unavailable_grade'){ %>
                       <span class="badge-status bg-warning text-dark border border-warning fw-bold">
                         <i class="fa-solid fa-hourglass-start"></i> صف غير متاح (انتظار)
                       </span>
@@ -705,7 +705,7 @@
                         <i class="fa-solid fa-ban"></i> لا يرغب
                       </span>
                     <% } else { %>
-                      <span class="badge-status bg-light text-muted border"><%= s.followup_status || 'لم يسجل' %></span>
+                      <span class="badge-status bg-light text-muted border"><%= (typeof formatStudentStatus === 'function') ? formatStudentStatus(s.followup_status, 'لم يسجل') : (s.followup_status || 'لم يسجل') %></span>
                     <% } %>
                   </td>
                   <td class="text-truncate" style="max-width: 200px;"><small class="text-muted"><%= (typeof cleanNotesForDisplay === 'function') ? (cleanNotesForDisplay(s.notes || '') || '—') : (s.notes || '—') %></small></td>
