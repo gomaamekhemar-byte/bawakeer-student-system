@@ -1,47 +1,96 @@
-﻿<!-- REUSABLE DATE RANGE FILTER COMPONENT (DRY) -->
-<div class="d-flex align-items-center flex-wrap gap-2 p-2 rounded-3 bg-light border shadow-2xs w-100 my-1" id="globalDateFilterContainer">
-  <div class="d-flex align-items-center gap-1 text-primary fw-bold small text-nowrap">
-    <i class="fa-solid fa-calendar-days fs-6"></i>
-    <span>الفترة الزمنية:</span>
-  </div>
+<!-- SMART DATE RANGE FILTER COMPONENT (<SmartDateFilter/>) -->
+<div class="d-flex flex-column gap-1 p-2 rounded-3 bg-light border shadow-2xs w-100 my-1 smart-date-filter-container" id="globalDateFilterContainer">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    
+    <!-- Title & Date Pickers Form Controls -->
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <div class="d-flex align-items-center gap-1 text-primary fw-bold small text-nowrap">
+        <i class="fa-solid fa-calendar-days fs-6"></i>
+        <span>الفترة الزمنية:</span>
+      </div>
 
-  <div class="d-flex align-items-center gap-2 flex-wrap">
-    <div class="d-flex align-items-center gap-1">
-      <label for="filterStartDate" class="form-label mb-0 text-muted small fw-bold text-nowrap">من:</label>
-      <input type="date" id="filterStartDate" name="startDate" class="form-control form-control-sm fw-bold border-secondary-subtle" style="max-width: 145px; font-size: 12.5px;" value="<%= typeof startDate !== 'undefined' ? startDate : '' %>">
+      <!-- 1. FROM DATE (DYNAMIC CONSTRAINTS & SMART RESET) -->
+      <div class="d-flex align-items-center gap-1">
+        <label for="filterStartDate" class="form-label mb-0 text-muted small fw-bold text-nowrap">من:</label>
+        <input type="date" 
+               id="filterStartDate" 
+               name="startDate" 
+               class="form-control form-control-sm fw-bold border-secondary-subtle smart-date-input" 
+               style="max-width: 145px; font-size: 12.5px;" 
+               value="<%= typeof startDate !== 'undefined' ? startDate : '' %>"
+               oninput="window.handleStartDateChange()"
+               onchange="window.handleStartDateChange()">
+      </div>
+
+      <!-- 2. TO DATE (DYNAMIC CONSTRAINTS & FUTURE RESTRICTION) -->
+      <div class="d-flex align-items-center gap-1">
+        <label for="filterEndDate" class="form-label mb-0 text-muted small fw-bold text-nowrap">إلى:</label>
+        <input type="date" 
+               id="filterEndDate" 
+               name="endDate" 
+               class="form-control form-control-sm fw-bold border-secondary-subtle smart-date-input" 
+               style="max-width: 145px; font-size: 12.5px;" 
+               value="<%= typeof endDate !== 'undefined' ? endDate : '' %>"
+               oninput="window.handleEndDateChange()"
+               onchange="window.handleEndDateChange()">
+      </div>
+
+      <!-- ACTION BUTTONS: APPLY & CLEAR -->
+      <div class="d-flex align-items-center gap-1">
+        <button type="button" 
+                class="btn btn-primary btn-sm px-3 fw-bold shadow-2xs d-inline-flex align-items-center gap-1" 
+                id="applyDateFilterBtn"
+                onclick="window.applyGlobalDateFilter()">
+          <i class="fa-solid fa-filter"></i>
+          <span>تطبيق</span>
+        </button>
+
+        <button type="button" 
+                class="btn btn-outline-secondary btn-sm px-2 fw-semibold d-inline-flex align-items-center gap-1" 
+                title="إلغاء فلتر التاريخ وعرض كل البيانات"
+                onclick="window.clearDateFilter()">
+          <i class="fa-solid fa-xmark"></i>
+          <span class="d-none d-sm-inline">مسح</span>
+        </button>
+      </div>
     </div>
 
-    <div class="d-flex align-items-center gap-1">
-      <label for="filterEndDate" class="form-label mb-0 text-muted small fw-bold text-nowrap">إلى:</label>
-      <input type="date" id="filterEndDate" name="endDate" class="form-control form-control-sm fw-bold border-secondary-subtle" style="max-width: 145px; font-size: 12.5px;" value="<%= typeof endDate !== 'undefined' ? endDate : '' %>">
+    <!-- QUICK PRESET BUTTONS (AUTOMATICALLY CLAMPED TO TODAY) -->
+    <div class="d-flex align-items-center gap-1 flex-wrap ms-auto">
+      <span class="text-muted small fw-semibold me-1 d-none d-md-inline">وصول سريع:</span>
+      <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('today')">
+        اليوم
+      </button>
+      <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('week')">
+        هذا الأسبوع
+      </button>
+      <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('month')">
+        هذا الشهر
+      </button>
+      <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('academic_year')">
+        العام الدراسي
+      </button>
     </div>
 
-    <button type="button" class="btn btn-primary btn-sm px-3 fw-bold shadow-2xs d-inline-flex align-items-center gap-1" onclick="window.applyGlobalDateFilter()">
-      <i class="fa-solid fa-filter"></i>
-      <span>تطبيق</span>
-    </button>
   </div>
 
-  <!-- QUICK PRESET BUTTONS -->
-  <div class="d-flex align-items-center gap-1 flex-wrap ms-auto">
-    <span class="text-muted small fw-semibold me-1 d-none d-sm-inline">وصول سريع:</span>
-    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('today')">
-      اليوم
-    </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('week')">
-      هذا الأسبوع
-    </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('month')">
-      هذا الشهر
-    </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 fw-semibold" style="font-size: 11.5px;" onclick="window.setDateFilterPreset('academic_year')">
-      العام الدراسي
-    </button>
+  <!-- INLINE VALIDATION FEEDBACK MESSAGE -->
+  <div id="dateFilterValidationMsg" class="text-danger small fw-bold d-none mt-1">
+    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+    <span id="dateFilterValidationMsgText"></span>
   </div>
 </div>
 
 <script>
   (function() {
+    function getTodayStr() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
     function formatDate(d) {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -49,35 +98,128 @@
       return `${year}-${month}-${day}`;
     }
 
+    // 1. Dynamic Constraint Enforcement (min/max binding)
+    window.syncDateConstraints = function() {
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      if (!startInput || !endInput) return;
+
+      const todayStr = getTodayStr();
+
+      // Rule 1: Never allow future dates on either input
+      startInput.max = todayStr;
+      endInput.max = todayStr;
+
+      const sVal = startInput.value ? startInput.value.trim() : '';
+      const eVal = endInput.value ? endInput.value.trim() : '';
+
+      // Rule 2: Dynamic restriction on "From Date" (max = min(today, eVal))
+      if (eVal) {
+        startInput.max = (eVal < todayStr) ? eVal : todayStr;
+      } else {
+        startInput.max = todayStr;
+      }
+
+      // Rule 3: Dynamic restriction on "To Date" (min = sVal, max = today)
+      if (sVal) {
+        endInput.min = sVal;
+      } else {
+        endInput.removeAttribute('min');
+      }
+
+      // Hide validation alert if valid
+      const msgEl = document.getElementById('dateFilterValidationMsg');
+      if (msgEl && (!sVal || !eVal || sVal <= eVal)) {
+        msgEl.classList.add('d-none');
+      }
+    };
+
+    // 2. Smart Reset when "From Date" changes (Local State Only)
+    window.handleStartDateChange = function() {
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      if (!startInput || !endInput) return;
+
+      const todayStr = getTodayStr();
+      let sVal = startInput.value ? startInput.value.trim() : '';
+      const eVal = endInput.value ? endInput.value.trim() : '';
+
+      // Prevent future date entry
+      if (sVal && sVal > todayStr) {
+        startInput.value = todayStr;
+        sVal = todayStr;
+      }
+
+      // Smart Reset: If newly selected "From" is newer than current "To", clear "To"
+      if (sVal && eVal && sVal > eVal) {
+        endInput.value = '';
+      }
+
+      window.syncDateConstraints();
+      // NOTE: Strictly LOCAL STATE. No global state or backend queries triggered here!
+    };
+
+    // 3. Dynamic adjustment when "To Date" changes (Local State Only)
+    window.handleEndDateChange = function() {
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      if (!startInput || !endInput) return;
+
+      const todayStr = getTodayStr();
+      const sVal = startInput.value ? startInput.value.trim() : '';
+      let eVal = endInput.value ? endInput.value.trim() : '';
+
+      // Prevent future date entry
+      if (eVal && eVal > todayStr) {
+        endInput.value = todayStr;
+        eVal = todayStr;
+      }
+
+      // Prevent end date prior to start date
+      if (sVal && eVal && eVal < sVal) {
+        endInput.value = sVal;
+      }
+
+      window.syncDateConstraints();
+      // NOTE: Strictly LOCAL STATE. No global state or backend queries triggered here!
+    };
+
+    // 4. Quick Presets (all clamped to today)
     window.setDateFilterPreset = function(preset) {
       const now = new Date();
+      const todayStr = getTodayStr();
       let startStr = '';
       let endStr = '';
 
       if (preset === 'today') {
-        startStr = formatDate(now);
-        endStr = formatDate(now);
+        startStr = todayStr;
+        endStr = todayStr;
       } else if (preset === 'week') {
         // Start of week (Sunday in Saudi Arabia / Middle East)
         const day = now.getDay(); // 0 is Sunday
         const diff = now.getDate() - day;
         const start = new Date(now);
         start.setDate(diff);
+        startStr = formatDate(start);
+
         const end = new Date(start);
         end.setDate(start.getDate() + 6);
-        startStr = formatDate(start);
-        endStr = formatDate(end);
+        const calcEnd = formatDate(end);
+        endStr = (calcEnd > todayStr) ? todayStr : calcEnd;
       } else if (preset === 'month') {
         const start = new Date(now.getFullYear(), now.getMonth(), 1);
-        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         startStr = formatDate(start);
-        endStr = formatDate(end);
+
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const calcEnd = formatDate(end);
+        endStr = (calcEnd > todayStr) ? todayStr : calcEnd;
       } else if (preset === 'academic_year') {
-        // Academic year typically starts Aug 1st
+        // Academic year starts Aug 1st
         const currentYear = now.getFullYear();
         const startYear = (now.getMonth() >= 7) ? currentYear : (currentYear - 1);
         startStr = `${startYear}-08-01`;
-        endStr = `${startYear + 1}-07-31`;
+        // End date cannot be in the future, clamped to today
+        endStr = todayStr;
       }
 
       const startInput = document.getElementById('filterStartDate');
@@ -85,14 +227,54 @@
       if (startInput) startInput.value = startStr;
       if (endInput) endInput.value = endStr;
 
+      window.syncDateConstraints();
       window.applyGlobalDateFilter();
     };
 
+    // 5. Clear filter (reset to null/empty)
+    window.clearDateFilter = function() {
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      if (startInput) startInput.value = '';
+      if (endInput) endInput.value = '';
+
+      window.syncDateConstraints();
+      window.applyGlobalDateFilter();
+    };
+
+    // 6. Apply Filter (Fail-Safe Validation & Secure Transmission)
     window.applyGlobalDateFilter = function() {
       const startInput = document.getElementById('filterStartDate');
       const endInput = document.getElementById('filterEndDate');
-      const sVal = startInput ? startInput.value.trim() : '';
-      const eVal = endInput ? endInput.value.trim() : '';
+      const msgEl = document.getElementById('dateFilterValidationMsg');
+      const msgTextEl = document.getElementById('dateFilterValidationMsgText');
+
+      let sVal = startInput ? startInput.value.trim() : '';
+      let eVal = endInput ? endInput.value.trim() : '';
+      const todayStr = getTodayStr();
+
+      // Fail-Safe Validation 1: Prevent Future Dates
+      if (sVal && sVal > todayStr) {
+        sVal = todayStr;
+        if (startInput) startInput.value = todayStr;
+      }
+      if (eVal && eVal > todayStr) {
+        eVal = todayStr;
+        if (endInput) endInput.value = todayStr;
+      }
+
+      // Fail-Safe Validation 2: Prevent Start > End
+      if (sVal && eVal && sVal > eVal) {
+        if (msgEl && msgTextEl) {
+          msgTextEl.textContent = 'عفواً، لا يمكن أن يكون تاريخ البداية بعد تاريخ النهاية.';
+          msgEl.classList.remove('d-none');
+        }
+        return;
+      }
+
+      if (msgEl) {
+        msgEl.classList.add('d-none');
+      }
 
       // Check if inside analytics page with refreshAnalytics
       if (typeof window.refreshAnalytics === 'function') {
@@ -100,7 +282,7 @@
         return;
       }
 
-      // If there is an enclosing form, update hidden/visible inputs or submit
+      // Universal navigation for other screens (Students, Reports, History)
       const currentUrl = new URL(window.location.href);
       if (sVal) {
         currentUrl.searchParams.set('startDate', sVal);
@@ -116,5 +298,28 @@
       // Preserve existing filters and navigate
       window.location.href = currentUrl.toString();
     };
+
+    // 7. Component Initialization (Reads URL Search Params and sets initial constraints)
+    function initSmartDateFilter() {
+      const startInput = document.getElementById('filterStartDate');
+      const endInput = document.getElementById('filterEndDate');
+      if (!startInput || !endInput) return;
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('startDate')) {
+        startInput.value = urlParams.get('startDate');
+      }
+      if (urlParams.has('endDate')) {
+        endInput.value = urlParams.get('endDate');
+      }
+
+      window.syncDateConstraints();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSmartDateFilter);
+    } else {
+      initSmartDateFilter();
+    }
   })();
 </script>
