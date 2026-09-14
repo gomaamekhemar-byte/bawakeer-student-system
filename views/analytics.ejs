@@ -1232,6 +1232,7 @@
     // Robust Date Range Helper (Strict Normalization to 00:00:00 and 23:59:59.999)
     function isWithinDateRange(itemDate, startDate, endDate) {
       if (!startDate && !endDate) return true;
+      if (startDate && endDate && startDate > endDate) return false;
       if (!itemDate) return false;
       const time = new Date(itemDate).getTime();
       if (isNaN(time)) return false;
