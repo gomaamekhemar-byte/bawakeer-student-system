@@ -355,8 +355,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   let selectedTrack = (req.query.track || "الكل").trim();
   let selectedSource = (req.query.source || req.query.source_filter || "الكل").trim();
 
-  const { startDate, endDate, isDefault: isDefaultDateRange } = getDateRange(req.query.startDate, req.query.endDate);
-  let userAccessibleStudents = filterByDateRange(allStudents, "created_at", startDate, endDate);
+  let userAccessibleStudents = allStudents;
 
   if (isSingleBranchUser) {
     const assignedBranch = userBranches[0];
@@ -364,15 +363,18 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
       return res.redirect("/analytics?msg=" + encodeURIComponent("عفواً، غير مصرح لك بالوصول لبيانات فرع آخر"));
     }
     selectedBranch = assignedBranch;
-    userAccessibleStudents = allStudents.filter(s => s.branch === selectedBranch);
+    userAccessibleStudents = userAccessibleStudents.filter(s => s.branch === selectedBranch);
 
     if (userPhases.length && !userPhases.includes("الكل")) {
       userAccessibleStudents = userAccessibleStudents.filter(s => userPhases.includes(s.phase));
     }
   }
 
-  // Compute Adaptive Filters on user-accessible data
-  const availableFilters = computeAdaptiveFilters(userAccessibleStudents, {
+  const { startDate, endDate, isDefault: isDefaultDateRange } = getDateRange(req.query.startDate, req.query.endDate);
+  const dateFilteredStudents = filterByDateRange(userAccessibleStudents, "created_at", startDate, endDate);
+
+  // Compute Adaptive Filters on date-filtered accessible data
+  const availableFilters = computeAdaptiveFilters(dateFilteredStudents, {
     branch: selectedBranch,
     phase: selectedPhase,
     grade: selectedGrade,
@@ -382,7 +384,7 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
   });
 
   // Apply active filters to get the current dataset with strict AND logic and trimming
-  let students = userAccessibleStudents.filter(s => {
+  let students = dateFilteredStudents.filter(s => {
     const sBranch = (s.branch || "").trim();
     const sPhase = (s.phase || "").trim();
     const sGrade = String(s.grade || "").trim();
@@ -488,7 +490,8 @@ router.get("/analytics", requireAuth, withUser, async (req, res) => {
     followup_status: (s.followup_status || "").trim(),
     status: (s.status === 'unavailable_grade' || s.followup_status === 'unavailable_grade' || s.followup_status === 'صف غير متاح' || (s.registration_reason || '').includes('غير متاح')) ? 'unavailable_grade' : (s.status || s.followup_status || '').trim(),
     registration_source: (s.registration_source || "").trim(),
-    registration_reason: (s.registration_reason || "").trim()
+    registration_reason: (s.registration_reason || "").trim(),
+    created_at: s.created_at || ""
   }));
 
   // Support JSON API response
